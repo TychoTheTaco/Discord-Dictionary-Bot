@@ -3,8 +3,10 @@ import requests
 import time
 from gtts import gTTS
 import pathlib
-import io
 import json
+import threading
+from queue import Queue
+import asyncio
 
 PROJECT_ROOT = pathlib.Path('../')
 
@@ -22,7 +24,64 @@ def get_definition(word):
     return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
 
 
-async def process_word(word, message, reverse=False):
+word_queues = {}
+vc_requests = {}
+
+
+class MessageQueue:
+
+    def __init__(self):
+        self._queue = Queue()
+        self._lock = threading.Lock()
+        self._condition = threading.Condition(self._lock)
+        threading.Thread(target=self.run).start()
+
+    def add(self, word, message):
+        self._lock.acquire()
+        self._queue.put((word, message))
+        self._condition.notify()
+        self._lock.release()
+
+    def run(self):
+        print('Started queue processor')
+        while True:
+
+            # Wait for an item to enter the queue
+            print('Waiting for new items')
+            self._lock.acquire()
+            if self._queue.empty():
+                self._condition.wait()
+            self._lock.release()
+
+            print('Processing', self._queue.qsize(), 'items')
+
+            while not self._queue.empty():
+                word, message = self._queue.get()
+
+                #with message.channel.typing():
+                process_word(word, message)
+
+            print('Finished queue')
+
+
+def add(word, message):
+    text_channel = message.channel
+    voice_state = message.author.voice
+    voice_channel = None if voice_state is None else voice_state.channel
+
+    if text_channel not in word_queues:
+        word_queues[text_channel] = MessageQueue()
+    word_queues[text_channel].add(word, message)
+    print(word_queues)
+
+    if voice_channel is not None:
+        if voice_channel not in vc_requests:
+            vc_requests[voice_channel] = 0
+        vc_requests[voice_channel] += 1
+    print(vc_requests)
+
+
+def process_word(word, message, reverse=False):
     """
 
     :param word:
@@ -34,7 +93,7 @@ async def process_word(word, message, reverse=False):
     response = get_definition(word)
     print('RETURN:', response)
     if response.status_code != 200:
-        await message.channel.send('That\'s not a word bruh')
+        asyncio.run_coroutine_threadsafe(message.channel.send('That\'s not a word bruh'), loop)
         return
 
     try:
@@ -42,10 +101,10 @@ async def process_word(word, message, reverse=False):
         definitions = response.json()
         print('DEFINITIONS:', definitions)
     except json.decoder.JSONDecodeError:
-        await message.channel.send('There was a problem finding that word')
+        asyncio.run_coroutine_threadsafe(message.channel.send('There was a problem finding that word'), loop)
         return
 
-    # Send text chat reply
+    # Create text channel reply
     if reverse:
         word = word[::-1]
     reply = f'__**{word}**__\n'
@@ -61,37 +120,44 @@ async def process_word(word, message, reverse=False):
         reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
         tts_input += f'{i + 1}, {word_type}, {definition_text}'
 
-    await message.channel.send(reply)
-
-    # Check if the user is in a voice channel
+    # Generate text-to-speech
     voice_state = message.author.voice
-    if voice_state is not None:
-        voice_channel = voice_state.channel
-        if voice_channel is not None:
+    voice_channel = None if voice_state is None else voice_state.channel
+    if voice_channel is not None:
 
-            # Create text to speech mp3
-            print(tts_input)
-            tts = gTTS(tts_input)
-            urls = tts.get_urls()
-            print('URLS:', urls)
+        # Create text to speech mp3
+        print(tts_input)
+        tts = gTTS(tts_input)
+        urls = tts.get_urls()
+        print('URLS:', urls)
 
-            # Join voice channel
-            voice_client = await voice_channel.connect()
+    # Send text chat reply
+    asyncio.run_coroutine_threadsafe(message.channel.send(reply), loop)
 
-            # Speak
-            for url in urls:
-                voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
-                while voice_client.is_playing():
-                    time.sleep(1)
+    # Send voice channel reply
+    if voice_channel is not None:
 
-            # Disconnect from voice channel
-            await voice_client.disconnect()
+        # Join voice channel
+        voice_client = asyncio.run_coroutine_threadsafe(voice_channel.connect(), loop).result()
+
+        # Speak
+        for url in urls:
+            voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
+            while voice_client.is_playing():
+                time.sleep(1)
+
+        # Disconnect from voice channel
+        asyncio.run_coroutine_threadsafe(voice_client.disconnect(), loop)
+
+
+loop = asyncio.get_event_loop()
 
 
 class Client(discord.Client):
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
+        print(loop is asyncio.get_event_loop())
 
     async def on_message(self, message):
 
@@ -105,15 +171,14 @@ class Client(discord.Client):
 
         # Parse command
         command = message.content[1:].lower().split(' ')
-        print('command:', command)
 
         if command[0] in ['define', 'd', 'b']:
 
             # Extract word from command
             word = ' '.join(command[1:])
-            print('word:', word)
 
-            await process_word(word, message, reverse=command[0] == 'b')
+            # Add word to the queue
+            add(word, message)
 
 
 client = Client()
