@@ -22,7 +22,7 @@ def get_definition(word):
     return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
 
 
-async def process_word(word, message):
+async def process_word(word, message, reverse=False):
     """
 
     :param word:
@@ -38,28 +38,34 @@ async def process_word(word, message):
 
     try:
         definitions = response.json()
+        print('DEFINITIONS:', definitions)
     except json.decoder.JSONDecodeError:
         await message.channel.send('There was a problem finding that word')
         return
 
     # Send text chat reply
-    print('DEFINE: ', definitions)
+    if reverse:
+        word = word[::-1]
     reply = f'__**{word}**__\n'
     tts_input = f'{word}, '
     for i, definition in enumerate(definitions):
-        reply += f'**[{i + 1}]** ({definition["type"]})\n' + definition['definition'] + '\n'
-        tts_input += f'{i + 1}, {definition["type"]}, {definition["definition"]}'
+        word_type = definition['type']
+        definition_text = definition['definition']
+
+        if reverse:
+            word_type = word_type[::-1]
+            definition_text = definition_text[::-1]
+
+        reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
+        tts_input += f'{i + 1}, {word_type}, {definition_text}'
+
     await message.channel.send(reply)
 
     # Create text to speech mp3
-    #tts_buffer = io.BytesIO()
     print(tts_input)
     tts = gTTS(tts_input)
     urls = tts.get_urls()
     print('URLS:', urls)
-    #tts.write_to_fp(tts_buffer)
-    #print(len(tts_buffer.getvalue()))
-    #tts.save(str(mp3_path))
 
     # Join voice channel
     voice_channel = message.author.voice.channel
@@ -101,6 +107,14 @@ class Client(discord.Client):
             print('word:', word)
 
             await process_word(word, message)
+
+        elif command[0] in ['b']:
+
+            # Extract word from command
+            word = ' '.join(command[1:])
+            print('word:', word)
+
+            await process_word(word, message, reverse=True)
 
 
 client = Client()
