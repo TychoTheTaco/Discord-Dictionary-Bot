@@ -27,6 +27,7 @@ async def process_word(word, message, reverse=False):
 
     :param word:
     :param message:
+    :param reverse:
     :return:
     """
     # Get definitions
@@ -37,6 +38,7 @@ async def process_word(word, message, reverse=False):
         return
 
     try:
+        print('RESPONSE:', response)
         definitions = response.json()
         print('DEFINITIONS:', definitions)
     except json.decoder.JSONDecodeError:
