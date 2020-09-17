@@ -61,27 +61,32 @@ async def process_word(word, message, reverse=False):
 
     await message.channel.send(reply)
 
-    # Create text to speech mp3
-    print(tts_input)
-    tts = gTTS(tts_input)
-    urls = tts.get_urls()
-    print('URLS:', urls)
+    # Check if the user is in a voice channel
+    voice_state = message.author.voice
+    if voice_state is not None:
+        voice_channel = voice_state.channel
+        if voice_channel is not None:
 
-    # Join voice channel
-    voice_channel = message.author.voice.channel
-    if voice_channel is not None:
-        voice_client = await voice_channel.connect()
+            # Create text to speech mp3
+            print(tts_input)
+            tts = gTTS(tts_input)
+            urls = tts.get_urls()
+            print('URLS:', urls)
 
-        for url in urls:
-            voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
-            while voice_client.is_playing():
-                time.sleep(1)
-        await voice_client.disconnect()
+            # Join voice channel
+            voice_client = await voice_channel.connect()
+
+            # Speak
+            for url in urls:
+                voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
+                while voice_client.is_playing():
+                    time.sleep(1)
+
+            # Disconnect from voice channel
+            await voice_client.disconnect()
 
 
 class Client(discord.Client):
-
-    TTS_CACHE = pathlib.Path(PROJECT_ROOT, 'ttscache')
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
@@ -100,21 +105,13 @@ class Client(discord.Client):
         command = message.content[1:].lower().split(' ')
         print('command:', command)
 
-        if command[0] in ['define', 'd']:
+        if command[0] in ['define', 'd', 'b']:
 
             # Extract word from command
             word = ' '.join(command[1:])
             print('word:', word)
 
-            await process_word(word, message)
-
-        elif command[0] in ['b']:
-
-            # Extract word from command
-            word = ' '.join(command[1:])
-            print('word:', word)
-
-            await process_word(word, message, reverse=True)
+            await process_word(word, message, reverse=command[0] == 'b')
 
 
 client = Client()
