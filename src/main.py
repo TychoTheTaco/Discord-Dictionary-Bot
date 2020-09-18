@@ -7,6 +7,7 @@ import json
 import threading
 from queue import Queue
 import asyncio
+import collections
 
 PROJECT_ROOT = pathlib.Path('../')
 
@@ -24,8 +25,39 @@ def get_definition(word):
     return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
 
 
-word_queues = {}
-vc_requests = {}
+class DefinitionResponseManager:
+
+    def __init__(self):
+        """
+        This class is responsible for responding to user requests for definitions.
+        """
+        # Each text channel will have its own request queue to allow simultaneous responses across channels
+        self._request_queues = collections.defaultdict(MessageQueue)
+
+        # Keep track of which voice channels we need to respond to. This way we can leave the channel only when we have finished all requests for that channel
+        self._voice_channels = collections.defaultdict(int)
+
+        # Lock used to synchronize 'self._voice_channels'
+        self._lock = threading.Lock()
+
+    def add(self, word, message: discord.Message):
+        """
+        Add a request
+        :param word:
+        :param message:
+        :return:
+        """
+        text_channel = message.channel
+        voice_state = message.author.voice
+        voice_channel = None if voice_state is None else voice_state.channel
+
+        # Add request to queue
+        self._request_queues[text_channel].add(word, message)
+
+        # Add voice channel
+        self._lock.acquire()
+        self._voice_channels[voice_channel] += 1
+        self._lock.release()
 
 
 class MessageQueue:
@@ -64,23 +96,6 @@ class MessageQueue:
             print('Finished queue')
 
 
-def add(word, message):
-    text_channel = message.channel
-    voice_state = message.author.voice
-    voice_channel = None if voice_state is None else voice_state.channel
-
-    if text_channel not in word_queues:
-        word_queues[text_channel] = MessageQueue()
-    word_queues[text_channel].add(word, message)
-    print(word_queues)
-
-    if voice_channel is not None:
-        if voice_channel not in vc_requests:
-            vc_requests[voice_channel] = 0
-        vc_requests[voice_channel] += 1
-    print(vc_requests)
-
-
 def process_word(word, message, reverse=False):
     """
 
@@ -91,13 +106,12 @@ def process_word(word, message, reverse=False):
     """
     # Get definitions
     response = get_definition(word)
-    print('RETURN:', response)
+    print('RESPONSE:', response, response.content)
     if response.status_code != 200:
         asyncio.run_coroutine_threadsafe(message.channel.send('That\'s not a word bruh'), loop)
         return
 
     try:
-        print('RESPONSE:', response)
         definitions = response.json()
         print('DEFINITIONS:', definitions)
     except json.decoder.JSONDecodeError:
@@ -153,11 +167,14 @@ def process_word(word, message, reverse=False):
 loop = asyncio.get_event_loop()
 
 
-class Client(discord.Client):
+class DictionaryBotClient(discord.Client):
+
+    def __init__(self, *, loop=None, **options):
+        super().__init__(loop=loop, **options)
+        self._definition_response_manager = DefinitionResponseManager()
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        print(loop is asyncio.get_event_loop())
 
     async def on_message(self, message):
 
@@ -178,8 +195,29 @@ class Client(discord.Client):
             word = ' '.join(command[1:])
 
             # Add word to the queue
-            add(word, message)
+            #add(word, message)
+            self._definition_response_manager.add(word, message)
+            print('Ready.')
+
+        elif command[0] in ['stop', 's']:
+            pass
+            # Clear word queue and leave voice channel
+
+    async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceClient:
+        """
+        Connect to the specified voice channel if we are not already connected.
+        :param voice_channel: The voice channel to connect to.
+        :return: A 'discord.VoiceClient' representing our voice connection.
+        """
+        # Check if we are already connected to this voice channel
+        for voice_client in self.voice_clients:
+            print(voice_client)
+            if voice_client.channel == voice_channel:
+                return voice_client
+
+        # Connect to the voice channel
+        await voice_channel.connect()
 
 
-client = Client()
+client = DictionaryBotClient()
 client.run(get_token(path='../token.txt'))
