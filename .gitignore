@@ -6,6 +6,3 @@ ffmpeg-20200831-4a11a6f-win64-static
 
 # This file contains the bot token
 token.txt
-
-# Cache that stores text to speech mp3 files
-ttscache

@@ -64,6 +64,35 @@ class DefinitionResponseManager:
             self._voice_channels[voice_channel] += 1
             self._lock.release()
 
+    async def clear(self, text_channel: discord.TextChannel):
+        """
+        Clear all requests for the specified text channel.
+        :param text_channel:
+        """
+        self._lock.acquire()
+        for item in self._request_queues[text_channel]._queue:
+            word, message, reverse = item
+
+            # Remove voice channel requirement for this request
+            voice_state = message.author.voice
+            voice_channel = None if voice_state is None else voice_state.channel
+            if voice_channel is not None:
+                self._voice_channels[voice_channel] -= 1
+
+                # Leave voice channels with no items in the queue
+                print(self._voice_channels[voice_channel])
+                if self._voice_channels[voice_channel] == 0:
+                    await self._client.leave_voice_channel(voice_channel)
+
+        self._request_queues[text_channel].clear()
+        print("Q CLEARED")
+
+        await self._request_queues[text_channel].stop()
+
+        self._lock.release()
+
+        await text_channel.send('Ok, i\'ll be quiet.')
+
 
 class MessageQueue:
 
@@ -73,6 +102,9 @@ class MessageQueue:
         self._lock = threading.Lock()
         self._condition = threading.Condition(self._lock)
         threading.Thread(target=self.run).start()
+
+        # The voice channel that we are currently connected to
+        self._voice_channel = None
 
     def add(self, word, message, reverse=False):
         self._lock.acquire()
@@ -100,9 +132,12 @@ class MessageQueue:
 
                 voice_state = message.author.voice
                 voice_channel = None if voice_state is None else voice_state.channel
+                self._voice_channel = voice_channel
 
                 #with message.channel.typing():
+                print("START PROCESS")
                 self._client.process_definition_request(word, message, reverse=reverse)
+                print("END PROCESS")
 
                 if voice_channel is not None:
                     self._client._definition_response_manager._lock.acquire()
@@ -119,6 +154,13 @@ class MessageQueue:
 
             print('Finished queue')
 
+    def clear(self):
+        self._queue.clear()
+
+    async def stop(self):
+        self.clear()
+        await self._client.leave_voice_channel(self._voice_channel)
+
     def __repr__(self):
         return str(self._queue)
 
@@ -132,7 +174,7 @@ class DictionaryBotClient(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
 
         # Ignore our own messages
         if message.author == self.user:
@@ -156,8 +198,8 @@ class DictionaryBotClient(discord.Client):
             print('Ready.')
 
         elif command[0] in ['stop', 's']:
-            pass
-            # Clear word queue and leave voice channel
+            # Clear word queue
+            await self._definition_response_manager.clear(message.channel)
 
     async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceClient:
         """
@@ -191,7 +233,7 @@ class DictionaryBotClient(discord.Client):
         response = get_definition(word)
         print('RESPONSE:', response, response.content)
         if response.status_code != 200:
-            asyncio.run_coroutine_threadsafe(message.channel.send('That\'s not a word bruh'), self.loop)
+            asyncio.run_coroutine_threadsafe(message.channel.send(f'__**{word}**__\nI don\'t know that word.'), self.loop)
             return
 
         try:
