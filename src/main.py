@@ -96,7 +96,7 @@ class MessageQueue:
             print('VOICE CHANNELS:', self._client._definition_response_manager._voice_channels)
 
             while len(self._queue) > 0:
-                word, message, reverse = self._queue.pop()
+                word, message, reverse = self._queue.popleft()
 
                 voice_state = message.author.voice
                 voice_channel = None if voice_state is None else voice_state.channel
@@ -111,7 +111,7 @@ class MessageQueue:
 
                     # If we don't need this voice channel anymore, disconnect from it
                     if self._client._definition_response_manager._voice_channels[voice_channel] == 0:
-                        asyncio.run_coroutine_threadsafe(client.leave_voice_channel(voice_channel), client.loop)
+                        asyncio.run_coroutine_threadsafe(self._client.leave_voice_channel(voice_channel), self._client.loop)
 
 
                 print('QUEUE:', self._client._definition_response_manager._request_queues)
@@ -135,7 +135,7 @@ class DictionaryBotClient(discord.Client):
     async def on_message(self, message):
 
         # Ignore our own messages
-        if message.author == client.user:
+        if message.author == self.user:
             return
 
         # Check for prefix
