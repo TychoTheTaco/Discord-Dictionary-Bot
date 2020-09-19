@@ -20,7 +20,6 @@ def get_token(path='token.txt'):
 
 
 def get_definition(word):
-    print('GET DEF:', word)
     return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
 
 
@@ -84,9 +83,7 @@ class DefinitionResponseManager:
                 if self._voice_channels[voice_channel] == 0:
                     await self._client.leave_voice_channel(voice_channel)
 
-        self._request_queues[text_channel].clear()
-        print("Q CLEARED")
-
+        # Stop any current voice activity and clear the request queue
         await self._request_queues[text_channel].stop()
 
         self._lock.release()
@@ -134,10 +131,12 @@ class MessageQueue:
                 voice_channel = None if voice_state is None else voice_state.channel
                 self._voice_channel = voice_channel
 
-                #with message.channel.typing():
-                print("START PROCESS")
                 self._client.process_definition_request(word, message, reverse=reverse)
-                print("END PROCESS")
+
+                #async def f():
+                #    async with message.channel.typing():
+                #        self._client.process_definition_request(word, message, reverse=reverse)
+                #asyncio.run_coroutine_threadsafe(f(), self._client.loop)
 
                 if voice_channel is not None:
                     self._client._definition_response_manager._lock.acquire()
@@ -172,7 +171,7 @@ class DictionaryBotClient(discord.Client):
         self._definition_response_manager = DefinitionResponseManager(self)
 
     async def on_ready(self):
-        print('Logged on as {0}!'.format(self.user))
+        print(f'Logged on as {self.user}!')
 
     async def on_message(self, message: discord.Message):
 
@@ -193,13 +192,13 @@ class DictionaryBotClient(discord.Client):
             word = ' '.join(command[1:])
 
             # Add word to the queue
-            #add(word, message)
             self._definition_response_manager.add(word, message, command[0] == 'b')
-            print('Ready.')
 
         elif command[0] in ['stop', 's']:
             # Clear word queue
             await self._definition_response_manager.clear(message.channel)
+
+        print('Ready.')
 
     async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceClient:
         """
@@ -277,7 +276,6 @@ class DictionaryBotClient(discord.Client):
 
             # Join voice channel
             voice_client = asyncio.run_coroutine_threadsafe(self.join_voice_channel(voice_channel), self.loop).result()
-            print('CLIENT:', voice_client)
 
             # Speak
             for url in urls:
