@@ -10,7 +10,7 @@ import collections
 
 PROJECT_ROOT = pathlib.Path('../')
 
-PREFIX = '!'
+PREFIX = '.'
 TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
 
 
@@ -186,7 +186,9 @@ class DictionaryBotClient(discord.Client):
         # Parse command
         command = message.content[1:].lower().split(' ')
 
-        if command[0] in ['define', 'd', 'b']:
+        if command[0] in ['help', 'h']:
+            await message.channel.send(self._get_help_message())
+        elif command[0] in ['define', 'd', 'b']:
 
             # Extract word from command
             word = ' '.join(command[1:])
@@ -282,6 +284,17 @@ class DictionaryBotClient(discord.Client):
                 voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
                 while voice_client.is_playing():
                     time.sleep(1)
+
+    def _get_help_message(self) -> str:
+        string = '__Available Commands__\n'
+        string += '**define** <word>\n'
+        string += '        Prints the definition of the word in chat and if you are in a voice channel, reads it out.\n'
+        string += '**help**\n'
+        string += '       Shows you this help message.\n'
+        string += '**stop**\n'
+        string += '        Makes this bot stop talking and removes all definition requests.'
+
+        return string
 
 
 client = DictionaryBotClient()
