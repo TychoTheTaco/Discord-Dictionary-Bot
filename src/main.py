@@ -164,10 +164,30 @@ class MessageQueue:
         return str(self._queue)
 
 
+class Command:
+
+    def __init__(self, name, aliases=None, description='', arg_format=''):
+        self._name = name
+        if aliases is None:
+            self._aliases = []
+        else:
+            self._aliases = aliases
+        self._description = description
+        self._arg_format = arg_format
+
+    def matches(self, string):
+        return string in [self._name] + self._aliases
+
+
 class DictionaryBotClient(discord.Client):
 
     def __init__(self, *, loop=None, **options):
         super().__init__(loop=loop, **options)
+        self._commands = [
+            Command('define', aliases=['d'], description='Prints the definition of the word in chat and if you are in a voice channel, reads it out.', arg_format='<word>'),
+            Command('help', aliases=['h'], description='Shows you this help message.'),
+            Command('stop', aliases=['s'], description='Makes this bot stop talking and removes all definition requests.')
+        ]
         self._definition_response_manager = DefinitionResponseManager(self)
 
     async def on_ready(self):
@@ -184,21 +204,23 @@ class DictionaryBotClient(discord.Client):
             return
 
         # Parse command
-        command = message.content[1:].lower().split(' ')
+        command_input = message.content[1:].lower().split(' ')
 
-        if command[0] in ['help', 'h']:
-            await message.channel.send(self._get_help_message())
-        elif command[0] in ['define', 'd', 'b']:
+        for command in self._commands:
+            if command.matches(command_input[0]):
+                if command._name == 'help':
+                    await message.channel.send(self._get_help_message())
+                elif command._name == 'define':
+                    # Extract word from command
+                    word = ' '.join(command_input[1:])
 
-            # Extract word from command
-            word = ' '.join(command[1:])
+                    # Add word to the queue
+                    self._definition_response_manager.add(word, message, command_input[0] == 'b')
+                elif command._name == 'stop':
+                    # Clear word queue
+                    await self._definition_response_manager.clear(message.channel)
+                break
 
-            # Add word to the queue
-            self._definition_response_manager.add(word, message, command[0] == 'b')
-
-        elif command[0] in ['stop', 's']:
-            # Clear word queue
-            await self._definition_response_manager.clear(message.channel)
 
         print('Ready.')
 
@@ -287,12 +309,9 @@ class DictionaryBotClient(discord.Client):
 
     def _get_help_message(self) -> str:
         string = '__Available Commands__\n'
-        string += '**define** <word>\n'
-        string += '        Prints the definition of the word in chat and if you are in a voice channel, reads it out.\n'
-        string += '**help**\n'
-        string += '       Shows you this help message.\n'
-        string += '**stop**\n'
-        string += '        Makes this bot stop talking and removes all definition requests.'
+        for command in self._commands:
+            string += f'**{command._name}** {command._arg_format}\n'
+            string += f'        {command._description}\n'
 
         return string
 
