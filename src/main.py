@@ -9,9 +9,10 @@ import asyncio
 import collections
 
 PROJECT_ROOT = pathlib.Path('../')
+TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
+FFMPEG_EXE_PATH = pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe')
 
 PREFIX = '.'
-TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
 
 
 def get_token(path='token.txt'):
@@ -303,7 +304,7 @@ class DictionaryBotClient(discord.Client):
 
             # Speak
             for url in urls:
-                voice_client.play(discord.FFmpegPCMAudio(url, executable=str(pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe'))))
+                voice_client.play(discord.FFmpegPCMAudio(url, executable=str(FFMPEG_EXE_PATH)))
                 while voice_client.is_playing():
                     time.sleep(1)
 
