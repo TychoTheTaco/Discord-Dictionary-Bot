@@ -264,7 +264,7 @@ class DictionaryBotClient(discord.Client):
         try:
             definitions = response.json()
             print('DEFINITIONS:', definitions)
-        except json.JSONDecodeError:
+        except ValueError:
             asyncio.run_coroutine_threadsafe(message.channel.send('There was a problem finding that word.'), self.loop)
             return
 
