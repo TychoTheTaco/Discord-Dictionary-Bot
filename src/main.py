@@ -7,11 +7,11 @@ import json
 import threading
 import asyncio
 import collections
-import sys
+import argparse
 
 PROJECT_ROOT = pathlib.Path('../')
 TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
-FFMPEG_EXE_PATH = pathlib.Path(PROJECT_ROOT, 'ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe')
+FFMPEG_EXE_PATH = None  # Set by argparse
 
 PREFIX = '.'
 
@@ -320,11 +320,19 @@ class DictionaryBotClient(discord.Client):
 
 if __name__ == '__main__':
 
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', help='Token to use when running the bot.', dest='token', default=None)
+    parser.add_argument('-f', help='Path to ffmpeg executable', dest='ffmpeg_exe_path', default='ffmpeg')
+    args = parser.parse_args()
+
+    FFMPEG_EXE_PATH = args.ffmpeg_exe_path
+
     # Create client
     client = DictionaryBotClient()
 
     # Start client
-    if len(sys.argv) >= 3 and sys.argv[1] == '-t':
-        client.run(sys.argv[2])
-    else:
+    if args.token is None:
         client.run(get_token(path='../token.txt'))
+    else:
+        client.run(args.token)
