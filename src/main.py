@@ -304,10 +304,13 @@ class DictionaryBotClient(discord.Client):
             voice_client = asyncio.run_coroutine_threadsafe(self.join_voice_channel(voice_channel), self.loop).result()
 
             # Speak
-            for url in urls:
-                voice_client.play(discord.FFmpegPCMAudio(url, executable=str(FFMPEG_EXE_PATH)))
-                while voice_client.is_playing():
-                    time.sleep(1)
+            try:
+                for url in urls:
+                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(FFMPEG_EXE_PATH)))
+                    while voice_client.is_playing():
+                        time.sleep(1)
+            except discord.errors.ClientException:
+                pass
 
     def _get_help_message(self) -> str:
         string = '__Available Commands__\n'
