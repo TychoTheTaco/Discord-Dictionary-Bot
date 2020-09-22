@@ -7,6 +7,7 @@ import json
 import threading
 import asyncio
 import collections
+import sys
 
 PROJECT_ROOT = pathlib.Path('../')
 TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
@@ -317,5 +318,13 @@ class DictionaryBotClient(discord.Client):
         return string
 
 
-client = DictionaryBotClient()
-client.run(get_token(path='../token.txt'))
+if __name__ == '__main__':
+
+    # Create client
+    client = DictionaryBotClient()
+
+    # Start client
+    if len(sys.argv) >= 3 and sys.argv[1] == '-t':
+        client.run(sys.argv[2])
+    else:
+        client.run(get_token(path='../token.txt'))
