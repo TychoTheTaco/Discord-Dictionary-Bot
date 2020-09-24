@@ -75,11 +75,13 @@ class DefinitionResponseManager:
         """
         self._lock.acquire()
         for item in self._request_queues[text_channel]._queue:
-            word, message, reverse = item
+            word, message, reverse, text_to_speech = item
 
             # Remove voice channel requirement for this request
             voice_state = message.author.voice
             voice_channel = None if voice_state is None else voice_state.channel
+            if not text_to_speech:
+                voice_channel = None
             if voice_channel is not None:
                 self._voice_channels[voice_channel] -= 1
 
