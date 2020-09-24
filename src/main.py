@@ -207,6 +207,7 @@ class DictionaryBotClient(discord.Client):
 
         # Parse command
         command_input = message.content[1:].lower().split(' ')
+        print(command_input)
 
         for command in self._commands:
             if command.matches(command_input[0]):
