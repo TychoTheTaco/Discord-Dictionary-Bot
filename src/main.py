@@ -43,27 +43,30 @@ class DefinitionResponseManager:
         # Lock used to synchronize 'self._voice_channels'
         self._lock = threading.Lock()
 
-    def add(self, word, message: discord.Message, reverse=False):
+    def add(self, word, message: discord.Message, reverse=False, text_to_speech=False):
         """
         Add a request
         :param word:
         :param message:
+        :param reverse:
+        :param text_to_speech:
         :return:
         """
         text_channel = message.channel
-        voice_state = message.author.voice
-        voice_channel = None if voice_state is None else voice_state.channel
 
         # Add request to queue
         if text_channel not in self._request_queues:
             self._request_queues[text_channel] = MessageQueue(self._client)
-        self._request_queues[text_channel].add(word, message, reverse=reverse)
+        self._request_queues[text_channel].add(word, message, reverse=reverse, text_to_speech=text_to_speech)
 
         # Add voice channel
-        if voice_channel is not None:
-            self._lock.acquire()
-            self._voice_channels[voice_channel] += 1
-            self._lock.release()
+        if text_to_speech:
+            voice_state = message.author.voice
+            voice_channel = None if voice_state is None else voice_state.channel
+            if voice_channel is not None:
+                self._lock.acquire()
+                self._voice_channels[voice_channel] += 1
+                self._lock.release()
 
     async def clear(self, text_channel: discord.TextChannel):
         """
@@ -105,9 +108,9 @@ class MessageQueue:
         # The voice channel that we are currently connected to
         self._voice_channel = None
 
-    def add(self, word, message, reverse=False):
+    def add(self, word, message, reverse=False, text_to_speech=False):
         self._lock.acquire()
-        self._queue.append((word, message, reverse))
+        self._queue.append((word, message, reverse, text_to_speech))
         self._condition.notify()
         self._lock.release()
 
@@ -127,10 +130,13 @@ class MessageQueue:
             print('VOICE CHANNELS:', self._client._definition_response_manager._voice_channels)
 
             while len(self._queue) > 0:
-                word, message, reverse = self._queue.popleft()
+                word, message, reverse, text_to_speech = self._queue.popleft()
 
-                voice_state = message.author.voice
-                voice_channel = None if voice_state is None else voice_state.channel
+                if text_to_speech:
+                    voice_state = message.author.voice
+                    voice_channel = None if voice_state is None else voice_state.channel
+                else:
+                    voice_channel = None
                 self._voice_channel = voice_channel
 
                 self._client.process_definition_request(word, message, reverse=reverse)
@@ -217,7 +223,8 @@ class DictionaryBotClient(discord.Client):
                     word = ' '.join(command_input[1:])
 
                     # Add word to the queue
-                    self._definition_response_manager.add(word, message, command_input[0] == 'b')
+                    text_to_speech = len(command_input[0]) == 2 and command_input[1] == 'v'
+                    self._definition_response_manager.add(word, message, command_input[0] == 'b', text_to_speech=text_to_speech)
                 elif command._name == 'stop':
                     # Clear word queue
                     await self._definition_response_manager.clear(message.channel)
@@ -246,7 +253,7 @@ class DictionaryBotClient(discord.Client):
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
 
-    def process_definition_request(self, word, message, reverse=False):
+    def process_definition_request(self, word, message, reverse=False, text_to_speech=False):
         """
 
             :param word:
@@ -285,8 +292,12 @@ class DictionaryBotClient(discord.Client):
             tts_input += f'{i + 1}, {word_type}, {definition_text}'
 
         # Generate text-to-speech
-        voice_state = message.author.voice
-        voice_channel = None if voice_state is None else voice_state.channel
+        if text_to_speech:
+            voice_state = message.author.voice
+            voice_channel = None if voice_state is None else voice_state.channel
+        else:
+            voice_channel = None
+
         if voice_channel is not None:
             # Create text to speech mp3
             print(tts_input)
