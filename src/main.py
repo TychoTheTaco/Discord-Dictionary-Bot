@@ -139,7 +139,7 @@ class MessageQueue:
                     voice_channel = None
                 self._voice_channel = voice_channel
 
-                self._client.process_definition_request(word, message, reverse=reverse)
+                self._client.process_definition_request(word, message, reverse=reverse, text_to_speech=text_to_speech)
 
                 #async def f():
                 #    async with message.channel.typing():
