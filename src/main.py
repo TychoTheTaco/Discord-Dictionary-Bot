@@ -192,7 +192,7 @@ class DictionaryBotClient(discord.Client):
     def __init__(self, *, loop=None, **options):
         super().__init__(loop=loop, **options)
         self._commands = [
-            Command('define', aliases=['d', 'b'], description='Prints the definition of the word in chat and if you are in a voice channel, reads it out.', arg_format='<word>'),
+            Command('define', aliases=['d', 'b', 'dv'], description='Prints the definition of the word in chat and if you are in a voice channel, reads it out.', arg_format='<word>'),
             Command('help', aliases=['h'], description='Shows you this help message.'),
             Command('stop', aliases=['s'], description='Makes this bot stop talking and removes all definition requests.')
         ]
