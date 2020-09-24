@@ -224,7 +224,7 @@ class DictionaryBotClient(discord.Client):
 
                     # Add word to the queue
                     print('COMMAND:', command_input)
-                    text_to_speech = len(command_input[0]) == 2 and command_input[1] == 'v'
+                    text_to_speech = len(command_input[0]) == 2 and command_input[0] == 'v'
                     self._definition_response_manager.add(word, message, command_input[0] == 'b', text_to_speech=text_to_speech)
                 elif command._name == 'stop':
                     # Clear word queue
