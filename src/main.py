@@ -96,12 +96,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     FFMPEG_EXE_PATH = args.ffmpeg_exe_path
-
-    # Create client
-    client = DictionaryBotClient()
+    token = args.token if args.token is not None else utils.get_token(path='../token.txt')
 
     # Start client
-    if args.token is None:
-        client.run(utils.get_token(path='../token.txt'))
-    else:
-        client.run(args.token)
+    client = DictionaryBotClient()
+    client.run(token)

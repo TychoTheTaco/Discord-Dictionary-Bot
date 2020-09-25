@@ -164,8 +164,7 @@ class MessageQueue:
 
         try:
             definitions = response.json()
-            print('DEFINITIONS:', definitions)
-        except ValueError:
+        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
             self._client.sync(utils.send_split(f'__**{word}**__\nThere was a problem finding word.', message.channel))
             return
 
