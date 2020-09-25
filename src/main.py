@@ -67,7 +67,6 @@ class DictionaryBotClient(discord.Client):
         """
         # Check if we are already connected to this voice channel
         for voice_client in self.voice_clients:
-            print(voice_client)
             if voice_client.channel == voice_channel:
                 return voice_client
 
