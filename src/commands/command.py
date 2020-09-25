@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import discord
-import asyncio
 
 
 class Command(ABC):
