@@ -5,7 +5,7 @@ import discord
 class DefineReverseCommand(Command):
 
     def __init__(self, client: discord.Client, definition_response_manager):
-        super().__init__(client, 'b')
+        super().__init__(client, 'b', secret=True)
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):

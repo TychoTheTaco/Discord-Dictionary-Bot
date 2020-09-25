@@ -5,7 +5,7 @@ import discord
 class DefineCommand(Command):
 
     def __init__(self, client: discord.Client, definition_response_manager):
-        super().__init__(client, 'define', aliases=['d'], description='Gets the definition of a word.', usage='<word>')
+        super().__init__(client, 'define', aliases=['d'], description='Gets the definition of a word and optionally reads it out to you.', usage='[-v] <word>')
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):
