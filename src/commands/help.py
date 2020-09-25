@@ -10,7 +10,8 @@ class HelpCommand(Command):
     def execute(self, message: discord.Message, args: tuple):
         reply = '__Available Commands__\n'
         for command in self.client.commands:
-            reply += f'**{command.name}** {command.usage}\n'
-            reply += f'        {command.description}\n'
+            if not command.secret:
+                reply += f'**{command.name}** {command.usage}\n'
+                reply += f'        {command.description}\n'
 
         self.sync(message.channel.send(reply))
