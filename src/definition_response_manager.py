@@ -159,14 +159,14 @@ class MessageQueue:
         response = get_definition(word)
         print('RESPONSE:', response, response.content)
         if response.status_code != 200:
-            self._client.sync(utils.send(f'__**{word}**__\nI don\'t know that word.', message.channel))
+            self._client.sync(utils.send_split(f'__**{word}**__\nI don\'t know that word.', message.channel))
             return
 
         try:
             definitions = response.json()
             print('DEFINITIONS:', definitions)
         except ValueError:
-            self._client.sync(utils.send(f'There was a problem finding that word.', message.channel))
+            self._client.sync(utils.send_split(f'__**{word}**__\nThere was a problem finding word.', message.channel))
             return
 
         # Create text channel reply
@@ -200,8 +200,7 @@ class MessageQueue:
             print('URLS:', urls)
 
         # Send text chat reply
-        self._client.sync(utils.send(reply, message.channel))
-
+        self._client.sync(utils.send_split(reply, message.channel))
 
         # Send voice channel reply
         if voice_channel is not None:

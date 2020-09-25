@@ -15,4 +15,4 @@ class HelpCommand(Command):
                 reply += f'**{command.name}** {command.usage}\n'
                 reply += f'        {command.description}\n'
 
-        self.client.sync(utils.send(reply, message.channel))
+        self.client.sync(utils.send_split(reply, message.channel))

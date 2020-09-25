@@ -13,7 +13,7 @@ class DefineCommand(Command):
         text_to_speech = len(args) > 1 and args[0] == '-v'
 
         # Extract word from command
-        word = ' '.join(args[int(text_to_speech):])
+        word = ' '.join(args[int(text_to_speech):]).strip()
 
         # Add request to queue
         self._definition_response_manager.add(word, message, reverse=False, text_to_speech=text_to_speech)
