@@ -12,8 +12,7 @@ from commands.define_backwards import DefineReverseCommand
 
 from definition_response_manager import DefinitionResponseManager
 
-PROJECT_ROOT = pathlib.Path('../')
-TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
+TOKEN_FILE_PATH = pathlib.Path('../token.txt')
 FFMPEG_EXE_PATH = None  # Set by argparse
 
 PREFIX = '.'
@@ -21,8 +20,8 @@ PREFIX = '.'
 
 class DictionaryBotClient(discord.Client):
 
-    def __init__(self, *, loop=None, **options):
-        super().__init__(loop=loop, **options)
+    def __init__(self):
+        super().__init__()
         self._definition_response_manager = DefinitionResponseManager(self, FFMPEG_EXE_PATH)
         self._commands = [
             HelpCommand(self),
