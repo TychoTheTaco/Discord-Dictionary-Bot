@@ -210,7 +210,7 @@ class MessageQueue:
             # Speak
             try:
                 for url in urls:
-                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path)))
+                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path), options='-loglevel panic'))
                     while voice_client.is_playing():
                         time.sleep(1)
             except discord.errors.ClientException:
