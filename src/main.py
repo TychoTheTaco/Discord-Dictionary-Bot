@@ -28,7 +28,7 @@ class DictionaryBotClient(discord.Client):
         self._commands = [
             HelpCommand(self),
             DefineCommand(self, self._definition_response_manager),
-            StopCommand(self)
+            StopCommand(self, self._definition_response_manager)
         ]
 
     @property

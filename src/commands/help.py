@@ -1,6 +1,5 @@
 from commands.command import Command
 import discord
-import asyncio
 
 
 class HelpCommand(Command):
@@ -14,4 +13,4 @@ class HelpCommand(Command):
             reply += f'**{command.name}** {command.usage}\n'
             reply += f'        {command.description}\n'
 
-        asyncio.run_coroutine_threadsafe(message.channel.send(reply), self.client.loop)
+        self.sync(message.channel.send(reply))
