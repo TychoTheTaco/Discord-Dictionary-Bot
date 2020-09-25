@@ -25,3 +25,8 @@ Aliases: `h`<br>
 
 ## Screenshots
 ![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
+
+### Credits
+#### Dictionary icon
+This icon was modified from the [original](https://thenounproject.com/term/dictionary/653775/).<br>
+`dictionary by Oriol Sallés from the Noun Project`
