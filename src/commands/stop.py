@@ -9,4 +9,4 @@ class StopCommand(Command):
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):
-        self.sync(self._definition_response_manager.clear(message.channel))
+        self.client.sync(self._definition_response_manager.clear(message.channel))

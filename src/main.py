@@ -1,6 +1,9 @@
 import discord
 import pathlib
 import argparse
+import asyncio
+
+import utils
 
 from commands.help import HelpCommand
 from commands.define import DefineCommand
@@ -14,11 +17,6 @@ TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
 FFMPEG_EXE_PATH = None  # Set by argparse
 
 PREFIX = '.'
-
-
-def get_token(path='token.txt'):
-    with open(path) as file:
-        return file.read()
 
 
 class DictionaryBotClient(discord.Client):
@@ -50,22 +48,13 @@ class DictionaryBotClient(discord.Client):
         if not message.content.startswith(PREFIX):
             return
 
-        # Parse command
+        # Parse input
         command_input = message.content[1:].lower().split(' ')
 
+        # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
                 command.execute(message, command_input[1:])
-                # elif command._name == 'define':
-                #     # Extract word from command
-                #     word = ' '.join(command_input[1:])
-                #
-                #     # Add word to the queue
-                #     text_to_speech = len(command_input[0]) == 2 and command_input[0][1] == 'v'
-                #     self._definition_response_manager.add(word, message, command_input[0][0] == 'b', text_to_speech=text_to_speech)
-                # elif command._name == 'stop':
-                #     # Clear word queue
-                #     await self._definition_response_manager.clear(message.channel)
                 break
 
         print('Ready.')
@@ -90,6 +79,13 @@ class DictionaryBotClient(discord.Client):
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
 
+    def sync(self, coroutine):
+        """
+        Submit a coroutine to the client's event loop.
+        :param coroutine:
+        """
+        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+
 
 if __name__ == '__main__':
 
@@ -106,6 +102,6 @@ if __name__ == '__main__':
 
     # Start client
     if args.token is None:
-        client.run(get_token(path='../token.txt'))
+        client.run(utils.get_token(path='../token.txt'))
     else:
         client.run(args.token)
