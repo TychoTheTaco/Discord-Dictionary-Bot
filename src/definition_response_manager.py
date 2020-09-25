@@ -182,7 +182,7 @@ class MessageQueue:
                 definition_text = definition_text[::-1]
 
             reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
-            tts_input += f'{i + 1}, {word_type}, {definition_text}'
+            tts_input += f' {i + 1}, {word_type}, {definition_text}'
 
         # Generate text-to-speech
         if text_to_speech:

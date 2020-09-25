@@ -5,6 +5,7 @@ import argparse
 from commands.help import HelpCommand
 from commands.define import DefineCommand
 from commands.stop import StopCommand
+from commands.define_backwards import DefineReverseCommand
 
 from definition_response_manager import DefinitionResponseManager
 
@@ -28,6 +29,7 @@ class DictionaryBotClient(discord.Client):
         self._commands = [
             HelpCommand(self),
             DefineCommand(self, self._definition_response_manager),
+            DefineReverseCommand(self, self._definition_response_manager),
             StopCommand(self, self._definition_response_manager)
         ]
 
