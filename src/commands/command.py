@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import discord
+import asyncio
 
 
 class Command(ABC):
@@ -37,3 +38,10 @@ class Command(ABC):
     @abstractmethod
     def execute(self, message: discord.Message, args: tuple):
         pass
+
+    def sync(self, coroutine):
+        """
+        Submit a coroutine to the client's event loop.
+        :param coroutine:
+        """
+        asyncio.run_coroutine_threadsafe(coroutine, self.client.loop)
