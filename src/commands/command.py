@@ -4,11 +4,16 @@ import discord
 
 class Command(ABC):
 
-    def __init__(self, name, aliases=None, description='', usage=''):
+    def __init__(self, client: discord.client, name, aliases=None, description='', usage=''):
+        self._client = client
         self._name = name
         self._aliases = [] if aliases is None else aliases
         self._description = description
         self._usage = usage
+
+    @property
+    def client(self):
+        return self._client
 
     @property
     def name(self):
@@ -30,12 +35,5 @@ class Command(ABC):
         return string in [self._name] + self._aliases
 
     @abstractmethod
-    def execute(self, client: discord.client, message: discord.Message, args: tuple):
-        """
-        Execute this command with the specified arguments.
-        :param client: The discord client that this command is executing in.
-        :param message: The message that triggered this command.
-        :param args: Arguments for this command.
-        :return:
-        """
+    def execute(self, message: discord.Message, args: tuple):
         pass

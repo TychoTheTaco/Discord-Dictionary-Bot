@@ -6,6 +6,8 @@ from commands.help import HelpCommand
 from commands.define import DefineCommand
 from commands.stop import StopCommand
 
+from definition_response_manager import DefinitionResponseManager
+
 PROJECT_ROOT = pathlib.Path('../')
 TOKEN_FILE_PATH = pathlib.Path(PROJECT_ROOT, 'token.txt')
 FFMPEG_EXE_PATH = None  # Set by argparse
@@ -22,10 +24,11 @@ class DictionaryBotClient(discord.Client):
 
     def __init__(self, *, loop=None, **options):
         super().__init__(loop=loop, **options)
+        self._definition_response_manager = DefinitionResponseManager(self, FFMPEG_EXE_PATH)
         self._commands = [
-            HelpCommand(),
-            DefineCommand(FFMPEG_EXE_PATH),
-            StopCommand()
+            HelpCommand(self),
+            DefineCommand(self, self._definition_response_manager),
+            StopCommand(self)
         ]
 
     @property
@@ -50,7 +53,7 @@ class DictionaryBotClient(discord.Client):
 
         for command in self._commands:
             if command.matches(command_input[0]):
-                command.execute(self, message, command_input[1:])
+                command.execute(message, command_input[1:])
                 # elif command._name == 'define':
                 #     # Extract word from command
                 #     word = ' '.join(command_input[1:])
