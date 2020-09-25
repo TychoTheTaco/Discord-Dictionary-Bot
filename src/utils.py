@@ -30,9 +30,6 @@ def find_active_formatting(message):
     active = []
     p = ''
     a = 0
-    bold = False
-    italics = False
-    underline = False
     for i, c in enumerate(message):
 
         # Detect bold/italics
@@ -107,14 +104,11 @@ def split_formatting(message: str, split_size=30):
                 code += '__'
 
         if len(code) > 0:
-            #print(len(code), 'extra chars required')
             if len(m) + len(code) <= split_size:
                 m += code
             else:
                 a = m[:-len(code)]
                 b = m[-len(code):]
-                #print('A:', a)
-                #print('B:', b)
                 m = a + code
                 message = code[::-1] + b + message
         messages.append(m)
