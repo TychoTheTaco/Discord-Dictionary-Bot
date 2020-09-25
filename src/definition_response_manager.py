@@ -6,6 +6,7 @@ from gtts import gTTS
 import discord
 import pathlib
 import requests
+import utils
 
 
 def get_definition(word):
@@ -158,14 +159,14 @@ class MessageQueue:
         response = get_definition(word)
         print('RESPONSE:', response, response.content)
         if response.status_code != 200:
-            asyncio.run_coroutine_threadsafe(message.channel.send(f'__**{word}**__\nI don\'t know that word.'), self._client.loop)
+            self._client.sync(utils.send(f'__**{word}**__\nI don\'t know that word.', message.channel))
             return
 
         try:
             definitions = response.json()
             print('DEFINITIONS:', definitions)
         except ValueError:
-            asyncio.run_coroutine_threadsafe(message.channel.send('There was a problem finding that word.'), self._client.loop)
+            self._client.sync(utils.send(f'There was a problem finding that word.', message.channel))
             return
 
         # Create text channel reply
@@ -199,13 +200,14 @@ class MessageQueue:
             print('URLS:', urls)
 
         # Send text chat reply
-        asyncio.run_coroutine_threadsafe(message.channel.send(reply), self._client.loop)
+        self._client.sync(utils.send(reply, message.channel))
+
 
         # Send voice channel reply
         if voice_channel is not None:
 
             # Join voice channel
-            voice_client = asyncio.run_coroutine_threadsafe(self._client.join_voice_channel(voice_channel), self._client.loop).result()
+            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
 
             # Speak
             try:

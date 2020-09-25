@@ -1,5 +1,6 @@
 from commands.command import Command
 import discord
+import utils
 
 
 class HelpCommand(Command):
@@ -14,4 +15,4 @@ class HelpCommand(Command):
                 reply += f'**{command.name}** {command.usage}\n'
                 reply += f'        {command.description}\n'
 
-        self.sync(message.channel.send(reply))
+        self.client.sync(utils.send(reply, message.channel))
