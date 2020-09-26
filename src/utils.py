@@ -19,14 +19,14 @@ async def send_split(message: str, channel: discord.TextChannel, split_size=2000
         await channel.send(m)
 
 
-FORMATTING_TAGS = [
-    ('*', 'italics'),
-    ('**', 'bold'),
-    ('__', 'underline'),
-]
-
-
 def find_active_formatting(message):
+    """
+    Italics: * or _
+    Bold: **
+    Underline: __
+    :param message:
+    :return:
+    """
     active = []
     p = ''
     a = 0
@@ -37,12 +37,9 @@ def find_active_formatting(message):
             if p == '*':
                 if 'bold' not in active:
                     active.append('bold')
-                    #print('BOLD START', i)
-                    a = i
                 else:
                     active.remove('bold')
-                    #print('BOLD END', i)
-                    a = i
+                a = i
         elif p == '*':
             if 'italics' not in active and i - 1 != a:
                 active.append('italics')
@@ -57,12 +54,9 @@ def find_active_formatting(message):
             if p == '_':
                 if 'underline' not in active:
                     active.append('underline')
-                    #print('UNDERLINE START', i)
-                    a = i
                 else:
                     active.remove('underline')
-                    #print('UNDERLINE END', i)
-                    a = i
+                a = i
         elif p == '_':
             if 'italics' not in active and i - 1 != a:
                 active.append('italics')
