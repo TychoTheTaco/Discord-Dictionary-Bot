@@ -8,23 +8,23 @@ Default command prefix: `.`<br>
 ### Commands
 **define**<br>
 Usage: `define [-v] <word>`<br>
-Description: Prints the definition of a word in the current text channel and optionally reads it out for you.<br>
+Prints the definition of a word in the current text channel and optionally reads it out for you.<br>
 Aliases: `d`<br>
 Options:<br>
 `-v`: Read out the definition to the voice channel you are connected to, if any.<br>
 
 **stop**<br>
 Usage: `stop`<br>
-Description: Makes this bot stop talking and removes any queued definition requests.<br>
+Makes this bot stop talking and removes any queued definition requests.<br>
 Aliases: `s`<br>
 
 **help**<br>
-`help`<br>
+Usage: `help`<br>
 Shows available commands.<br>
 Aliases: `h`<br>
 
 **next**<br>
-`next`<br>
+Usage: `next`<br>
 If the bot is currently reading out a definition, this will make it skip to the next one.<br>
 Aliases: `n`<br>
 
