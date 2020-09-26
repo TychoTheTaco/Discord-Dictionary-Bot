@@ -23,6 +23,11 @@ Aliases: `s`<br>
 Shows available commands.<br>
 Aliases: `h`<br>
 
+**next**<br>
+`next`<br>
+If the bot is currently reading out a definition, this will make it skip to the next one.<br>
+Aliases: `n`<br>
+
 ## Screenshots
 ![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
