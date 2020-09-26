@@ -13,6 +13,6 @@ class HelpCommand(Command):
         for command in self.client.commands:
             if not command.secret:
                 reply += f'**{command.name}** {command.usage}\n'
-                reply += f'        {command.description}\n'
+                reply += f'{command.description}\n'
 
         self.client.sync(utils.send_split(reply, message.channel))

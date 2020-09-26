@@ -56,9 +56,10 @@ class DictionaryBotClient(discord.Client):
         for command in self._commands:
             if command.matches(command_input[0]):
                 command.execute(message, command_input[1:])
-                break
+                return
 
-        print('Ready.')
+        # Send invalid command message
+        await utils.send_split(f'Unrecognized command. Use `{PREFIX + HelpCommand(self).name}` to see available commands.', message.channel)
 
     def get_voice_client(self, voice_channel: discord.VoiceChannel):
         for voice_client in self.voice_clients:
