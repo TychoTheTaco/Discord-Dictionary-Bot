@@ -9,6 +9,7 @@ from commands.help import HelpCommand
 from commands.define import DefineCommand
 from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
+from commands.next import NextCommand
 
 from definition_response_manager import DefinitionResponseManager
 
@@ -27,7 +28,8 @@ class DictionaryBotClient(discord.Client):
             HelpCommand(self),
             DefineCommand(self, self._definition_response_manager),
             DefineReverseCommand(self, self._definition_response_manager),
-            StopCommand(self, self._definition_response_manager)
+            StopCommand(self, self._definition_response_manager),
+            NextCommand(self, self._definition_response_manager)
         ]
 
     @property
@@ -57,6 +59,12 @@ class DictionaryBotClient(discord.Client):
                 break
 
         print('Ready.')
+
+    def get_voice_client(self, voice_channel: discord.VoiceChannel):
+        for voice_client in self.voice_clients:
+            if voice_client.channel == voice_channel:
+                return voice_client
+        return None
 
     async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceClient:
         """

@@ -17,7 +17,7 @@ class DefinitionResponseManager:
 
     def __init__(self, client: discord.Client, ffmpeg_path: pathlib.Path):
         """
-        This class is responsible for responding to user requests for definitions.
+        This class is responsible for managing definition requests. It decides which queue to add the request to and it keeps track of which voice channels need to remain connected.
         """
         self._client = client
         self._ffmpeg_path = ffmpeg_path
@@ -85,10 +85,33 @@ class DefinitionResponseManager:
 
         await text_channel.send('Ok, i\'ll be quiet.')
 
+    def next(self, message):
+        voice_state = message.author.voice
+        voice_channel = voice_state.channel if voice_state is not None else None
+
+        # Check if user is in a voice channel
+        if voice_channel is None:
+            self._client.sync(utils.send_split('You must be in a voice channel to use that command.', message.channel))
+            return
+
+        # Find the message queue that is using the voice channel
+        for message_queue in self._request_queues.values():
+            if message_queue._voice_channel == voice_channel:
+                message_queue.next()
+                return
+
+        #
+        self._client.sync(utils.send_split(f'There are no more words in the queue.', message.channel))
+
 
 class MessageQueue:
 
     def __init__(self, client, ffmpeg_path):
+        """
+        This class represents a single request queue. These are created by the DefinitionResponseManager.
+        :param client:
+        :param ffmpeg_path:
+        """
         self._ffmpeg_path = ffmpeg_path
         self._client = client
         self._queue = collections.deque()
@@ -98,6 +121,10 @@ class MessageQueue:
 
         # The voice channel that we are currently connected to
         self._voice_channel = None
+        self._voice_client = None
+        self._voice_lock = threading.Lock()
+
+        self._speaking = True
 
     def add(self, word, message, reverse=False, text_to_speech=False):
         self._lock.acquire()
@@ -205,16 +232,26 @@ class MessageQueue:
         if voice_channel is not None:
 
             # Join voice channel
+            self._voice_lock.acquire()
             voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+            self._voice_client = voice_client
+            self._voice_lock.release()
 
             # Speak
             try:
                 for url in urls:
                     voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path), options='-loglevel panic'))
-                    while voice_client.is_playing():
+                    while voice_client.is_playing() and self._speaking:
                         time.sleep(1)
+                    if not self._speaking:
+                        self._speaking = True
+                        voice_client.stop()
+                        self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
+                        break
             except discord.errors.ClientException:
                 pass
+
+        self._voice_channel = None
 
     def clear(self):
         self._queue.clear()
@@ -222,6 +259,9 @@ class MessageQueue:
     async def stop(self):
         self.clear()
         await self._client.leave_voice_channel(self._voice_channel)
+
+    def next(self):
+        self._speaking = False
 
     def __repr__(self):
         return str(self._queue)
