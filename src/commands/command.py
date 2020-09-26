@@ -5,6 +5,15 @@ import discord
 class Command(ABC):
 
     def __init__(self, client: discord.client, name, aliases=None, description='', usage='', secret=False):
+        """
+        This is the base class for commands.
+        :param client: The client this command is attached to.
+        :param name: The name of this command. This is the name the bot will react to.
+        :param aliases: Aliases that the bot will also react to for this command.
+        :param description: A description of the command that shows up in the help message.
+        :param usage: A usage description that shows up in the help message.
+        :param secret: If this command is secret, it will not show up in the help message.
+        """
         self._client = client
         self._name = name
         self._aliases = [] if aliases is None else aliases
