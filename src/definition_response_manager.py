@@ -13,6 +13,16 @@ def get_definition(word):
     return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
 
 
+class DefinitionRequest:
+
+    def __init__(self, word, message, reverse=False, text_to_speech=False, language='en-us'):
+        self.word = word
+        self.message = message
+        self.reverse = reverse
+        self.text_to_speech = text_to_speech
+        self.language = language
+
+
 class DefinitionResponseManager:
 
     def __init__(self, client: discord.Client, ffmpeg_path: pathlib.Path):
@@ -31,7 +41,7 @@ class DefinitionResponseManager:
         # Lock used to synchronize 'self._voice_channels'
         self._lock = threading.Lock()
 
-    def add(self, word, message: discord.Message, reverse=False, text_to_speech=False):
+    def add(self, definition_request: DefinitionRequest):
         """
         Add a request
         :param word:
@@ -40,15 +50,17 @@ class DefinitionResponseManager:
         :param text_to_speech:
         :return:
         """
+        message = definition_request.message
         text_channel = message.channel
 
         # Add request to queue
         if text_channel not in self._request_queues:
             self._request_queues[text_channel] = MessageQueue(self._client, self._ffmpeg_path)
-        self._request_queues[text_channel].add(word, message, reverse=reverse, text_to_speech=text_to_speech)
+
+        self._request_queues[text_channel].add(definition_request)
 
         # Add voice channel
-        if text_to_speech:
+        if definition_request.text_to_speech:
             voice_state = message.author.voice
             voice_channel = None if voice_state is None else voice_state.channel
             if voice_channel is not None:
@@ -126,9 +138,9 @@ class MessageQueue:
 
         self._speaking = True
 
-    def add(self, word, message, reverse=False, text_to_speech=False):
+    def add(self, definition_request: DefinitionRequest):
         self._lock.acquire()
-        self._queue.append((word, message, reverse, text_to_speech))
+        self._queue.append(definition_request)
         self._condition.notify()
         self._lock.release()
 
@@ -146,16 +158,16 @@ class MessageQueue:
             print('Processing', len(self._queue), 'items')
 
             while len(self._queue) > 0:
-                word, message, reverse, text_to_speech = self._queue.popleft()
+                definition_request = self._queue.popleft()
 
-                if text_to_speech:
-                    voice_state = message.author.voice
+                if definition_request.text_to_speech:
+                    voice_state = definition_request.message.author.voice
                     voice_channel = None if voice_state is None else voice_state.channel
                 else:
                     voice_channel = None
                 self._voice_channel = voice_channel
 
-                self._process_definition_request(word, message, reverse=reverse, text_to_speech=text_to_speech)
+                self._process_definition_request(definition_request)
 
                 #async def f():
                 #    async with message.channel.typing():
@@ -174,7 +186,7 @@ class MessageQueue:
 
             print('Finished queue')
 
-    def _process_definition_request(self, word, message, reverse=False, text_to_speech=False):
+    def _process_definition_request(self, definition_request: DefinitionRequest):
         """
 
             :param word:
@@ -182,6 +194,12 @@ class MessageQueue:
             :param reverse:
             :return:
             """
+        word = definition_request.word
+        message = definition_request.message
+        reverse = definition_request.reverse
+        text_to_speech = definition_request.text_to_speech
+        language = definition_request.language
+
         # Get definitions
         response = get_definition(word)
         print('RESPONSE:', response, response.content)
@@ -221,7 +239,11 @@ class MessageQueue:
         if voice_channel is not None:
             # Create text to speech mp3
             print(tts_input)
-            tts = gTTS(tts_input)
+            try:
+                tts = gTTS(tts_input, lang=language)
+            except ValueError:
+                self._client.sync(utils.send_split(f'That language is not supported.', message.channel))
+                return
             urls = tts.get_urls()
             print('URLS:', urls)
 

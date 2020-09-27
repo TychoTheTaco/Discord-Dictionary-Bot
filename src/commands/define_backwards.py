@@ -1,5 +1,7 @@
 from commands.command import Command
 import discord
+import argparse
+from definition_response_manager import DefinitionRequest
 import utils
 
 
@@ -10,15 +12,18 @@ class DefineReverseCommand(Command):
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):
-        if len(args) == 0:
+        try:
+            parser = argparse.ArgumentParser()
+            parser.add_argument('word', nargs='+')
+            parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
+            parser.add_argument('-lang', dest='language')
+            args = parser.parse_args(args)
+        except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
             return
 
-        # Check for text to speech option
-        text_to_speech = len(args) > 1 and args[0] == '-v'
-
-        # Extract word from command
-        word = ' '.join(args[int(text_to_speech):]).strip()
+        # Extract word from arguments
+        word = ' '.join(args.word)
 
         # Add request to queue
-        self._definition_response_manager.add(word, message, reverse=True, text_to_speech=text_to_speech)
+        self._definition_response_manager.add(DefinitionRequest(word, message, reverse=True, text_to_speech=args.text_to_speech, language=args.language))
