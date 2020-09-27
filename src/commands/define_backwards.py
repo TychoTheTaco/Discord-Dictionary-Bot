@@ -1,5 +1,6 @@
 from commands.command import Command
 import discord
+import utils
 
 
 class DefineReverseCommand(Command):
@@ -9,6 +10,10 @@ class DefineReverseCommand(Command):
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):
+        if len(args) == 0:
+            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
+            return
+
         # Check for text to speech option
         text_to_speech = len(args) > 1 and args[0] == '-v'
 
