@@ -7,11 +7,12 @@ Default command prefix: `.`<br>
 
 ### Commands
 **define**<br>
-Usage: `define [-v] <word>`<br>
+Usage: `define [-v] [-lang <language_code>] <word>`<br>
 Prints the definition of a word in the current text channel and optionally reads it out for you.<br>
 Aliases: `d`<br>
 Options:<br>
 `-v`: Read out the definition to the voice channel you are connected to, if any.<br>
+`-lang <language_code>`: Specify the language to use for text-to-speech.<br>
 
 **stop**<br>
 Usage: `stop`<br>
