@@ -302,33 +302,7 @@ class MessageQueue:
             voice_channel = None
 
         if voice_channel is not None:
-            # Instantiates a client
-            client = texttospeech.TextToSpeechClient()
-
-            # Set the text input to be synthesized
-            print(tts_input)
-            synthesis_input = texttospeech.SynthesisInput(text=tts_input)
-
-            # Build the voice request, select the language code ("en-US") and the ssml
-            # voice gender ("neutral")
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
-            )
-
-            # Select the type of audio file you want returned
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.LINEAR16,
-                sample_rate_hertz=48000
-            )
-
-            # Perform the text-to-speech request on the text input with the selected
-            # voice parameters and audio file type
-            response = client.synthesize_speech(
-                input=synthesis_input, voice=voice, audio_config=audio_config
-            )
-
-            file = io.BytesIO()
-            file.write(response.audio_content)
+            chunks = self.text_to_speech_pcm(tts_input)
 
         # Send text chat reply
         self._client.sync(utils.send_split(reply, message.channel))
@@ -343,14 +317,17 @@ class MessageQueue:
             self._voice_lock.release()
 
             # Speak
-            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
+            for chunk in chunks:
+                file = io.BytesIO()
+                file.write(chunk)
+                voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
 
-            while voice_client.is_playing() and self._speaking:
-                time.sleep(1)
-            if not self._speaking:
-                self._speaking = True
-                voice_client.stop()
-                self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
+                while voice_client.is_playing() and self._speaking:
+                    time.sleep(1)
+                if not self._speaking:
+                    self._speaking = True
+                    voice_client.stop()
+                    self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
 
         self._voice_channel = None
 
@@ -366,6 +343,41 @@ class MessageQueue:
 
     def __repr__(self):
         return str(self._queue)
+
+    def text_to_speech_pcm(self, text):
+        # Instantiates a client
+        client = texttospeech.TextToSpeechClient()
+
+        # Build the voice request, select the language code ("en-US") and the ssml
+        # voice gender ("neutral")
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+        )
+
+        # Select the type of audio file you want returned
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.LINEAR16,
+            sample_rate_hertz=48000
+        )
+
+        content = []
+
+        messages = split(text, 500)
+        for message in messages:
+            print('PROCESS:', message)
+
+            # Set the text input to be synthesized
+            synthesis_input = texttospeech.SynthesisInput(text=message)
+
+            # Perform the text-to-speech request on the text input with the selected
+            # voice parameters and audio file type
+            response = client.synthesize_speech(
+                input=synthesis_input, voice=voice, audio_config=audio_config
+            )
+
+            content.append(response.audio_content)
+
+        return content
 
 
 class BytesIOPCMAudio(discord.PCMAudio):
@@ -388,3 +400,25 @@ class BytesIOPCMAudio(discord.PCMAudio):
     def sp(self):
         self._process.stdin.write(self._source.getvalue())
         self._process.stdin.close()
+
+
+def split(message, split_size):
+    messages = []
+    while len(message) > 0:
+
+        # Find closest space before 'split_size' limit
+        if len(message) > split_size:
+            space_index = split_size
+            while message[space_index] != ' ':
+                space_index -= 1
+        else:
+            space_index = len(message)
+
+        # Add chunk to message list
+        m = message[:space_index]
+        messages.append(m)
+
+        # Remove chunk from message
+        message = message[space_index:]
+
+    return messages
