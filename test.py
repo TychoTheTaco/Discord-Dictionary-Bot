@@ -1,14 +1,8 @@
-import utils
 
+def split(string, split_size):
+    pass
 
 if __name__ == '__main__':
-    #message = '**__w*o*wza**'
-    #active = utils.format(message)
-    #print(active)
-
-    message = '**this is some *strangely* formatted** string that is supposed to be pretty __long__ so it'
-    print(utils.split_formatting(message))
-    #split = utils.split(message, 30)
-    #print(split)
-
-    #utils.format_all(split)
+    text = 'This is a really long message that needs to be split on spaces so that the text to speech synthesizer can process it correctly. It needs to be split into chunks preferably by sentences to there arent any weird pauses.'
+    result = split(text, 40)
+    print(result)

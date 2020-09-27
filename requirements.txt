@@ -3,3 +3,4 @@ requests
 pyNaCl
 gTTS
 google-cloud-firestore
+google-cloud-texttospeech
