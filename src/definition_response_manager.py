@@ -2,11 +2,13 @@ import asyncio
 import collections
 import threading
 import time
-from gtts import gTTS
+import io
 import discord
 import pathlib
 import requests
 import utils
+from google.cloud import texttospeech
+import subprocess
 
 
 def get_definition(word):
@@ -157,10 +159,10 @@ class MessageQueue:
 
                 self._process_definition_request(word, message, reverse=reverse, text_to_speech=text_to_speech)
 
-                #async def f():
+                # async def f():
                 #    async with message.channel.typing():
                 #        self._client.process_definition_request(word, message, reverse=reverse)
-                #asyncio.run_coroutine_threadsafe(f(), self._client.loop)
+                # asyncio.run_coroutine_threadsafe(f(), self._client.loop)
 
                 if voice_channel is not None:
                     self._client._definition_response_manager._lock.acquire()
@@ -170,7 +172,6 @@ class MessageQueue:
                     # If we don't need this voice channel anymore, disconnect from it
                     if self._client._definition_response_manager._voice_channels[voice_channel] == 0:
                         asyncio.run_coroutine_threadsafe(self._client.leave_voice_channel(voice_channel), self._client.loop)
-
 
             print('Finished queue')
 
@@ -219,11 +220,33 @@ class MessageQueue:
             voice_channel = None
 
         if voice_channel is not None:
-            # Create text to speech mp3
+            # Instantiates a client
+            client = texttospeech.TextToSpeechClient()
+
+            # Set the text input to be synthesized
             print(tts_input)
-            tts = gTTS(tts_input)
-            urls = tts.get_urls()
-            print('URLS:', urls)
+            synthesis_input = texttospeech.SynthesisInput(text=tts_input)
+
+            # Build the voice request, select the language code ("en-US") and the ssml
+            # voice gender ("neutral")
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+            )
+
+            # Select the type of audio file you want returned
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.LINEAR16,
+                sample_rate_hertz=48000
+            )
+
+            # Perform the text-to-speech request on the text input with the selected
+            # voice parameters and audio file type
+            response = client.synthesize_speech(
+                input=synthesis_input, voice=voice, audio_config=audio_config
+            )
+
+            file = io.BytesIO()
+            file.write(response.audio_content)
 
         # Send text chat reply
         self._client.sync(utils.send_split(reply, message.channel))
@@ -238,18 +261,14 @@ class MessageQueue:
             self._voice_lock.release()
 
             # Speak
-            try:
-                for url in urls:
-                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path), options='-loglevel panic'))
-                    while voice_client.is_playing() and self._speaking:
-                        time.sleep(1)
-                    if not self._speaking:
-                        self._speaking = True
-                        voice_client.stop()
-                        self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
-                        break
-            except discord.errors.ClientException:
-                pass
+            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
+
+            while voice_client.is_playing() and self._speaking:
+                time.sleep(1)
+            if not self._speaking:
+                self._speaking = True
+                voice_client.stop()
+                self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
 
         self._voice_channel = None
 
@@ -265,3 +284,25 @@ class MessageQueue:
 
     def __repr__(self):
         return str(self._queue)
+
+
+class BytesIOPCMAudio(discord.PCMAudio):
+
+    def __init__(self, source, executable='ffmpeg'):
+        self._source = source
+
+        # Start ffmpeg process
+        self._process = subprocess.Popen(
+            [executable, '-y', '-i', 'pipe:0', '-ac', '2', '-f', 's16le', 'pipe:1', '-loglevel', 'panic'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+
+        # Start writing data to process stdin
+        threading.Thread(target=self.sp).start()
+
+        super().__init__(self._process.stdout)
+
+    def sp(self):
+        self._process.stdin.write(self._source.getvalue())
+        self._process.stdin.close()
