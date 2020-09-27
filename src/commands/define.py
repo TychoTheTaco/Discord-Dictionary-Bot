@@ -8,7 +8,7 @@ import utils
 class DefineCommand(Command):
 
     def __init__(self, client: discord.Client, definition_response_manager):
-        super().__init__(client, 'define', aliases=['d'], description='Gets the definition of a word and optionally reads it out to you.', usage='[-v] <word>')
+        super().__init__(client, 'define', aliases=['d'], description='Gets the definition of a word and optionally reads it out to you.', usage='[-v] [-lang <language_code>] <word>')
         self._definition_response_manager = definition_response_manager
 
     def execute(self, message: discord.Message, args: tuple):
@@ -17,6 +17,7 @@ class DefineCommand(Command):
             parser.add_argument('word', nargs='+')
             parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
             parser.add_argument('-lang', '-l', dest='language')
+            
             args = parser.parse_args(args)
         except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
