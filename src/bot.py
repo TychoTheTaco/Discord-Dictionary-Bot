@@ -8,6 +8,7 @@ from commands.define import DefineCommand
 from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
 from commands.next import NextCommand
+from commands.lang_list import LangListCommand
 
 from definition_response_manager import DefinitionResponseManager
 
@@ -27,7 +28,8 @@ class DictionaryBotClient(discord.Client):
             DefineCommand(self, self._definition_response_manager),
             DefineReverseCommand(self, self._definition_response_manager),
             StopCommand(self, self._definition_response_manager),
-            NextCommand(self, self._definition_response_manager)
+            NextCommand(self, self._definition_response_manager),
+            LangListCommand(self)
         ]
 
     @property

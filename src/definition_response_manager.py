@@ -238,14 +238,14 @@ class MessageQueue:
 
         if voice_channel is not None:
             # Create text to speech mp3
-            print(tts_input)
+            #print(tts_input)
             try:
                 tts = gTTS(tts_input, lang=language)
             except ValueError:
                 self._client.sync(utils.send_split(f'That language is not supported.', message.channel))
                 return
             urls = tts.get_urls()
-            print('URLS:', urls)
+            #print('URLS:', urls)
 
         # Send text chat reply
         self._client.sync(utils.send_split(reply, message.channel))
