@@ -32,39 +32,48 @@ def find_active_formatting(message):
     a = 0
     for i, c in enumerate(message):
 
-        # Detect bold/italics
-        if c == '*':
-            if p == '*':
-                if 'bold' not in active:
-                    active.append('bold')
-                else:
-                    active.remove('bold')
-                a = i
-        elif p == '*':
-            if 'italics' not in active and i - 1 != a:
-                active.append('italics')
-                #print('italics START', i - 1)
-                a = i - 1
-            elif 'italics' in active:
-                active.remove('italics')
-                #print('italics END', i - 1)
+        # Detect code block
+        if c == '`':
+            if 'code' not in active:
+                active.append('code')
+            else:
+                active.remove('code')
+            a = i
 
-        # Detect underline/italics
-        if c == '_':
-            if p == '_':
-                if 'underline' not in active:
-                    active.append('underline')
-                else:
-                    active.remove('underline')
-                a = i
-        elif p == '_':
-            if 'italics' not in active and i - 1 != a:
-                active.append('italics')
-                #print('italics START', i - 1)
-                a = i - 1
-            elif 'italics' in active:
-                active.remove('italics')
-                #print('italics END', i - 1)
+        if 'code' not in active:
+            # Detect bold/italics
+            if c == '*':
+                if p == '*':
+                    if 'bold' not in active:
+                        active.append('bold')
+                    else:
+                        active.remove('bold')
+                    a = i
+            elif p == '*':
+                if 'italics' not in active and i - 1 != a:
+                    active.append('italics')
+                    #print('italics START', i - 1)
+                    a = i - 1
+                elif 'italics' in active:
+                    active.remove('italics')
+                    #print('italics END', i - 1)
+
+            # Detect underline/italics
+            if c == '_':
+                if p == '_':
+                    if 'underline' not in active:
+                        active.append('underline')
+                    else:
+                        active.remove('underline')
+                    a = i
+            elif p == '_':
+                if 'italics' not in active and i - 1 != a:
+                    active.append('italics')
+                    #print('italics START', i - 1)
+                    a = i - 1
+                elif 'italics' in active:
+                    active.remove('italics')
+                    #print('italics END', i - 1)
 
         p = c
     return active

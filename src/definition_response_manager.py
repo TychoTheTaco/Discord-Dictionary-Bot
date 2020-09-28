@@ -7,6 +7,7 @@ import discord
 import pathlib
 import requests
 import utils
+import re
 
 
 def get_definition(word):
@@ -186,6 +187,49 @@ class MessageQueue:
 
             print('Finished queue')
 
+    def say(self, text: str, text_channel: discord.TextChannel, voice_channel=None, language='en-us', tts_input=None):
+
+        # Remove invalid characters for text-to-speech
+        if tts_input is None:
+            tts_input = re.sub(r'[^A-Za-z0-9 \\.,]+', '', text)
+
+        # Generate text to speech
+        if voice_channel is not None:
+            try:
+                tts = gTTS(tts_input, lang=language)
+            except ValueError:
+                self._client.sync(utils.send_split(f'That language is not supported.', text_channel))
+                return
+            urls = tts.get_urls()
+
+        # Send text chat reply
+        self._client.sync(utils.send_split(text, text_channel))
+
+        # Send voice channel reply
+        if voice_channel is not None:
+
+            # Join voice channel
+            self._voice_lock.acquire()
+            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+            self._voice_client = voice_client
+            self._voice_lock.release()
+
+            # Speak
+            try:
+                for url in urls:
+                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path), options='-loglevel panic'))
+                    while voice_client.is_playing() and self._speaking:
+                        time.sleep(1)
+                    if not self._speaking:
+                        self._speaking = True
+                        voice_client.stop()
+                        self._client.sync(utils.send_split(f'Skipping to next word.', text_channel))
+                        break
+            except discord.errors.ClientException:
+                pass
+
+        self._voice_channel = None
+
     def _process_definition_request(self, definition_request: DefinitionRequest):
         """
 
@@ -200,11 +244,17 @@ class MessageQueue:
         text_to_speech = definition_request.text_to_speech
         language = definition_request.language
 
+        if text_to_speech:
+            voice_state = message.author.voice
+            voice_channel = None if voice_state is None else voice_state.channel
+        else:
+            voice_channel = None
+
         # Get definitions
         response = get_definition(word)
         print('RESPONSE:', response, response.content)
         if response.status_code != 200:
-            self._client.sync(utils.send_split(f'__**{word}**__\nI don\'t know that word.', message.channel))
+            self.say(f'__**{word}**__\nI don\'t know that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. I don\'t know that word.')
             return
 
         try:
@@ -229,51 +279,7 @@ class MessageQueue:
             reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
             tts_input += f' {i + 1}, {word_type}, {definition_text}'
 
-        # Generate text-to-speech
-        if text_to_speech:
-            voice_state = message.author.voice
-            voice_channel = None if voice_state is None else voice_state.channel
-        else:
-            voice_channel = None
-
-        if voice_channel is not None:
-            # Create text to speech mp3
-            #print(tts_input)
-            try:
-                tts = gTTS(tts_input, lang=language)
-            except ValueError:
-                self._client.sync(utils.send_split(f'That language is not supported.', message.channel))
-                return
-            urls = tts.get_urls()
-            #print('URLS:', urls)
-
-        # Send text chat reply
-        self._client.sync(utils.send_split(reply, message.channel))
-
-        # Send voice channel reply
-        if voice_channel is not None:
-
-            # Join voice channel
-            self._voice_lock.acquire()
-            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
-            self._voice_client = voice_client
-            self._voice_lock.release()
-
-            # Speak
-            try:
-                for url in urls:
-                    voice_client.play(discord.FFmpegPCMAudio(url, executable=str(self._ffmpeg_path), options='-loglevel panic'))
-                    while voice_client.is_playing() and self._speaking:
-                        time.sleep(1)
-                    if not self._speaking:
-                        self._speaking = True
-                        voice_client.stop()
-                        self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
-                        break
-            except discord.errors.ClientException:
-                pass
-
-        self._voice_channel = None
+        self.say(reply, message.channel, voice_channel=voice_channel, language=language, tts_input=tts_input)
 
     def clear(self):
         self._queue.clear()
