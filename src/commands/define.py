@@ -16,7 +16,7 @@ class DefineCommand(Command):
             parser = argparse.ArgumentParser()
             parser.add_argument('word', nargs='+')
             parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
-            parser.add_argument('-lang', '-l', dest='language')
+            parser.add_argument('-lang', '-l', dest='language', default='en')
             
             args = parser.parse_args(args)
         except SystemExit:
