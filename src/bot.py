@@ -26,7 +26,6 @@ class DictionaryBotClient(discord.Client):
 
         # Load properties
         self._properties = Properties()
-        self._properties.load()
 
         # Load commands
         self._definition_response_manager = DefinitionResponseManager(self, pathlib.Path(ffmpeg_path))

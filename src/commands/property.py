@@ -8,7 +8,7 @@ from properties import Properties
 class PropertyCommand(Command):
 
     def __init__(self, client: discord.Client, properties: Properties):
-        super().__init__(client, 'property', aliases=['p'], description='Sets the specified property.', usage='<scope> (list | set <key> <value>)')
+        super().__init__(client, 'property', aliases=['p'], description='Sets the specified property.', usage='<scope> (list | set <key> <value> | del <key>)')
         self._properties = properties
 
     def execute(self, message: discord.Message, args: tuple):
@@ -19,9 +19,14 @@ class PropertyCommand(Command):
             subparsers = parser.add_subparsers(dest='action')
             subparsers.required = True
 
+            # Set
             set_parser = subparsers.add_parser('set')
             set_parser.add_argument('key')
             set_parser.add_argument('value')
+
+            # Delete
+            set_parser = subparsers.add_parser('del')
+            set_parser.add_argument('key')
 
             list_parser = subparsers.add_parser('list')
 
@@ -55,3 +60,13 @@ class PropertyCommand(Command):
             # Set property
             self._properties.set(scope, args.key, args.value)
             self.client.sync(utils.send_split('Property set.', message.channel))
+
+        elif args.action == 'del':
+
+            # Make sure scope is not global
+            if args.scope == 'global':
+                self.client.sync(utils.send_split('Can\'t delete a global property!', message.channel))
+                return
+
+            self._properties.delete(scope, args.key)
+            self.client.sync(utils.send_split('Property removed.', message.channel))
