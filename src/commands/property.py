@@ -45,12 +45,13 @@ class PropertyCommand(Command):
             return
 
         if args.action == 'list':
-            reply = f'__Properties for this '
+            reply = '__'
             if args.scope == 'global':
-                reply += 'server'
+                reply += 'Server '
             elif args.scope == 'channel':
-                reply += 'channel'
-            reply += '__\n'
+                reply += 'Channel '
+            reply += 'properties__\n'
+
             properties = self._properties.list(scope=scope)
             for k, v in properties.items():
                 reply += f'{k}: `{v}`\n'
@@ -58,8 +59,10 @@ class PropertyCommand(Command):
         elif args.action == 'set':
 
             # Set property
-            self._properties.set(scope, args.key, args.value)
-            self.client.sync(utils.send_split('Property set.', message.channel))
+            if self._properties.set(scope, args.key, args.value):
+                self.client.sync(utils.send_split('Property set.', message.channel))
+            else:
+                self.client.sync(utils.send_split('Failed to set property.', message.channel))
 
         elif args.action == 'del':
 

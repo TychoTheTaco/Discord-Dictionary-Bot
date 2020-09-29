@@ -3,7 +3,39 @@ from typing import Union
 from google.cloud import firestore
 
 
+class Property:
+
+    def __init__(self, key, values=None, default=None, dtype=str):
+        self._key = key
+        self._values = values
+        self._default = default
+        self._dtype = dtype
+
+    @property
+    def key(self):
+        return self._key
+
+    @property
+    def values(self):
+        return self._values
+
+    @property
+    def default(self):
+        return self._default
+
+    def is_valid(self, value):
+        if self._values is not None:
+            return value in self._values
+        return type(value) is self._dtype
+
+
 class Properties:
+
+    PROPERTIES = [
+        Property('prefix', default='.'),
+        Property('text_to_speech', values=['force', 'flag', 'disable'], default='flag'),
+        Property('language', default='en-us')
+    ]
 
     def __init__(self):
         """
@@ -19,22 +51,23 @@ class Properties:
         """
         self._firestore_client = firestore.Client()
 
-    def get_defaults(self):
-        return {
-            'prefix': '.',
-            'text_to_speech': 'flag',
-            'language': 'en-us'
-        }
-
     def delete(self, scope, key):
         dictionary = self._get_dict(scope)
         del dictionary[key]
         self._get_snapshot(scope).reference.set(dictionary)
 
-    def set(self, scope, key, value):
+    def set(self, scope, key, value) -> bool:
+        # Make sure property is valid
+        for p in Properties.PROPERTIES:
+            if p.key == key:
+                if p.is_valid(value):
+                    break
+                else:
+                    return False
         dictionary = self._get_dict(scope)
         dictionary[key] = value
         self._get_snapshot(scope).reference.set(dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
+        return True
 
     def get(self, scope: Union[discord.Guild, discord.TextChannel], key) -> str:
         if type(scope) is discord.Guild:
@@ -56,7 +89,7 @@ class Properties:
             # Write default preferences
             if not snapshot.exists:
                 print('Preferences for', scope, 'did not exist. Setting defaults.')
-                guild_document.set(self.get_defaults())
+                guild_document.set({p.key: p.default for p in Properties.PROPERTIES})
                 snapshot = guild_document.get()
 
             return snapshot
