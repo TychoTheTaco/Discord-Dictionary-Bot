@@ -9,8 +9,10 @@ from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
 from commands.next import NextCommand
 from commands.lang_list import LangListCommand
+from commands.property import PropertyCommand
 
 from definition_response_manager import DefinitionResponseManager
+from properties import Properties
 
 
 class DictionaryBotClient(discord.Client):
@@ -21,7 +23,12 @@ class DictionaryBotClient(discord.Client):
         :param ffmpeg_path: Path to the ffmpeg executable.
         """
         super().__init__()
-        self._prefix = '.'
+
+        # Load properties
+        self._properties = Properties()
+        self._properties.load()
+
+        # Load commands
         self._definition_response_manager = DefinitionResponseManager(self, pathlib.Path(ffmpeg_path))
         self._commands = [
             HelpCommand(self),
@@ -29,28 +36,36 @@ class DictionaryBotClient(discord.Client):
             DefineReverseCommand(self, self._definition_response_manager),
             StopCommand(self, self._definition_response_manager),
             NextCommand(self, self._definition_response_manager),
-            LangListCommand(self)
+            LangListCommand(self),
+            PropertyCommand(self, self._properties)
         ]
 
     @property
     def commands(self):
         return self._commands
 
+    @property
+    def properties(self):
+        return self._properties
+
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
 
     async def on_message(self, message: discord.Message):
+
+        # Check what prefix we have on this server
+        prefix = self._properties.get(message.guild, 'prefix')
 
         # Ignore our own messages
         if message.author == self.user:
             return
 
         # Check for prefix
-        if not message.content.startswith(self._prefix):
+        if not message.content.startswith(prefix):
             return
 
         # Parse input
-        command_input = message.content[1:].lower().split(' ')
+        command_input = message.content[len(prefix):].lower().split(' ')
 
         # Execute command
         for command in self._commands:
@@ -59,7 +74,7 @@ class DictionaryBotClient(discord.Client):
                 return
 
         # Send invalid command message
-        await utils.send_split(f'Unrecognized command. Use `{self._prefix + HelpCommand(self).name}` to see available commands.', message.channel)
+        await utils.send_split(f'Unrecognized command. Use `{prefix + HelpCommand(self).name}` to see available commands.', message.channel)
 
     def get_voice_client(self, voice_channel: discord.VoiceChannel):
         for voice_client in self.voice_clients:

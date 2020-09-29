@@ -16,7 +16,7 @@ class DefineReverseCommand(Command):
             parser = argparse.ArgumentParser()
             parser.add_argument('word', nargs='+')
             parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
-            parser.add_argument('-lang', '-l', dest='language', default='en')
+            parser.add_argument('-lang', '-l', dest='language', default=self.client.properties.get(message.channel, 'language'))
             args = parser.parse_args(args)
         except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))

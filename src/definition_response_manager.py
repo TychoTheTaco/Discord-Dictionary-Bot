@@ -54,6 +54,13 @@ class DefinitionResponseManager:
         message = definition_request.message
         text_channel = message.channel
 
+        # Override text to speech option
+        text_to_speech_property = self._client.properties.get(message.channel, 'text_to_speech')
+        if text_to_speech_property == 'force':
+            definition_request.text_to_speech = True
+        elif text_to_speech_property == 'disable':
+            definition_request.text_to_speech = False
+
         # Add request to queue
         if text_channel not in self._request_queues:
             self._request_queues[text_channel] = MessageQueue(self._client, self._ffmpeg_path)
