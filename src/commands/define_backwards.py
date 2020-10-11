@@ -3,6 +3,7 @@ import discord
 import argparse
 from definition_response_manager import DefinitionRequest
 import utils
+import re
 
 
 class DefineReverseCommand(Command):
@@ -23,7 +24,13 @@ class DefineReverseCommand(Command):
             return
 
         # Extract word from arguments
-        word = ' '.join(args.word)
+        word = ' '.join(args.word).strip()
+
+        # Check for non-word characters
+        pattern = re.compile('(?:[^ \\w]|\\d)')
+        if pattern.search(word) is not None:
+            self.client.sync(utils.send_split(f'That\'s not a word.', message.channel))
+            return
 
         # Add request to queue
         self._definition_response_manager.add(DefinitionRequest(word, message, reverse=True, text_to_speech=args.text_to_speech, language=args.language))

@@ -3,6 +3,7 @@ from commands.command import Command
 import discord
 import argparse
 import utils
+import re
 
 
 class DefineCommand(Command):
@@ -23,7 +24,13 @@ class DefineCommand(Command):
             return
 
         # Extract word from arguments
-        word = ' '.join(args.word)
+        word = ' '.join(args.word).strip()
+
+        # Check for non-word characters
+        pattern = re.compile('(?:[^ \\w]|\\d)')
+        if pattern.search(word) is not None:
+            self.client.sync(utils.send_split(f'That\'s not a word.', message.channel))
+            return
 
         # Add request to queue
         self._definition_response_manager.add(DefinitionRequest(word, message, reverse=False, text_to_speech=args.text_to_speech, language=args.language))

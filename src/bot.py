@@ -63,6 +63,11 @@ class DictionaryBotClient(discord.Client):
         if not message.content.startswith(prefix):
             return
 
+        # Ignore messages with mentions
+        if len(message.mentions) + len(message.channel_mentions) + len(message.role_mentions) > 0:
+            await utils.send_split('I don\'t approve of ping spamming.', message.channel)
+            return
+
         # Parse input
         command_input = message.content[len(prefix):].lower().split(' ')
 

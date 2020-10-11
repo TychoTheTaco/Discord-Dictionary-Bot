@@ -304,6 +304,3 @@ class MessageQueue:
 
     def next(self):
         self._speaking = False
-
-    def __repr__(self):
-        return str(self._queue)
