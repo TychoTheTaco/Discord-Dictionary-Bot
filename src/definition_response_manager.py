@@ -45,10 +45,7 @@ class DefinitionResponseManager:
     def add(self, definition_request: DefinitionRequest):
         """
         Add a request
-        :param word:
-        :param message:
-        :param reverse:
-        :param text_to_speech:
+        :param definition_request:
         :return:
         """
         message = definition_request.message
@@ -72,15 +69,18 @@ class DefinitionResponseManager:
             voice_state = message.author.voice
             voice_channel = None if voice_state is None else voice_state.channel
             if voice_channel is not None:
+                print(f'[{self}]: 73 Acquire...')
                 self._lock.acquire()
                 self._voice_channels[voice_channel] += 1
                 self._lock.release()
+                print(f'[{self}]: 73 Released')
 
     async def clear(self, text_channel: discord.TextChannel):
         """
         Clear all requests for the specified text channel.
         :param text_channel:
         """
+        print(f'[{self}]: 84 Acquire...')
         self._lock.acquire()
         for item in self._request_queues[text_channel]._queue:
             word, message, reverse, text_to_speech = item
@@ -102,6 +102,7 @@ class DefinitionResponseManager:
         await self._request_queues[text_channel].stop()
 
         self._lock.release()
+        print(f'[{self}]: 84 Released')
 
         await text_channel.send('Ok, i\'ll be quiet.')
 
@@ -147,21 +148,23 @@ class MessageQueue:
         self._speaking = True
 
     def add(self, definition_request: DefinitionRequest):
+        print(f'[{self}]: 152 Acquire...')
         self._lock.acquire()
         self._queue.append(definition_request)
         self._condition.notify()
         self._lock.release()
+        print(f'[{self}]: 152 Released')
 
     def run(self):
-        print('Started queue processor')
         while True:
 
             # Wait for an item to enter the queue
-            print('Waiting for new items')
+            print(f'[{self}]: 163 Acquire...')
             self._lock.acquire()
             if len(self._queue) == 0:
                 self._condition.wait()
             self._lock.release()
+            print(f'[{self}]: 163 Released')
 
             print('Processing', len(self._queue), 'items')
 
@@ -183,9 +186,11 @@ class MessageQueue:
                 #asyncio.run_coroutine_threadsafe(f(), self._client.loop)
 
                 if voice_channel is not None:
+                    print(f'[{self}]: 190 Acquire...')
                     self._client._definition_response_manager._lock.acquire()
                     self._client._definition_response_manager._voice_channels[voice_channel] -= 1
                     self._client._definition_response_manager._lock.release()
+                    print(f'[{self}]: 190 Released')
 
                     # If we don't need this voice channel anymore, disconnect from it
                     if self._client._definition_response_manager._voice_channels[voice_channel] == 0:
@@ -216,10 +221,12 @@ class MessageQueue:
         if voice_channel is not None:
 
             # Join voice channel
+            print(f'[{self}]: 225 Acquire...')
             self._voice_lock.acquire()
             voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
             self._voice_client = voice_client
             self._voice_lock.release()
+            print(f'[{self}]: 225 Released')
 
             # Speak
             try:
@@ -259,7 +266,7 @@ class MessageQueue:
 
         # Get definitions
         response = get_definition(word)
-        print('RESPONSE:', response, response.content)
+        #print('RESPONSE:', response, response.content)
         if response.status_code != 200:
             self.say(f'__**{word}**__\nI don\'t know that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. I don\'t know that word.')
             return
