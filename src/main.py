@@ -2,10 +2,12 @@ import pathlib
 import argparse
 import utils
 from bot import DictionaryBotClient
-
+import os
 
 TOKEN_FILE_PATH = pathlib.Path('../token.txt')
 
+# Set environment variables
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '../credentials.json'
 
 if __name__ == '__main__':
 
