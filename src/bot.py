@@ -52,8 +52,8 @@ class DictionaryBotClient(discord.Client):
 
     async def on_message(self, message: discord.Message):
 
-        # Check what prefix we have on this server
-        prefix = self._properties.get(message.guild, 'prefix')
+        # Check what prefix we have in this channel
+        prefix = self._properties.get(message.channel, 'prefix')
 
         # Ignore our own messages
         if message.author == self.user:

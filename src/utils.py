@@ -1,4 +1,5 @@
 import discord
+import re
 
 
 def get_token(path='token.txt'):
@@ -6,7 +7,7 @@ def get_token(path='token.txt'):
         return file.read()
 
 
-async def send_split(message: str, channel: discord.TextChannel, split_size=2000):
+async def send_split(message: str, channel: discord.TextChannel, split_size=2000, delim=None):
     """
     Send a message to the specified tet channel. If the message is longer than Discord's limit of 2000 characters, the message will be split up and sent separately.
     :param message:
@@ -14,7 +15,20 @@ async def send_split(message: str, channel: discord.TextChannel, split_size=2000
     :param split_size:
     :return:
     """
-    messages = split_formatting(message, split_size)
+    messages = split_formatting(message, split_size, delim=delim)
+    for m in messages:
+        await channel.send(m)
+
+
+async def send_split_nf(message: str, channel: discord.TextChannel, split_size=2000, delim=None):
+    """
+    Send a message to the specified tet channel. If the message is longer than Discord's limit of 2000 characters, the message will be split up and sent separately.
+    :param message:
+    :param channel:
+    :param split_size:
+    :return:
+    """
+    messages = split(message, split_size, delim=delim)
     for m in messages:
         await channel.send(m)
 
@@ -52,11 +66,11 @@ def find_active_formatting(message):
             elif p == '*':
                 if 'italics' not in active and i - 1 != a:
                     active.append('italics')
-                    #print('italics START', i - 1)
+                    # print('italics START', i - 1)
                     a = i - 1
                 elif 'italics' in active:
                     active.remove('italics')
-                    #print('italics END', i - 1)
+                    # print('italics END', i - 1)
 
             # Detect underline/italics
             if c == '_':
@@ -69,23 +83,60 @@ def find_active_formatting(message):
             elif p == '_':
                 if 'italics' not in active and i - 1 != a:
                     active.append('italics')
-                    #print('italics START', i - 1)
+                    # print('italics START', i - 1)
                     a = i - 1
                 elif 'italics' in active:
                     active.remove('italics')
-                    #print('italics END', i - 1)
+                    # print('italics END', i - 1)
 
         p = c
     return active
 
 
-def split_formatting(message: str, split_size=30):
+def split(message: str, split_size: int, delim='\n'):
+    #print('MESSAGE LENGTH:', len(message))
+    blocks = []
+
+    # Find valid split locations
+    pattern = re.compile(delim)
+    matches = [m.span() for m in pattern.finditer(message)]
+    #print('MATCHES:', matches)
+
+    i = 0
+    while i < len(message) - 1:
+        end_index = min(i + split_size - 1, len(message) - 1)
+        #print('SUB STR', i, end_index)
+        block_size = end_index - i
+
+        # Find the nearest valid split index
+        if end_index < len(message) - 1:
+            s = (end_index, end_index)
+            while len(matches) > 0:
+                s = matches[0]
+                matches = matches[1:]
+                if len(matches) > 0:
+                    if matches[0][0] > end_index:
+                        break
+
+            #print('SPLIT AT', s)
+            block_size = s[0] + 1 - i
+
+        blocks.append(message[i:i+block_size])
+
+        #print('BLOCK SIZE', block_size)
+        i += block_size
+
+    return blocks
+
+
+def split_formatting(message: str, split_size=30, delim=None):
     """
     Split the given message while attempting to keep markdown formatting intact.
     :param message: The message to split.
     :param split_size: The maximum length (in characters) of any message segment.
     :return: A list of message segments.
     """
+
     messages = []
     while len(message) > 0:
 
