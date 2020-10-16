@@ -295,30 +295,33 @@ class MessageQueue:
         self._client.sync(utils.send_split(reply, message.channel))
 
         # Send voice channel reply
-        if voice_channel is not None and text_to_speech_bytes is not None:
+        if voice_channel is not None:
 
-            # Join voice channel
-            print(f'[{id(self._voice_lock)}]: 296 Wait...')
-            self._voice_lock.acquire()
-            print(f'[{id(self._voice_lock)}]: 296 Acquired')
-            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
-            self._voice_client = voice_client
-            self._voice_lock.release()
-            print(f'[{id(self._voice_lock)}]: 296 Released')
+            if text_to_speech_bytes is not None:
 
-            # Speak
-            file = io.BytesIO()
-            file.write(text_to_speech_bytes)
-            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
+                # Join voice channel
+                print(f'[{id(self._voice_lock)}]: 296 Wait...')
+                self._voice_lock.acquire()
+                print(f'[{id(self._voice_lock)}]: 296 Acquired')
+                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+                self._voice_client = voice_client
+                self._voice_lock.release()
+                print(f'[{id(self._voice_lock)}]: 296 Released')
 
-            while voice_client.is_playing() and self._speaking:
-                time.sleep(1)
-            if not self._speaking:
-                self._speaking = True
-                voice_client.stop()
-                self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
-        else:
-            self._client.sync(utils.send_split('**There was a problem processing the text-to-speech.**', message.channel))
+                # Speak
+                file = io.BytesIO()
+                file.write(text_to_speech_bytes)
+                voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
+
+                while voice_client.is_playing() and self._speaking:
+                    time.sleep(1)
+                if not self._speaking:
+                    self._speaking = True
+                    voice_client.stop()
+                    self._client.sync(utils.send_split(f'Skipping to next word.', message.channel))
+
+            else:
+                self._client.sync(utils.send_split('**There was a problem processing the text-to-speech.**', message.channel))
 
         self._voice_channel = None
 
