@@ -4,7 +4,7 @@ import asyncio
 import utils
 
 from commands.help import HelpCommand
-from commands.define import DefineCommand
+from commands.define_forwards import DefineForwardsCommand
 from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
 from commands.next import NextCommand
@@ -31,7 +31,7 @@ class DictionaryBotClient(discord.Client):
         self._definition_response_manager = DefinitionResponseManager(self, pathlib.Path(ffmpeg_path))
         self._commands = [
             HelpCommand(self),
-            DefineCommand(self, self._definition_response_manager),
+            DefineForwardsCommand(self, self._definition_response_manager),
             DefineReverseCommand(self, self._definition_response_manager),
             StopCommand(self, self._definition_response_manager),
             NextCommand(self, self._definition_response_manager),

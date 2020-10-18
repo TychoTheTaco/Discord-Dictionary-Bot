@@ -1,36 +1,11 @@
-from commands.command import Command
+from commands.define import DefineCommand
 import discord
-import argparse
-from definition_response_manager import DefinitionRequest
-import utils
-import re
 
 
-class DefineReverseCommand(Command):
+class DefineReverseCommand(DefineCommand):
 
     def __init__(self, client: discord.Client, definition_response_manager):
-        super().__init__(client, 'b', secret=True)
-        self._definition_response_manager = definition_response_manager
+        super().__init__(client, definition_response_manager, 'b', secret=True)
 
-    def execute(self, message: discord.Message, args: tuple):
-        try:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('word', nargs='+')
-            parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
-            parser.add_argument('-lang', '-l', dest='language', default=self.client.properties.get(message.channel, 'language'))
-            args = parser.parse_args(args)
-        except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
-            return
-
-        # Extract word from arguments
-        word = ' '.join(args.word).strip()
-
-        # Check for non-word characters
-        pattern = re.compile('(?:[^ \\w]|\\d)')
-        if pattern.search(word) is not None:
-            self.client.sync(utils.send_split(f'That\'s not a word.', message.channel))
-            return
-
-        # Add request to queue
-        self._definition_response_manager.add(DefinitionRequest(word, message, reverse=True, text_to_speech=args.text_to_speech, language=args.language))
+    def send_request(self, word, message, reverse, text_to_speech, language):
+        super().send_request(word, message, True, text_to_speech, language)
