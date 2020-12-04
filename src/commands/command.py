@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 import discord
 
+import discord_bot_client
+
 
 class Command(ABC):
 
-    def __init__(self, client: discord.client, name, aliases=None, description='', usage='', secret=False):
+    def __init__(self, client: 'discord_bot_client.DiscordBotClient', name, aliases=None, description='', usage='', secret=False):
         """
         This is the base class for commands.
         :param client: The client this command is attached to.
@@ -22,32 +24,32 @@ class Command(ABC):
         self._secret = secret
 
     @property
-    def client(self):
+    def client(self) -> 'discord_bot_client.DiscordBotClient':
         return self._client
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def aliases(self):
+    def aliases(self) -> [str]:
         return self._aliases
 
     @property
-    def description(self):
+    def description(self) -> str:
         return self._description
 
     @property
-    def usage(self):
+    def usage(self) -> str:
         return self._usage
 
     @property
-    def secret(self):
+    def secret(self) -> bool:
         return self._secret
 
-    def matches(self, string):
+    def matches(self, string) -> bool:
         return string in [self._name] + self._aliases
 
     @abstractmethod
-    def execute(self, message: discord.Message, args: tuple):
+    def execute(self, message: discord.Message, args: tuple) -> None:
         pass

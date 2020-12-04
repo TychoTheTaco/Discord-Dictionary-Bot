@@ -9,16 +9,18 @@ from google.cloud import texttospeech
 
 class DefineCommand(Command):
 
+    # This set stores valid language names that can be used for text-to-speech. It is filled when the first instance of 'DefineCommand' is created. All instances of 'DefineCommand' should share this set.
+    LANGUAGES = set()
+
     def __init__(self, client: discord.client, definition_response_manager, name, aliases=None, description='', secret=False):
         super().__init__(client, name, aliases, description, usage='[-v] [-lang <language_code>] <word>', secret=secret)
         self._definition_response_manager = definition_response_manager
 
         # Get a list of supported languages
-        client = texttospeech.TextToSpeechClient()
-        response = client.list_voices()
-
-        self._languages = set(voice.name for voice in response.voices)
-        print(self._languages)
+        if len(DefineCommand.LANGUAGES) == 0:
+            client = texttospeech.TextToSpeechClient()
+            response = client.list_voices()
+            DefineCommand.LANGUAGES = set(voice.name for voice in response.voices)
 
     def execute(self, message: discord.Message, args: tuple):
         try:
@@ -47,6 +49,8 @@ class DefineCommand(Command):
                     args.language = language_code
                     self.client.sync(utils.send_split(f'**Unknown language. Assuming it\'s** `{args.language}`', message.channel))
                     break
+
+        # TODO: Check for language or text to speech override
 
         # Add request to queue
         self.send_request(word, message, False, args.text_to_speech, language=args.language)

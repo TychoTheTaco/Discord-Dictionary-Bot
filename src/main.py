@@ -1,7 +1,7 @@
 import pathlib
 import argparse
 import utils
-from bot import DictionaryBotClient
+from dictionary_bot_client import DictionaryBotClient
 import os
 
 TOKEN_FILE_PATH = pathlib.Path('../token.txt')

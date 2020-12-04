@@ -5,7 +5,7 @@ import utils
 
 class HelpCommand(Command):
 
-    def __init__(self, client: discord.Client):
+    def __init__(self, client: 'discord_bot_client.DiscordBotClient'):
         super().__init__(client, 'help', aliases=['h'], description='Shows you this help message.')
 
     def execute(self, message: discord.Message, args: tuple):
