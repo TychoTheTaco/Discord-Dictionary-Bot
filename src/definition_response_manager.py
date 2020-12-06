@@ -22,6 +22,41 @@ def log(message, level='info'):
         print(f'[INFO ] {message}')
 
 
+def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL):
+    # Create a text-to-speech client with maximum receive size of 24MB
+    channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
+    transport = TextToSpeechGrpcTransport(channel=channel)
+    client = texttospeech.TextToSpeechClient(transport=transport)
+
+    language_components = language.split('-')
+    language_code = '-'.join(language_components[:2])
+    name = None
+    if len(language_components) == 4:
+        name = language
+
+    # Build the voice request
+    voice = texttospeech.VoiceSelectionParams(
+        language_code=language_code, ssml_gender=gender, name=name
+    )
+
+    # Select the type of audio file you want returned
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.LINEAR16,
+        sample_rate_hertz=48000
+    )
+
+    # Set the text input to be synthesized
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    # Request text-to-speech data
+    try:
+        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+        return response.audio_content
+    except Exception as e:
+        print('Failed to get text to speech data:', e)
+        return None
+
+
 class DefinitionAPI(ABC):
 
     @abstractmethod
@@ -92,6 +127,7 @@ class DefinitionResponseManager:
 
         # Each text channel will have its own request queue to allow simultaneous responses across channels
         self._request_queues = {}
+        self._request_queues_lock = threading.Lock()
 
         # Keep track of which voice channels we need to respond to. This way we can leave the channel only when we have finished all requests for that channel
         self._voice_channels = collections.defaultdict(int)
@@ -133,9 +169,10 @@ class DefinitionResponseManager:
         text_channel = message.channel
 
         # Add request to queue
-        if text_channel not in self._request_queues:
-            self._request_queues[text_channel] = MessageQueue(self, self._ffmpeg_path)
-        self._request_queues[text_channel].add(definition_request)
+        with self._request_queues_lock:
+            if text_channel not in self._request_queues:
+                self._request_queues[text_channel] = MessageQueue(self, text_channel, self._ffmpeg_path)
+            self._request_queues[text_channel].add(definition_request)
 
         # Check if this request needs to use a voice channel
         if definition_request.text_to_speech:
@@ -145,44 +182,29 @@ class DefinitionResponseManager:
                 self._voice_channels[voice_channel] += 1
                 self._voice_channels_map_lock.release()
 
-    async def clear(self, text_channel: discord.TextChannel):
+    async def stop(self, text_channel: discord.TextChannel):
         """
-        Clear all requests for the specified text channel.
+        Clear all requests for the specified text channel and stops any in-progress requests for that channel.
         :param text_channel:
         """
-        print(f'[{id(self._lock)}]: 84 Wait...')
-        self._lock.acquire()
-        print(f'[{id(self._lock)}]: 84 Acquired')
-        for item in self._request_queues[text_channel]._queue:
+        with self._request_queues_lock:
+            if text_channel not in self._request_queues:
+                await utils.send_split('Okay, i\'ll be quiet.', text_channel)
+                return
 
-            # Remove voice channel requirement for this request
-            voice_state = item.message.author.voice
-            voice_channel = None if voice_state is None else voice_state.channel
-            if not item.text_to_speech:
-                voice_channel = None
-            if voice_channel is not None:
-                self._voice_channels[voice_channel] -= 1
+            await self._request_queues[text_channel].stop()
 
-                # Leave voice channels with no items in the queue
-                print(self._voice_channels[voice_channel])
-                if self._voice_channels[voice_channel] == 0:
-                    await self._client.leave_voice_channel(voice_channel)
-
-        # Stop any current voice activity and clear the request queue
-        await self._request_queues[text_channel].stop()
-
-        self._lock.release()
-        print(f'[{id(self._lock)}]: 84 Released')
-
-        await text_channel.send('Ok, i\'ll be quiet.')
-
-    def next(self, message):
-        voice_state = message.author.voice
+    def next(self, text_channel: discord.TextChannel, voice_state: discord.VoiceState) -> None:
+        """
+        If the bot is currently reading out a definition, this will make it skip to the next one.
+        :param text_channel: The 'discord.TextChannel' the command was sent in.
+        :param voice_state: The 'discord.VoiceState' of the user who issued the command.
+        """
         voice_channel = voice_state.channel if voice_state is not None else None
 
         # Check if user is in a voice channel
         if voice_channel is None:
-            self._client.sync(utils.send_split('You must be in a voice channel to use that command.', message.channel))
+            self._client.sync(utils.send_split('You must be in a voice channel to use that command.', text_channel))
             return
 
         # Find the message queue that is using the voice channel
@@ -192,42 +214,7 @@ class DefinitionResponseManager:
                 return
 
         #
-        self._client.sync(utils.send_split(f'There are no more words in the queue.', message.channel))
-
-
-def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL):
-    # Create a text-to-speech client with maximum receive size of 24MB
-    channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
-    transport = TextToSpeechGrpcTransport(channel=channel)
-    client = texttospeech.TextToSpeechClient(transport=transport)
-
-    language_components = language.split('-')
-    language_code = '-'.join(language_components[:2])
-    name = None
-    if len(language_components) == 4:
-        name = language
-
-    # Build the voice request
-    voice = texttospeech.VoiceSelectionParams(
-        language_code=language_code, ssml_gender=gender, name=name
-    )
-
-    # Select the type of audio file you want returned
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16,
-        sample_rate_hertz=48000
-    )
-
-    # Set the text input to be synthesized
-    synthesis_input = texttospeech.SynthesisInput(text=text)
-
-    # Request text-to-speech data
-    try:
-        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
-        return response.audio_content
-    except Exception as e:
-        print('Failed to get text to speech data:', e)
-        return None
+        self._client.sync(utils.send_split(f'There are no more words in the queue.', text_channel))
 
 
 class MessageQueue:
@@ -235,15 +222,16 @@ class MessageQueue:
     This class represents a single definition request queue and is responsible for processing requests on a single 'discord.TextChannel'. These are created by the DefinitionResponseManager.
     """
 
-    def __init__(self, definition_response_manager: DefinitionResponseManager, ffmpeg_path):
+    def __init__(self, definition_response_manager: DefinitionResponseManager, text_channel: discord.TextChannel, ffmpeg_path):
         self._ffmpeg_path = ffmpeg_path
         self._definition_response_manager = definition_response_manager
+        self._text_channel = text_channel
         self._client = definition_response_manager._client
 
         # This queue stores incoming 'DefinitionRequest's. The condition is notified whenever a new item is added to the queue.
         self._queue = collections.deque()
         self._queue_lock = threading.Lock()
-        self._condition = threading.Condition(self._queue_lock)
+        self._queue_condition = threading.Condition(self._queue_lock)
 
         # The current voice client we are using for text-to-speech
         self._voice_client: discord.VoiceClient = None
@@ -263,7 +251,7 @@ class MessageQueue:
         """
         with self._queue_lock:
             self._queue.append(definition_request)
-            self._condition.notify()
+            self._queue_condition.notify()
 
     def run(self) -> None:
         """
@@ -271,37 +259,32 @@ class MessageQueue:
         """
         while True:
 
+            # Acquire the lock to ensure only 1 item is processed at a time
+            self._process_lock.acquire()
+
             # Wait for an item to enter the queue
             with self._queue_lock:
-                if len(self._queue) == 0:
-                    self._condition.wait()
-
-            # Process all items currently in the queue
-            while len(self._queue) > 0:
-
-                # Acquire the lock to ensure only 1 item is processed at a time
-                self._process_lock.acquire()
-
+                while len(self._queue) == 0:
+                    log(f'[MessageQueue {id(self)}] Waiting for more requests...')
+                    self._queue_condition.wait()
                 log(f'[MessageQueue {id(self)}] Processing {len(self._queue)} items...')
 
                 # Get definition request
                 definition_request = self._queue.popleft()
 
-                # Process the definition request
-                asyncio.run_coroutine_threadsafe(self._process_definition_request(definition_request), self._client.loop).result()
+            # Process the definition request
+            self._process_definition_request(definition_request)
 
-            log(f'[MessageQueue {id(self)}] Finished queue')
-
-    async def _say(self, text: str, text_channel: discord.TextChannel, voice_channel=None, language='en-us', tts_input=None, after_callback=None):
-
-        # Generate text to speech data
-        text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language) if voice_channel is not None else None
+    def _say(self, text: str, voice_channel=None, language='en-us', tts_input=None, after_callback=None):
 
         # Send voice channel reply
         if voice_channel is not None:
 
+            # Generate text to speech data
+            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
+
             # Join voice channel
-            voice_client = await self._client.join_voice_channel(voice_channel)
+            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
 
             # Acquire lock for this voice channel
             self._definition_response_manager.voice_channels_locks[voice_channel].acquire()
@@ -310,7 +293,7 @@ class MessageQueue:
                 self._voice_client = voice_client
 
             # Send text chat reply
-            await utils.send_split(text, text_channel)
+            self._client.sync(utils.send_split(text, self._text_channel))
 
             # Create callback for when we are done speaking
             def after(error):
@@ -337,12 +320,12 @@ class MessageQueue:
         else:
 
             # Send text chat reply
-            await utils.send_split(text, text_channel)
+            self._client.sync(utils.send_split(text, self._text_channel))
 
             # Call pass-through callback
             after_callback(None)
 
-    async def _process_definition_request(self, definition_request: DefinitionRequest) -> None:
+    def _process_definition_request(self, definition_request: DefinitionRequest) -> None:
         """
         Process a definition request. This will fetch the definition from the dictionary API, fetch the text-to-speech data from the text-to-speech API, and post the definition to the text channel and voice channel.
         :param definition_request: The definition request to process.
@@ -383,7 +366,7 @@ class MessageQueue:
                 self._process_lock.release()
 
             # Send response
-            await self._say(f'__**{word}**__\nThere was a problem finding that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. There was a problem finding that word.', after_callback=after)
+            self._say(f'__**{word}**__\nThere was a problem finding that word.', voice_channel=voice_channel, language=language, tts_input=f'{word}. There was a problem finding that word.', after_callback=after)
             return
 
         # Create text channel reply
@@ -415,7 +398,7 @@ class MessageQueue:
             if text_to_speech_bytes is not None:
 
                 # Join the voice channel
-                voice_client = await self._client.join_voice_channel(voice_channel)
+                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
 
                 # Acquire lock for this voice channel
                 self._definition_response_manager.voice_channels_locks[voice_channel].acquire()
@@ -424,7 +407,7 @@ class MessageQueue:
                     self._voice_client = voice_client
 
                 # Send text chat reply
-                await utils.send_split(reply, message.channel)
+                self._client.sync(utils.send_split(reply, message.channel))
 
                 # Speak
                 def after(error):
@@ -452,35 +435,39 @@ class MessageQueue:
 
             else:
                 log('Failed to generate text-to-speech data', 'error')
-                await utils.send_split('**There was a problem processing the text-to-speech.**', message.channel)
+                self._client.sync(utils.send_split('**There was a problem processing the text-to-speech.**', message.channel))
 
         else:
 
             # Send text chat reply
-            await utils.send_split(reply, message.channel)
+            self._client.sync(utils.send_split(reply, message.channel))
 
             # Release process lock
             self._process_lock.release()
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """
         Clears the queue and immediately stops processing definition requests.
         """
         # Clear the queue and update voice channel map
         with self._queue_lock, self._definition_response_manager.voice_channel_map_lock:
             for item in self._queue:
-                if item.voice_channel:
-                    self._definition_response_manager.voice_channels[item.voice_channel] -= 1
+                if item.voice_state:
+                    self._definition_response_manager.voice_channels[item.voice_state.channel] -= 1
             self._queue.clear()
+            self._queue_condition.notify()
 
         # Stop using the voice channel
         with self._voice_client_lock:
             if self._voice_client:
                 self._voice_client.stop()
 
+        # Send text channel reply
+        await utils.send_split('Okay, i\'ll be quiet.', self._text_channel)
+
     def next(self) -> None:
         """
-        Skips to the next definition request.
+        If we are currently reading out a definition, skips to the next definition request. This will have no effect if we are not currently using a voice channel.
         """
         with self._voice_client_lock:
             if self._voice_client:

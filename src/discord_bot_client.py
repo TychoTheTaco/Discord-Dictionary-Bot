@@ -94,6 +94,7 @@ class DiscordBotClient(discord.Client):
         # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
+                print('EXEC:', command_input)
                 command.execute(message, command_input[1:])
                 return
 
