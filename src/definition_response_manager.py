@@ -19,7 +19,7 @@ def log(message, level='info'):
     if level in ['e', 'error']:
         print(f'[ERROR] {message}', file=sys.stderr)
     else:
-        print(f'[INFO] {message}')
+        print(f'[INFO ] {message}')
 
 
 class DefinitionAPI(ABC):
@@ -249,6 +249,10 @@ class MessageQueue:
         self._voice_client: discord.VoiceClient = None
         self._voice_client_lock = threading.Lock()
 
+        # This lock ensures that only 1 queue item is processed at a time. This is needed because the async function '_process_definition_request' may return before we are finished with the voice channel so we need to wait until
+        # text-to-speech has finished before processing the next item in the queue
+        self._process_lock = threading.Lock()
+
         # Start processing queue
         threading.Thread(target=self.run).start()
 
@@ -272,10 +276,13 @@ class MessageQueue:
                 if len(self._queue) == 0:
                     self._condition.wait()
 
-            print(f'[MessageQueue {id(self)}] Processing {len(self._queue)} items...')
-
             # Process all items currently in the queue
             while len(self._queue) > 0:
+
+                # Acquire the lock to ensure only 1 item is processed at a time
+                self._process_lock.acquire()
+
+                log(f'[MessageQueue {id(self)}] Processing {len(self._queue)} items...')
 
                 # Get definition request
                 definition_request = self._queue.popleft()
@@ -283,11 +290,11 @@ class MessageQueue:
                 # Process the definition request
                 asyncio.run_coroutine_threadsafe(self._process_definition_request(definition_request), self._client.loop).result()
 
-            print(f'[MessageQueue {id(self)}] Finished queue')
+            log(f'[MessageQueue {id(self)}] Finished queue')
 
-    async def _say(self, text: str, text_channel: discord.TextChannel, voice_channel=None, language='en-us', tts_input=None):
+    async def _say(self, text: str, text_channel: discord.TextChannel, voice_channel=None, language='en-us', tts_input=None, after_callback=None):
 
-        # Generate text to speech
+        # Generate text to speech data
         text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language) if voice_channel is not None else None
 
         # Send voice channel reply
@@ -305,20 +312,35 @@ class MessageQueue:
             # Send text chat reply
             await utils.send_split(text, text_channel)
 
-            # Speak
+            # Create callback for when we are done speaking
             def after(error):
+
+                if error is not None:
+                    log(f'Exception occurred while playing audio: {error}', 'error')
+
+                # Release voice channel lock
                 with self._voice_client_lock:
                     self._voice_client = None
                 self._definition_response_manager.voice_channels_locks[voice_channel].release()
+
+                # Call pass-through callback
+                if after_callback is not None:
+                    after_callback(error)
+
+            # Write text-to-speech data to a BytesIO file
             file = io.BytesIO()
             file.write(text_to_speech_bytes)
+
+            # Speak
             voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)), after=after)
 
         else:
+
             # Send text chat reply
             await utils.send_split(text, text_channel)
 
-        self._voice_channel = None
+            # Call pass-through callback
+            after_callback(None)
 
     async def _process_definition_request(self, definition_request: DefinitionRequest) -> None:
         """
@@ -340,7 +362,28 @@ class MessageQueue:
         # Get definitions
         definitions = self._definition_response_manager.api.define(word)
         if len(definitions) == 0:
-            await self._say(f'__**{word}**__\nThere was a problem finding that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. There was a problem finding that word.')
+
+            # Create callback for when we are done speaking
+            def after(error):
+
+                if error is not None:
+                    log(f'Exception occurred while playing audio: {error}', 'error')
+
+                if voice_channel is not None:
+
+                    # Update voice channel map
+                    with self._definition_response_manager.voice_channel_map_lock:
+                        self._definition_response_manager.voice_channels[voice_channel] -= 1
+
+                    # Disconnect from the voice channel if we don't need it anymore
+                    if self._definition_response_manager.voice_channels[voice_channel] == 0:
+                        self._client.sync(self._client.leave_voice_channel(voice_channel))
+
+                # Release process lock
+                self._process_lock.release()
+
+            # Send response
+            await self._say(f'__**{word}**__\nThere was a problem finding that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. There was a problem finding that word.', after_callback=after)
             return
 
         # Create text channel reply
@@ -359,7 +402,6 @@ class MessageQueue:
             reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
             tts_input += f' {i + 1}, {word_type}, {definition_text}'
 
-        # Generate text-to-speech
         if text_to_speech:
             voice_state = definition_request.voice_state
             voice_channel = None if voice_state is None else voice_state.channel
@@ -381,6 +423,9 @@ class MessageQueue:
                 with self._voice_client_lock:
                     self._voice_client = voice_client
 
+                # Send text chat reply
+                await utils.send_split(reply, message.channel)
+
                 # Speak
                 def after(error):
 
@@ -400,14 +445,22 @@ class MessageQueue:
                     if self._definition_response_manager.voice_channels[voice_channel] == 0:
                         asyncio.run_coroutine_threadsafe(self._client.leave_voice_channel(voice_channel), self._client.loop)
 
+                    # Release process lock
+                    self._process_lock.release()
+
                 voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)), after=after)
 
             else:
                 log('Failed to generate text-to-speech data', 'error')
                 await utils.send_split('**There was a problem processing the text-to-speech.**', message.channel)
 
-        # Send text chat reply
-        await utils.send_split(reply, message.channel)
+        else:
+
+            # Send text chat reply
+            await utils.send_split(reply, message.channel)
+
+            # Release process lock
+            self._process_lock.release()
 
     def stop(self) -> None:
         """
