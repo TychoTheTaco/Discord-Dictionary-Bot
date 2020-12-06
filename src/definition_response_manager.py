@@ -1,8 +1,10 @@
 import asyncio
 import collections
+import sys
 import threading
-import time
 import io
+from abc import ABC, abstractmethod
+
 import discord
 import pathlib
 import requests
@@ -13,8 +15,56 @@ import subprocess
 from discord_bot_client import DiscordBotClient
 
 
-def get_definition(word):
-    return requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json')
+def log(message, level='info'):
+    if level in ['e', 'error']:
+        print(f'[ERROR] {message}', file=sys.stderr)
+    else:
+        print(f'[INFO] {message}')
+
+
+class DefinitionAPI(ABC):
+
+    @abstractmethod
+    def define(self, word: str) -> {}:
+        pass
+
+
+class OwlBotDictionaryAPI(DefinitionAPI):
+
+    def __init__(self, token: str):
+        self._token = token
+
+    def define(self, word: str) -> []:
+        """
+        Get the definitions for the specified word. The format is:
+        [
+        {word_type: 'str', definition: 'str'}
+        ]
+        :param word: The word to define.
+        :return:
+        """
+        headers = {'Authorization': f'Token {self._token}'}
+        response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
+
+        if response.status_code != 200:
+            log(f'Error getting definition! Status code: {response.status_code}; Word: {word}', 'error')
+            return []
+
+        try:
+            definitions = response.json()
+        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
+            log(f'Failed to parse response: {response}')
+            return []
+
+        result = []
+        for d in definitions:
+            definition = {
+                'word_type': d['type'],
+                'definition': d['definition']
+            }
+            result.append(definition)
+
+        return result
 
 
 class DefinitionRequest:
@@ -35,9 +85,10 @@ class DefinitionResponseManager:
     request requires the use of a 'discord.VoiceChannel', all other definition requests that also require that same voice channel must wait.
     """
 
-    def __init__(self, client: DiscordBotClient, ffmpeg_path: pathlib.Path):
+    def __init__(self, client: DiscordBotClient, ffmpeg_path: pathlib.Path, api: DefinitionAPI):
         self._client = client
         self._ffmpeg_path = ffmpeg_path
+        self._api = api
 
         # Each text channel will have its own request queue to allow simultaneous responses across channels
         self._request_queues = {}
@@ -48,6 +99,10 @@ class DefinitionResponseManager:
 
         # This dictionary will store a 'threading.Lock' for each voice channel that should be held by a 'MessageQueue' when it is using the corresponding voice channel.
         self._voice_channels_locks = collections.defaultdict(threading.Lock)
+
+    @property
+    def api(self):
+        return self._api
 
     @property
     def voice_channels(self):
@@ -184,14 +239,18 @@ class MessageQueue:
         self._ffmpeg_path = ffmpeg_path
         self._definition_response_manager = definition_response_manager
         self._client = definition_response_manager._client
+
+        # This queue stores incoming 'DefinitionRequest's. The condition is notified whenever a new item is added to the queue.
         self._queue = collections.deque()
         self._queue_lock = threading.Lock()
         self._condition = threading.Condition(self._queue_lock)
-        threading.Thread(target=self.run).start()
 
         # The current voice client we are using for text-to-speech
         self._voice_client: discord.VoiceClient = None
         self._voice_client_lock = threading.Lock()
+
+        # Start processing queue
+        threading.Thread(target=self.run).start()
 
     def add(self, definition_request: DefinitionRequest) -> None:
         """
@@ -224,18 +283,6 @@ class MessageQueue:
                 # Process the definition request
                 asyncio.run_coroutine_threadsafe(self._process_definition_request(definition_request), self._client.loop).result()
 
-                # Check if the request needed to use a voice channel
-                if definition_request.text_to_speech:
-                    voice_state = definition_request.voice_state
-                    voice_channel = None if voice_state is None else voice_state.channel
-
-                    with self._definition_response_manager.voice_channel_map_lock:
-                        self._definition_response_manager.voice_channels[voice_channel] -= 1
-
-                    # Disconnect from the voice channel if we don't need it anymore
-                    if self._definition_response_manager.voice_channels[voice_channel] == 0:
-                        asyncio.run_coroutine_threadsafe(self._client.leave_voice_channel(voice_channel), self._client.loop)
-
             print(f'[MessageQueue {id(self)}] Finished queue')
 
     async def _say(self, text: str, text_channel: discord.TextChannel, voice_channel=None, language='en-us', tts_input=None):
@@ -259,13 +306,13 @@ class MessageQueue:
             await utils.send_split(text, text_channel)
 
             # Speak
-            def after():
+            def after(error):
                 with self._voice_client_lock:
                     self._voice_client = None
                 self._definition_response_manager.voice_channels_locks[voice_channel].release()
             file = io.BytesIO()
             file.write(text_to_speech_bytes)
-            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)))
+            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)), after=after)
 
         else:
             # Send text chat reply
@@ -291,15 +338,9 @@ class MessageQueue:
             voice_channel = None
 
         # Get definitions
-        response = get_definition(word)
-        if response.status_code != 200:
-            await self._say(f'__**{word}**__\nI don\'t know that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. I don\'t know that word.')
-            return
-
-        try:
-            definitions = response.json()
-        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-            await utils.send_split(f'__**{word}**__\nThere was a problem finding word.', message.channel)
+        definitions = self._definition_response_manager.api.define(word)
+        if len(definitions) == 0:
+            await self._say(f'__**{word}**__\nThere was a problem finding that word.', message.channel, voice_channel=voice_channel, language=language, tts_input=f'{word}. There was a problem finding that word.')
             return
 
         # Create text channel reply
@@ -308,7 +349,7 @@ class MessageQueue:
         reply = f'__**{word}**__\n'
         tts_input = f'{word}, '
         for i, definition in enumerate(definitions):
-            word_type = definition['type']
+            word_type = definition['word_type']
             definition_text = definition['definition']
 
             if reverse:
@@ -320,18 +361,15 @@ class MessageQueue:
 
         # Generate text-to-speech
         if text_to_speech:
-            voice_state = message.author.voice
+            voice_state = definition_request.voice_state
             voice_channel = None if voice_state is None else voice_state.channel
-        else:
-            voice_channel = None
 
-        # Generate text-to-speech data
-        text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language) if voice_channel is not None else None
-        file = io.BytesIO()
-        file.write(text_to_speech_bytes)
+            # Generate text-to-speech data
+            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language) if voice_channel is not None else b''
+            file = io.BytesIO()
+            file.write(text_to_speech_bytes)
 
-        # If we need the voice channel, send both the text and audio response at the same time
-        if voice_channel is not None:
+            # If we need the voice channel, send both the text and audio response at the same time
             if text_to_speech_bytes is not None:
 
                 # Join the voice channel
@@ -343,22 +381,33 @@ class MessageQueue:
                 with self._voice_client_lock:
                     self._voice_client = voice_client
 
-                # Send text chat reply
-                await utils.send_split(reply, message.channel)
-
                 # Speak
-                def after():
+                def after(error):
+
+                    if error is not None:
+                        log(f'Exception occurred while playing audio: {error}', 'error')
+
                     with self._voice_client_lock:
                         self._voice_client = None
+
                     self._definition_response_manager.voice_channels_locks[voice_channel].release()
+
+                    # Update voice channel map
+                    with self._definition_response_manager.voice_channel_map_lock:
+                        self._definition_response_manager.voice_channels[voice_channel] -= 1
+
+                    # Disconnect from the voice channel if we don't need it anymore
+                    if self._definition_response_manager.voice_channels[voice_channel] == 0:
+                        asyncio.run_coroutine_threadsafe(self._client.leave_voice_channel(voice_channel), self._client.loop)
+
                 voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)), after=after)
 
             else:
+                log('Failed to generate text-to-speech data', 'error')
                 await utils.send_split('**There was a problem processing the text-to-speech.**', message.channel)
 
-        else:
-            # Send text chat reply
-            await utils.send_split(reply, message.channel)
+        # Send text chat reply
+        await utils.send_split(reply, message.channel)
 
     def stop(self) -> None:
         """

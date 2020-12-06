@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 from commands.command import Command
 from commands.help import HelpCommand
@@ -54,6 +56,13 @@ class DiscordBotClient(discord.Client):
         for voice_client in self.voice_clients:
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
+
+    def sync(self, coroutine):
+        """
+        Submit a coroutine to the client's event loop.
+        :param coroutine: A coroutine to run on this client's event loop.
+        """
+        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
     # def get_voice_client(self, voice_channel: discord.VoiceChannel):
     #     for voice_client in self.voice_clients:

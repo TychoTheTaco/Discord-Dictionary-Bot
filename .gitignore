@@ -9,3 +9,6 @@ token.txt
 
 # Credentials
 credentials.json
+
+# Owlbot dictionary API token
+owl_bot_dictionary_token.txt

@@ -1,11 +1,8 @@
 import discord
 import pathlib
-import asyncio
-import utils
 
 from discord_bot_client import DiscordBotClient
 
-from commands.help import HelpCommand
 from commands.define_forwards import DefineForwardsCommand
 from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
@@ -15,6 +12,7 @@ from commands.property import PropertyCommand
 
 from definition_response_manager import DefinitionResponseManager
 from properties import Properties
+from definition_response_manager import OwlBotDictionaryAPI
 
 
 class DictionaryBotClient(DiscordBotClient):
@@ -29,8 +27,12 @@ class DictionaryBotClient(DiscordBotClient):
         # Load properties
         self._properties = Properties()
 
+        # Load definition API token
+        with open('../owl_bot_dictionary_token.txt') as file:
+            owlbot_api_token = file.read()
+
         # Load commands
-        self._definition_response_manager = DefinitionResponseManager(self, pathlib.Path(ffmpeg_path))
+        self._definition_response_manager = DefinitionResponseManager(self, pathlib.Path(ffmpeg_path), OwlBotDictionaryAPI(token=owlbot_api_token))
         self.add_command(DefineForwardsCommand(self, self._definition_response_manager))
         self.add_command(DefineReverseCommand(self, self._definition_response_manager))
         self.add_command(StopCommand(self, self._definition_response_manager))
@@ -47,10 +49,3 @@ class DictionaryBotClient(DiscordBotClient):
 
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
-
-    def sync(self, coroutine):
-        """
-        Submit a coroutine to the client's event loop.
-        :param coroutine:
-        """
-        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
