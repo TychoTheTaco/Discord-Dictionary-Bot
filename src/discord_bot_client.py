@@ -1,10 +1,9 @@
 import asyncio
-
+import threading
 import discord
 from commands.command import Command
 from commands.help import HelpCommand
 import utils
-
 
 class DiscordBotClient(discord.Client):
     """
@@ -64,12 +63,6 @@ class DiscordBotClient(discord.Client):
         """
         return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
-    # def get_voice_client(self, voice_channel: discord.VoiceChannel):
-    #     for voice_client in self.voice_clients:
-    #         if voice_client.channel == voice_channel:
-    #             return voice_client
-    #     return None
-
     async def on_message(self, message: discord.Message):
 
         # Ignore our own messages
@@ -94,8 +87,7 @@ class DiscordBotClient(discord.Client):
         # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
-                print('EXEC:', command_input)
-                command.execute(message, command_input[1:])
+                threading.Thread(target=command.execute, args=[message, command_input[1:]]).start()
                 return
 
         # Send invalid command message
