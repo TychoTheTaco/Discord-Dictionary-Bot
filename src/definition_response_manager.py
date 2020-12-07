@@ -83,7 +83,7 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
 
         if response.status_code != 200:
-            log(f'Error getting definition! Status code: {response.status_code}; Word: {word}', 'error')
+            log(f'Error getting definition! Status code: {response.status_code}; Word: "{word}"', 'error')
             return []
 
         try:
@@ -195,27 +195,17 @@ class DefinitionResponseManager:
 
             self._request_queues[text_channel].stop()
 
-    def next(self, text_channel: discord.TextChannel, voice_state: discord.VoiceState) -> None:
+    def next(self, text_channel: discord.TextChannel) -> None:
         """
         If the bot is currently reading out a definition, this will make it skip to the next one.
         :param text_channel: The 'discord.TextChannel' the command was sent in.
-        :param voice_state: The 'discord.VoiceState' of the user who issued the command.
         """
-        voice_channel = voice_state.channel if voice_state is not None else None
+        with self._request_queues_lock:
+            if text_channel not in self._request_queues:
+                self._client.sync(utils.send_split('Nothing in queue.', text_channel))
+                return  # nothing in queue
 
-        # Check if user is in a voice channel
-        if voice_channel is None:
-            self._client.sync(utils.send_split('You must be in a voice channel to use that command.', text_channel))
-            return
-
-        # Find the message queue that is using the voice channel
-        for message_queue in self._request_queues.values():
-            if message_queue._voice_channel == voice_channel:
-                message_queue.next()
-                return
-
-        #
-        self._client.sync(utils.send_split(f'There are no more words in the queue.', text_channel))
+            self._request_queues[text_channel].next()
 
 
 class MessageQueue:
@@ -268,9 +258,9 @@ class MessageQueue:
             # Wait for an item to enter the queue
             with self._queue_lock:
                 while len(self._queue) == 0:
-                    log(f'[MessageQueue {id(self)}] Waiting for more requests...')
+                    log(f'[{self}] Waiting for more requests...')
                     self._queue_condition.wait()
-                log(f'[MessageQueue {id(self)}] Processing {len(self._queue)} items...')
+                log(f'[{self}] Processing {len(self._queue)} items...')
 
                 # Get definition request
                 definition_request = self._queue.popleft()
@@ -488,9 +478,18 @@ class MessageQueue:
         """
         If we are currently reading out a definition, skips to the next definition request. This will have no effect if we are not currently using a voice channel.
         """
-        with self._voice_client_lock:
-            if self._voice_client:
-                self._voice_client.stop()
+        with self._stop_lock:
+
+            # Stop using the voice channel
+            with self._voice_client_lock:
+                if self._voice_client:
+                    self._voice_client.stop()
+
+        # Send text channel reply
+        self._client.sync(utils.send_split('Skipped to next word.', self._text_channel))
+
+    def __repr__(self):
+        return f'MessageQueue {{G: "{self._text_channel.guild}", C: "{self._text_channel.name}"}}'
 
 
 class BytesIOPCMAudio(discord.PCMAudio):
