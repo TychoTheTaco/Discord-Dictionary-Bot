@@ -1,26 +1,17 @@
 import asyncio
 import collections
-import sys
 import threading
 import io
-from abc import ABC, abstractmethod
-from enum import Enum
 
+from dictionary_api import DictionaryAPI
+from m_logging import log
 import discord
 import pathlib
-import requests
 import utils
 from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 import subprocess
 from discord_bot_client import DiscordBotClient
-
-
-def log(message, level='info'):
-    if level in ['e', 'error']:
-        print(f'[ERROR] {message}', file=sys.stderr)
-    else:
-        print(f'[INFO ] {message}')
 
 
 def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL):
@@ -56,51 +47,6 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
     except Exception as e:
         print('Failed to get text to speech data:', e)
         return None
-
-
-class DictionaryAPI(ABC):
-
-    @abstractmethod
-    def define(self, word: str) -> {}:
-        pass
-
-
-class OwlBotDictionaryAPI(DictionaryAPI):
-
-    def __init__(self, token: str):
-        self._token = token
-
-    def define(self, word: str) -> []:
-        """
-        Get the definitions for the specified word. The format is:
-        [
-        {word_type: 'str', definition: 'str'}
-        ]
-        :param word: The word to define.
-        :return:
-        """
-        headers = {'Authorization': f'Token {self._token}'}
-        response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
-
-        if response.status_code != 200:
-            log(f'Error getting definition! Status code: {response.status_code}; Word: "{word}"', 'error')
-            return []
-
-        try:
-            definitions = response.json()
-        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-            log(f'Failed to parse response: {response}')
-            return []
-
-        result = []
-        for d in definitions:
-            definition = {
-                'word_type': d['type'],
-                'definition': d['definition']
-            }
-            result.append(definition)
-
-        return result
 
 
 class DefinitionRequest:

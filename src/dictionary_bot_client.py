@@ -12,7 +12,7 @@ from commands.property import PropertyCommand
 
 from definition_response_manager import DefinitionResponseManager
 from properties import Properties
-from definition_response_manager import OwlBotDictionaryAPI
+from dictionary_api import OwlBotDictionaryAPI
 
 
 class DictionaryBotClient(DiscordBotClient):

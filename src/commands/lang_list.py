@@ -8,7 +8,7 @@ import argparse
 
 class LangListCommand(Command):
 
-    def __init__(self, client: discord.Client):
+    def __init__(self, client: 'dictionary_bot_client.DictionaryBotClient'):
         super().__init__(client, 'lang', aliases=['l'], description='Shows the list of supported languages for text to speech.', usage='[-v]')
 
     def execute(self, message: discord.Message, args: tuple):
