@@ -46,7 +46,7 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
         response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
         return response.audio_content
     except Exception as e:
-        log(f'Failed to generate text-to-speech data: {e}', 'error')
+        log(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: {language_code}', 'error')
         return b''
 
 
@@ -229,6 +229,8 @@ class MessageQueue:
         # Get text-to-speech data
         if definition_request.text_to_speech:
             text_to_speech_bytes = text_to_speech_pcm(tts_input, language=definition_request.language)
+            if len(text_to_speech_bytes) == 0:
+                return reply, None
             buffer = io.BytesIO()
             buffer.write(text_to_speech_bytes)
             return reply, buffer
@@ -424,7 +426,7 @@ class MessageQueue:
                 # Release stop lock
                 self._stop_lock.release()
 
-                self._client.sync(utils.send_split('**There was a problem processing the text-to-speech.**', message.channel))
+                self._client.sync(utils.send_split('There was a problem processing the text-to-speech.', message.channel))
 
         else:
 

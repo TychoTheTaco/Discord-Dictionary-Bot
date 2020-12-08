@@ -42,12 +42,12 @@ class DefineCommand(Command):
             self.client.sync(utils.send_split(f'That\'s not a word.', message.channel))
             return
 
-        # TODO: Find closest matching language
+        # TODO: Find closest matching language, prefer wavenet by default?
         if args.language not in DefineCommand._LANGUAGES:
             for language_code in DefineCommand._LANGUAGES:
-                if language_code.startswith(args.language):
+                if args.language.lower() in language_code.lower():
                     args.language = language_code
-                    self.client.sync(utils.send_split(f'**Unknown language. Assuming it\'s** `{args.language}`', message.channel))
+                    self.client.sync(utils.send_split(f'Incomplete language code. Assuming you mean `{args.language}`', message.channel))
                     break
 
         # Add request to queue
