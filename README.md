@@ -32,6 +32,21 @@ Aliases: `n`<br>
 ## Screenshots
 ![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
+## Libraries and APIs
+The following libraries / APIs used by this bot require an API token to function. If you want to clone this repository, you will need to use your own API token for them.<br>
+
+### Owlbot
+[URL](https://owlbot.info/)<br>
+This API is used to get word definitions.
+
+### Google Cloud Text-to-Speech
+[URL](https://cloud.google.com/text-to-speech)<br>
+This library is used to generate realistic text-to-speech translations in multiple languages.
+
+### Google Cloud Firestore
+[URL](https://firebase.google.com/products/firestore)<br>
+This library is used to store guild and channel specific properties that are customizable by the user.
+
 ### Credits
 #### Dictionary icon
 This icon was modified from the [original](https://thenounproject.com/term/dictionary/653775/).<br>
