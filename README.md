@@ -23,6 +23,8 @@ Aliases: `h`<br>
 Usage: `lang [-v]`<br>
 Shows the list of supported languages for text to speech.<br>
 Aliases: `l`<br>
+Options:<br>
+`-v`: Verbose mode. Prints out all the languages in chat instead of posting a link.<br>
 
 **next**<br>
 Usage: `next`<br>
@@ -33,6 +35,11 @@ Aliases: `n`<br>
 Usage: `property <scope> (list | set <key> <value> | del <key>)`<br>
 Set or remove channel or server properties.<br>
 Aliases: `p`<br>
+Options:<br>
+`<scope>`: The scope of the property. Either 'global' for guild-specific properties or 'channel' for channel-specific properties. Channel-specific properties will override guild-specific properties.<br>
+`list`: List all properties in the specified scope.<br>
+`set <key> <value>`: Set the value of the property named `key` to `value`.<br>
+`del <key>`: Removes the specified property.<br>
 
 **stop**<br>
 Usage: `stop`<br>
