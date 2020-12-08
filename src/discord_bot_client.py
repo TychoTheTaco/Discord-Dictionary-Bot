@@ -4,6 +4,8 @@ import discord
 from commands.command import Command
 from commands.help import HelpCommand
 import utils
+from commands.property import PropertyCommand
+from properties import Properties
 
 
 class DiscordBotClient(discord.Client):
@@ -13,11 +15,20 @@ class DiscordBotClient(discord.Client):
 
     def __init__(self):
         super().__init__()
-        self._commands = [HelpCommand(self)]
+
+        # Initialize properties
+        self._properties = Properties()
+
+        # List of commands this bot supports. All bots support the 'Help' and 'Property' commands by default. Subclasses can add more by calling 'add_command()'.
+        self._commands = [HelpCommand(self), PropertyCommand(self, self._properties)]
 
     @property
     def commands(self):
         return self._commands
+
+    @property
+    def properties(self):
+        return self._properties
 
     def add_command(self, command: Command) -> None:
         """
@@ -32,9 +43,9 @@ class DiscordBotClient(discord.Client):
         :param channel: The text channel.
         :return: The summon prefix.
         """
-        return '!'
+        return self._properties.get(channel, 'prefix')
 
-    async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceClient:
+    async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceProtocol:
         """
         Connect to the specified voice channel if we are not already connected.
         :param voice_channel: The voice channel to connect to.
@@ -63,6 +74,9 @@ class DiscordBotClient(discord.Client):
         :param coroutine: A coroutine to run on this client's event loop.
         """
         return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+
+    async def on_ready(self):
+        print(f'Logged on as {self.user}!')
 
     async def on_message(self, message: discord.Message):
 

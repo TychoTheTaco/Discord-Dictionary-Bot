@@ -5,10 +5,12 @@ import utils
 import gtts
 import argparse
 
+from discord_bot_client import DiscordBotClient
+
 
 class LangListCommand(Command):
 
-    def __init__(self, client: 'dictionary_bot_client.DictionaryBotClient'):
+    def __init__(self, client: DiscordBotClient):
         super().__init__(client, 'lang', aliases=['l'], description='Shows the list of supported languages for text to speech.', usage='[-v]')
 
     def execute(self, message: discord.Message, args: tuple):

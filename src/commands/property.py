@@ -10,7 +10,7 @@ from contextlib import redirect_stderr
 
 class PropertyCommand(Command):
 
-    def __init__(self, client: discord.Client, properties: Properties):
+    def __init__(self, client: 'DiscordBotClient', properties: Properties):
         super().__init__(client, 'property', aliases=['p'], description='Set or remove channel or server properties.', usage='<scope> (list | set <key> <value> | del <key>)')
         self._properties = properties
 

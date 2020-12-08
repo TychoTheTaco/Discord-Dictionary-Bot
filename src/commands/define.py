@@ -1,3 +1,6 @@
+import io
+from contextlib import redirect_stderr
+
 from definition_response_manager import DefinitionRequest
 from commands.command import Command
 import discord
@@ -6,13 +9,15 @@ import utils
 import re
 from google.cloud import texttospeech
 
+from discord_bot_client import DiscordBotClient
+
 
 class DefineCommand(Command):
 
     # This set stores valid language names that can be used for text-to-speech. It is filled when the first instance of 'DefineCommand' is created. All instances of 'DefineCommand' should share this set.
     _LANGUAGES = set()
 
-    def __init__(self, client: 'dictionary_bot_client.DictionaryBotClient', definition_response_manager, name, aliases=None, description='', secret=False):
+    def __init__(self, client: DiscordBotClient, definition_response_manager, name, aliases=None, description='', secret=False):
         super().__init__(client, name, aliases, description, usage='[-v] [-lang <language_code>] <word>', secret=secret)
         self._definition_response_manager = definition_response_manager
 
@@ -28,7 +33,12 @@ class DefineCommand(Command):
             parser.add_argument('word', nargs='+')
             parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
             parser.add_argument('-lang', '-l', dest='language', default=self.client.properties.get(message.channel, 'language'))
-            args = parser.parse_args(args)
+
+            # Parse arguments but suppress stderr output
+            stderr_stream = io.StringIO()
+            with redirect_stderr(stderr_stream):
+                args = parser.parse_args(args)
+
         except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
             return
@@ -43,12 +53,13 @@ class DefineCommand(Command):
             return
 
         # TODO: Find closest matching language, prefer wavenet by default?
-        if args.language not in DefineCommand._LANGUAGES:
-            for language_code in DefineCommand._LANGUAGES:
-                if args.language.lower() in language_code.lower():
-                    args.language = language_code
-                    self.client.sync(utils.send_split(f'Incomplete language code. Assuming you mean `{args.language}`', message.channel))
-                    break
+        if args.language != self.client.properties.get(message.channel, 'language'):
+            if args.language not in DefineCommand._LANGUAGES:
+                for language_code in DefineCommand._LANGUAGES:
+                    if args.language.lower() in language_code.lower():
+                        args.language = language_code
+                        self.client.sync(utils.send_split(f'Incomplete language code. Assuming you mean `{args.language}`', message.channel))
+                        break
 
         # Add request to queue
         self.send_request(message.author, word, message, False, args.text_to_speech, language=args.language)
