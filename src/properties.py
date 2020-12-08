@@ -78,6 +78,18 @@ class Properties:
                 return dictionary[key]
             return self.get(scope.guild, key)
 
+    def get_channel_property(self, channel: discord.TextChannel, key: str) -> Union[str, None]:
+        """
+        Get a channel-specific property. This will return 'None' if the property does not exist.
+        :param channel:
+        :param key:
+        :return:
+        """
+        dictionary = self._get_dict(channel)
+        if key in dictionary:
+            return dictionary[key]
+        return None
+
     def list(self, scope):
         return self._get_dict(scope)
 

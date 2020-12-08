@@ -50,10 +50,21 @@ class DefineCommand(Command):
                     self.client.sync(utils.send_split(f'**Unknown language. Assuming it\'s** `{args.language}`', message.channel))
                     break
 
-        # TODO: Check for language or text to speech override
-
         # Add request to queue
         self.send_request(message.author, word, message, False, args.text_to_speech, language=args.language)
 
-    def send_request(self, user, word, message, reverse, text_to_speech, language):
+    def send_request(self, user: discord.Member, word, message: discord.Message, reverse, text_to_speech, language):
+
+        # Check for text-to-speech override
+        text_to_speech_property = self.client.properties.get(message.channel, 'text_to_speech')
+        if text_to_speech_property == 'force':
+            text_to_speech = user.voice is not None
+        elif text_to_speech_property == 'disable':
+            text_to_speech = False
+
+        # Check for language override
+        language_property = self.client.properties.get_channel_property(message.channel, 'language')
+        if language_property is not None:
+            language = language_property
+
         self._definition_response_manager.add(DefinitionRequest(user, word, message, reverse=reverse, text_to_speech=text_to_speech, language=language))
