@@ -27,14 +27,18 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         headers = {'Authorization': f'Token {self._token}'}
         response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
 
+        if response.status_code == 401:
+            log(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status_code}, Word: "{word}"}}', 'error')
+            return []
+
         if response.status_code != 200:
-            log(f'Error getting definition! Status code: {response.status_code}; Word: "{word}"', 'error')
+            log(f'{self} Error getting definition! {{Status code: {response.status_code}, Word: "{word}"}}', 'error')
             return []
 
         try:
             definitions = response.json()
         except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-            log(f'Failed to parse response: {response}')
+            log(f'{self} Failed to parse response: {response}')
             return []
 
         result = []
@@ -46,3 +50,6 @@ class OwlBotDictionaryAPI(DictionaryAPI):
             result.append(definition)
 
         return result
+
+    def __repr__(self):
+        return '[Owlbot]'

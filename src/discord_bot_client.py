@@ -5,6 +5,7 @@ from commands.command import Command
 from commands.help import HelpCommand
 import utils
 
+
 class DiscordBotClient(discord.Client):
     """
     A general discord bot client that supports 'Command's and includes some other helper functions.

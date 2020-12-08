@@ -1,8 +1,11 @@
+import io
+
 from commands.command import Command
 import discord
 import argparse
 import utils
 from properties import Properties
+from contextlib import redirect_stderr
 
 
 class PropertyCommand(Command):
@@ -30,7 +33,10 @@ class PropertyCommand(Command):
 
             list_parser = subparsers.add_parser('list')
 
-            args = parser.parse_args(args)
+            # Parse arguments but suppress stderr output
+            stderr_stream = io.StringIO()
+            with redirect_stderr(stderr_stream):
+                args = parser.parse_args(args)
         except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
             return
