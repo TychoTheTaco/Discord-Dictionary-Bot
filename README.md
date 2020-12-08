@@ -47,20 +47,19 @@ Aliases: `s`<br>
 ## Screenshots
 ![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
-## Libraries and APIs
-The following libraries / APIs used by this bot require an API token to function. If you want to clone this repository, you will need to use your own API token for them.<br>
+## Requirements
+If you want to run this bot yourself, you will need your own API tokens for the APIs that this bot uses. More specifically, you will need tokens for the following APIs:
+- [Owlbot](https://owlbot.info/)
+- [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
+- [Google Cloud Firestore](https://firebase.google.com/products/firestore)
 
-### Owlbot
-[URL](https://owlbot.info/)<br>
-This API is used to get word definitions.
+Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 
-### Google Cloud Text-to-Speech
-[URL](https://cloud.google.com/text-to-speech)<br>
-This library is used to generate realistic text-to-speech translations in multiple languages.
-
-### Google Cloud Firestore
-[URL](https://firebase.google.com/products/firestore)<br>
-This library is used to store guild and channel specific properties that are customizable by the user.
+Finally, run `main.py` with the following arguments:<br>
+`--discord-token <token>`: Your discord bot token.<br>
+`--google-credentials-path <path>`: Path to the Google applicaiton credentials file.<br>
+`--owlbot-api-token <token>`: Your Owlbot API token.<br>
+`--ffmpeg-path <token>`: Path to the FFmpeg executable.<br>
 
 ### Credits
 #### Dictionary icon
