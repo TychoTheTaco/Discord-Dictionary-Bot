@@ -61,7 +61,7 @@ Finally, run `main.py` with the following arguments:<br>
 `--owlbot-api-token <token>`: Your Owlbot API token.<br>
 `--ffmpeg-path <token>`: Path to the FFmpeg executable.<br>
 
-### Credits
+## Credits
 #### Dictionary icon
 This icon was modified from the [original](https://thenounproject.com/term/dictionary/653775/).<br>
 `dictionary by Oriol Sallés from the Noun Project`
