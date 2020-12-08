@@ -14,20 +14,30 @@ Options:<br>
 `-v`: Read out the definition to the voice channel you are connected to, if any.<br>
 `-lang <language_code>`: Specify the language to use for text-to-speech.<br>
 
-**stop**<br>
-Usage: `stop`<br>
-Makes this bot stop talking and removes any queued definition requests.<br>
-Aliases: `s`<br>
-
 **help**<br>
 Usage: `help`<br>
 Shows available commands.<br>
 Aliases: `h`<br>
 
+**lang**<br>
+Usage: `lang [-v]`<br>
+Shows the list of supported languages for text to speech.<br>
+Aliases: `l`<br>
+
 **next**<br>
 Usage: `next`<br>
 If the bot is currently reading out a definition, this will make it skip to the next one.<br>
 Aliases: `n`<br>
+
+**property**<br>
+Usage: `property <scope> (list | set <key> <value> | del <key>)`<br>
+Set or remove channel or server properties.<br>
+Aliases: `p`<br>
+
+**stop**<br>
+Usage: `stop`<br>
+Makes this bot stop talking and removes any queued definition requests.<br>
+Aliases: `s`<br>
 
 ## Screenshots
 ![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
