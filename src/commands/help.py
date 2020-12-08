@@ -10,7 +10,7 @@ class HelpCommand(Command):
 
     def execute(self, message: discord.Message, args: tuple):
         reply = '__Available Commands__\n'
-        for command in self.client.commands:
+        for command in sorted(self.client.commands, key=lambda x: x.name):
             if not command.secret:
                 reply += f'**{command.name}**'
                 if len(command.usage) > 0:
