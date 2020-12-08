@@ -104,6 +104,10 @@ class DefinitionResponseManager:
         self._voice_channels_locks = collections.defaultdict(threading.Lock)
 
     @property
+    def client(self):
+        return self._client
+
+    @property
     def api(self):
         return self._api
 
@@ -183,7 +187,7 @@ class MessageQueue:
         self._ffmpeg_path = ffmpeg_path
         self._definition_response_manager = definition_response_manager
         self._text_channel = text_channel
-        self._client = definition_response_manager._client
+        self._client = definition_response_manager.client
 
         # This queue stores incoming 'DefinitionRequest's. The condition is notified whenever a new item is added to the queue.
         self._queue = collections.deque()
@@ -228,11 +232,7 @@ class MessageQueue:
 
         # Get text-to-speech data
         if definition_request.text_to_speech:
-            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=definition_request.language)
-            if len(text_to_speech_bytes) == 0:
-                return reply, None
-            buffer = io.BytesIO()
-            buffer.write(text_to_speech_bytes)
+            buffer = self._get_text_to_speech(tts_input, definition_request.language)
             return reply, buffer
 
         return reply, None
@@ -282,13 +282,27 @@ class MessageQueue:
             # Process the definition request
             self._process_definition_request(definition_request)
 
+    def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
+        result = io.BytesIO()
+
+        text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
+        if len(text_to_speech_bytes) == 0:
+            return result
+
+        # Convert to proper format
+        text_to_speech_bytes = convert(text_to_speech_bytes, ffmpeg_path=self._ffmpeg_path)
+        result.write(text_to_speech_bytes)
+        result.seek(0)
+
+        return result
+
     def _say(self, text: str, voice_channel=None, language='en-us', tts_input=None, after_callback=None):
 
         # Send voice channel reply
         if voice_channel is not None:
 
             # Generate text to speech data
-            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
+            buffer = self._get_text_to_speech(tts_input, language)
 
             # Join voice channel
             voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
@@ -317,12 +331,8 @@ class MessageQueue:
                 if after_callback is not None:
                     after_callback(error)
 
-            # Write text-to-speech data to a BytesIO file
-            file = io.BytesIO()
-            file.write(text_to_speech_bytes)
-
             # Speak
-            voice_client.play(BytesIOPCMAudio(file, executable=str(self._ffmpeg_path)), after=after)
+            voice_client.play(discord.PCMAudio(buffer), after=after)
 
         else:
 
@@ -416,7 +426,7 @@ class MessageQueue:
                     # Release process lock
                     self._process_lock.release()
 
-                voice_client.play(BytesIOPCMAudio(buffer, executable=str(self._ffmpeg_path)), after=after)
+                voice_client.play(discord.PCMAudio(buffer), after=after)
 
                 # Release stop lock
                 self._stop_lock.release()
@@ -482,45 +492,15 @@ class MessageQueue:
         return f'MessageQueue {{G: "{self._text_channel.guild}", C: "{self._text_channel.name}"}}'
 
 
-class BytesIOPCMAudio(discord.PCMAudio):
+def convert(source: bytes, ffmpeg_path='ffmpeg'):
+    # Start ffmpeg process
+    process = subprocess.Popen(
+        [ffmpeg_path, '-i', 'pipe:0', '-ac', '2', '-f', 's16le', 'pipe:1', '-loglevel', 'panic'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE
+    )
 
-    def __init__(self, source, executable='ffmpeg'):
-        self._source = source
+    # Pipe input and wait for output
+    output = process.communicate(source)
 
-        # Start ffmpeg process
-        self._process = subprocess.Popen(
-            [executable, '-y', '-i', 'pipe:0', '-ac', '2', '-f', 's16le', 'pipe:1', '-loglevel', 'panic'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-
-        # Start writing data to process stdin
-        threading.Thread(target=self.sp).start()
-
-        super().__init__(self._process.stdout)
-
-    def sp(self):
-        self._process.stdin.write(self._source.getvalue())
-        self._process.stdin.close()
-
-
-def split(message, split_size):
-    messages = []
-    while len(message) > 0:
-
-        # Find closest space before 'split_size' limit
-        if len(message) > split_size:
-            space_index = split_size
-            while message[space_index] != ' ':
-                space_index -= 1
-        else:
-            space_index = len(message)
-
-        # Add chunk to message list
-        m = message[:space_index]
-        messages.append(m)
-
-        # Remove chunk from message
-        message = message[space_index:]
-
-    return messages
+    return output[0]
