@@ -5,6 +5,7 @@ from commands.command import Command
 from commands.help import HelpCommand
 import utils
 from commands.property import PropertyCommand
+from exceptions import InsufficientPermissionsException
 from properties import Properties
 
 
@@ -51,6 +52,12 @@ class DiscordBotClient(discord.Client):
         :param voice_channel: The voice channel to connect to.
         :return: A 'discord.VoiceClient' representing our voice connection.
         """
+
+        # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
+        permissions = voice_channel.permissions_for(voice_channel.guild.me)
+        if not all([permissions.connect, permissions.speak, permissions.use_voice_activation]):
+            raise InsufficientPermissionsException(['Connect', 'Speak', 'Use Voice Activity'])
+
         # Check if we are already connected to this voice channel
         for voice_client in self.voice_clients:
             if voice_client.channel == voice_channel:

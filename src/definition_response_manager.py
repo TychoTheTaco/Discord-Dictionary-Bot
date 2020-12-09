@@ -3,7 +3,7 @@ import collections
 import threading
 import io
 from concurrent.futures.thread import ThreadPoolExecutor
-
+from exceptions import InsufficientPermissionsException
 from dictionary_api import DictionaryAPI
 from m_logging import log
 import discord
@@ -305,7 +305,23 @@ class MessageQueue:
             buffer = self._get_text_to_speech(tts_input, language)
 
             # Join voice channel
-            voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+            try:
+                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+            except InsufficientPermissionsException as e:
+
+                self._client.sync(utils.send_split(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel))
+
+                # Call pass-through callback
+                after_callback(None)
+                return
+
+            except Exception as e:
+                log(f'{self} Failed to connect to the voice channel: {e}', 'error')
+                self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
+
+                # Call pass-through callback
+                after_callback(None)
+                return
 
             # Acquire lock for this voice channel
             self._definition_response_manager.voice_channels_locks[voice_channel].acquire()
@@ -393,7 +409,31 @@ class MessageQueue:
             if buffer is not None:
 
                 # Join the voice channel
-                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+                try:
+                    voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+                except InsufficientPermissionsException as e:
+
+                    self._client.sync(utils.send_split(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel))
+
+                    # Release stop lock
+                    self._stop_lock.release()
+
+                    # Release process lock
+                    self._process_lock.release()
+
+                    return
+
+                except Exception as e:
+                    log(f'{self} Failed to connect to voice channel: {e}', 'error')
+                    self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
+
+                    # Release stop lock
+                    self._stop_lock.release()
+
+                    # Release process lock
+                    self._process_lock.release()
+
+                    return
 
                 # Acquire lock for this voice channel
                 self._definition_response_manager.voice_channels_locks[voice_channel].acquire()
