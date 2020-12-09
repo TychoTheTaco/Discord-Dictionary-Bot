@@ -55,8 +55,8 @@ class DiscordBotClient(discord.Client):
 
         # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
         permissions = voice_channel.permissions_for(voice_channel.guild.me)
-        if not all([permissions.connect, permissions.speak, permissions.use_voice_activation]):
-            raise InsufficientPermissionsException(['Connect', 'Speak', 'Use Voice Activity'])
+        if not all([permissions.view_channel, permissions.connect, permissions.speak]):
+            raise InsufficientPermissionsException(['View Channel', 'Connect', 'Speak'])
 
         # Check if we are already connected to this voice channel
         for voice_client in self.voice_clients:
