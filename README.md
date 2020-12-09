@@ -1,6 +1,6 @@
 # Discord Dictionary Bot
-
-A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you.
+A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you.<br>
+[Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot)
 
 ## Usage
 Default command prefix: `.`<br>
