@@ -1,5 +1,8 @@
 # Discord Dictionary Bot
+<img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
 A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you. [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot)
+
+
 
 ## Usage
 Default command prefix: `.`<br>
@@ -62,5 +65,6 @@ Finally, run `main.py` with the following arguments:<br>
 
 ## Credits
 #### Dictionary icon
+<img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
 This icon was modified from the [original](https://thenounproject.com/term/dictionary/653775/).<br>
 `dictionary by Oriol Sallés from the Noun Project`
