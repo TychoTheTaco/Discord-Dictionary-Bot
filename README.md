@@ -1,6 +1,5 @@
 # Discord Dictionary Bot
-A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you.<br>
-[Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot)
+A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you. [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot)
 
 ## Usage
 Default command prefix: `.`<br>
@@ -33,7 +32,7 @@ Aliases: `n`<br>
 **property**<br>
 Set or remove channel or server properties.<br>
 Usage: `property <scope> (list | set <key> <value> | del <key>)`<br>
-`<scope>`: The scope of the property. Either 'global' for guild-specific properties or 'channel' for channel-specific properties. Channel-specific properties will override guild-specific properties.<br>
+`<scope>`: The scope of the property. Either `global` for guild-specific properties or `channel` for channel-specific properties. Channel-specific properties will override guild-specific properties.<br>
 `list`: List all properties in the specified scope.<br>
 `set <key> <value>`: Set the value of the property named `key` to `value`.<br>
 `del <key>`: Removes the specified property.<br>
