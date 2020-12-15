@@ -81,6 +81,9 @@ class DefinitionRequest:
         self.text_to_speech = text_to_speech
         self.language = language
 
+    def __repr__(self):
+        return f'{{W: "{self.word}", M: "{self.message}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
+
 
 class DefinitionResponseManager:
     """
@@ -368,6 +371,8 @@ class MessageQueue:
         message = definition_request.message
         text_to_speech = definition_request.text_to_speech
         voice_channel = definition_request.voice_channel
+
+        log(f'[{self}] Processing request: {definition_request}')
 
         # Get result from request future
         with self._request_futures_lock:

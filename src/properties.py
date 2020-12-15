@@ -69,6 +69,7 @@ class Properties:
         self._get_snapshot(scope).reference.set(dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
         return True
 
+    # TODO: Cache values if they are unchanged to limit firestore reads
     def get(self, scope: Union[discord.Guild, discord.TextChannel], key) -> str:
         if type(scope) is discord.Guild:
             return self._get_dict(scope)[key]

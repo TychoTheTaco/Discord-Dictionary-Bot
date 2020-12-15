@@ -1,9 +1,12 @@
+import io
+
 from commands.command import Command
 import discord
 from google.cloud import texttospeech
 import utils
 import gtts
 import argparse
+from contextlib import redirect_stderr
 
 from discord_bot_client import DiscordBotClient
 
@@ -18,7 +21,12 @@ class LangListCommand(Command):
         try:
             parser = argparse.ArgumentParser()
             parser.add_argument('-v', action='store_true', default=False, dest='verbose', help='Verbose')
-            args = parser.parse_args(args)
+
+            # Parse arguments but suppress stderr output
+            stderr_stream = io.StringIO()
+            with redirect_stderr(stderr_stream):
+                args = parser.parse_args(args)
+
         except SystemExit:
             self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
             return

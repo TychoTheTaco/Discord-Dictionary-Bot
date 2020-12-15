@@ -1,8 +1,22 @@
 import sys
+import time
 
 
 def log(message, level='info'):
+    # Add timestamp
+    timestamp = time.strftime("%m/%d/%Y %H:%M:%S")
+    result = f'[{timestamp}]'
+
+    # Add log level
+    file = sys.stdout
     if level in ['e', 'error']:
-        print(f'[ERROR] {message}', file=sys.stderr)
+        result += ' [ERROR]'
+        file = sys.stderr
     else:
-        print(f'[INFO ] {message}')
+        result += ' [INFO ]'
+
+    # Add message
+    result += f' {message}'
+
+    # Write message
+    print(f'{result}', file=file)
