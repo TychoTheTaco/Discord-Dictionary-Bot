@@ -72,7 +72,7 @@ def create_reply(word, definitions, reverse=False):
 
 class DefinitionRequest:
 
-    def __init__(self, user: discord.Member, word, message, reverse=False, text_to_speech=False, language='en-us'):
+    def __init__(self, user: discord.Member, word, message: discord.Message, reverse=False, text_to_speech=False, language='en-us'):
         self.user = user
         self.voice_channel = None if user.voice is None else user.voice.channel
         self.word = word
@@ -82,7 +82,7 @@ class DefinitionRequest:
         self.language = language
 
     def __repr__(self):
-        return f'{{W: "{self.word}", M: "{self.message}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
+        return f'{{W: "{self.word}", M: "{self.message.content}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
 
 
 class DefinitionResponseManager:
