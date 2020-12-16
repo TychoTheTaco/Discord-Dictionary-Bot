@@ -11,7 +11,8 @@ from contextlib import redirect_stderr
 class PropertyCommand(Command):
 
     def __init__(self, client: 'DiscordBotClient', properties: Properties):
-        super().__init__(client, 'property', aliases=['p'], description='Set or remove channel or server properties.', usage='<scope> (list | set <key> <value> | del <key>)')
+        super().__init__(client, 'property', aliases=['p'], description='Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.',
+                         usage='<scope> (list | set <key> <value> | del <key>)')
         self._properties = properties
 
     def execute(self, message: discord.Message, args: tuple):

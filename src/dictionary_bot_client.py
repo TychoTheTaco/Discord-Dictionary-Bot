@@ -7,7 +7,7 @@ from commands.stop import StopCommand
 from commands.define_backwards import DefineReverseCommand
 from commands.next import NextCommand
 from commands.lang_list import LangListCommand
-
+from commands.active_server_count import ActiveServerCountCommand
 from definition_response_manager import DefinitionResponseManager
 from dictionary_api import DictionaryAPI
 
@@ -29,3 +29,4 @@ class DictionaryBotClient(DiscordBotClient):
         self.add_command(StopCommand(self, self._definition_response_manager))
         self.add_command(NextCommand(self, self._definition_response_manager))
         self.add_command(LangListCommand(self))
+        self.add_command(ActiveServerCountCommand(self))
