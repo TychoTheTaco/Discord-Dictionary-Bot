@@ -7,6 +7,7 @@ import utils
 from commands.property import PropertyCommand
 from exceptions import InsufficientPermissionsException
 from properties import Properties
+from m_logging import log
 
 
 class DiscordBotClient(discord.Client):
@@ -93,6 +94,8 @@ class DiscordBotClient(discord.Client):
 
         # Check what prefix we have in this channel or server
         prefix = self.get_prefix(message.channel)
+        if type(prefix) is not str:
+            log(f'Invalid prefix: "{prefix}" M: "{message}" G: "{message.guild} C: "{message.channel}"')
 
         # Check if the message starts with our prefix
         if not message.content.startswith(prefix):

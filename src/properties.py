@@ -1,6 +1,7 @@
 import discord
 from typing import Union
 from google.cloud import firestore
+from m_logging import log
 
 
 class Property:
@@ -66,6 +67,7 @@ class Properties:
                     return False
         dictionary = self._get_dict(scope)
         dictionary[key] = value
+        log(f'Set property "{key}" to "{value}"')
         self._get_snapshot(scope).reference.set(dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
         return True
 
@@ -119,4 +121,5 @@ class Properties:
         elif type(scope) is discord.TextChannel:
             if snapshot.exists:
                 return snapshot.to_dict()
+        log(f'Scope is not a guild or channel: {type(scope)}', 'warn')
         return {}

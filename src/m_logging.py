@@ -12,8 +12,10 @@ def log(message, level='info'):
     if level in ['e', 'error']:
         result += ' [ERROR]'
         file = sys.stderr
-    else:
+    elif level in ['i', 'info']:
         result += ' [INFO ]'
+    elif level in ['w', 'warn']:
+        result += ' [WARN ]'
 
     # Add message
     result += f' {message}'
