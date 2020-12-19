@@ -92,10 +92,11 @@ class DiscordBotClient(discord.Client):
         if message.author == self.user:
             return
 
-        # Check what prefix we have in this channel or server
+        # Check what prefix we have in this channel
         prefix = self.get_prefix(message.channel)
         if type(prefix) is not str:
-            log(f'Invalid prefix: "{prefix}" M: "{message}" G: "{message.guild} C: "{message.channel}"')
+            log(f'Message: "{message.content}"')
+            log(f'Invalid prefix: "{prefix}" M: "{message}" G: "{message.guild}" C: "{message.channel}"')
 
         # Check if the message starts with our prefix
         if not message.content.startswith(prefix):

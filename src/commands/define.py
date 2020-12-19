@@ -64,11 +64,11 @@ class DefineCommand(Command):
         # Add request to queue
         self.send_request(message.author, word, message, False, args.text_to_speech, language=args.language)
 
-    def send_request(self, user: discord.Member, word, message: discord.Message, reverse, text_to_speech, language):
+    def send_request(self, user: discord.User, word, message: discord.Message, reverse, text_to_speech, language):
 
         # Check for text-to-speech override
         text_to_speech_property = self.client.properties.get(message.channel, 'text_to_speech')
-        if text_to_speech_property == 'force':
+        if text_to_speech_property == 'force' and isinstance(user, discord.Member):
             text_to_speech = user.voice is not None
         elif text_to_speech_property == 'disable':
             text_to_speech = False

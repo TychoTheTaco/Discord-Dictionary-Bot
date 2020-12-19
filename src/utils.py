@@ -7,12 +7,13 @@ def get_token(path='token.txt'):
         return file.read()
 
 
-async def send_split(message: str, channel: discord.TextChannel, split_size=2000, delim=None):
+async def send_split(message: str, channel: discord.abc.Messageable, split_size=2000, delim=None):
     """
     Send a message to the specified tet channel. If the message is longer than Discord's limit of 2000 characters, the message will be split up and sent separately.
     :param message:
     :param channel:
     :param split_size:
+    :param delim:
     :return:
     """
     messages = split_formatting(message, split_size, delim=delim)
@@ -20,12 +21,13 @@ async def send_split(message: str, channel: discord.TextChannel, split_size=2000
         await channel.send(m)
 
 
-async def send_split_nf(message: str, channel: discord.TextChannel, split_size=2000, delim=None):
+async def send_split_nf(message: str, channel: discord.abc.Messageable, split_size=2000, delim=None):
     """
     Send a message to the specified tet channel. If the message is longer than Discord's limit of 2000 characters, the message will be split up and sent separately.
     :param message:
     :param channel:
     :param split_size:
+    :param delim:
     :return:
     """
     messages = split(message, split_size, delim=delim)

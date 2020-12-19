@@ -59,7 +59,7 @@ Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 
 Finally, run `main.py` with the following arguments:<br>
 `--discord-token <token>`: Your discord bot token.<br>
-`--google-credentials-path <path>`: Path to the Google applicaiton credentials file.<br>
+`--google-credentials-path <path>`: Path to the Google application credentials file.<br>
 `--owlbot-api-token <token>`: Your Owlbot API token.<br>
 `--ffmpeg-path <token>`: Path to the FFmpeg executable.<br>
 

@@ -72,9 +72,9 @@ def create_reply(word, definitions, reverse=False):
 
 class DefinitionRequest:
 
-    def __init__(self, user: discord.Member, word, message: discord.Message, reverse=False, text_to_speech=False, language='en-us'):
+    def __init__(self, user: discord.User, word, message: discord.Message, reverse=False, text_to_speech=False, language='en-us'):
         self.user = user
-        self.voice_channel = None if user.voice is None else user.voice.channel
+        self.voice_channel = user.voice.channel if isinstance(user, discord.Member) and user.voice is not None else None
         self.word = word
         self.message = message
         self.reverse = reverse
@@ -190,7 +190,7 @@ class MessageQueue:
     def __init__(self, definition_response_manager: DefinitionResponseManager, text_channel: discord.TextChannel, ffmpeg_path):
         self._ffmpeg_path = ffmpeg_path
         self._definition_response_manager = definition_response_manager
-        self._text_channel = text_channel
+        self._text_channel: discord.abc.Messageable = text_channel
         self._client = definition_response_manager.client
 
         # This queue stores incoming 'DefinitionRequest's. The condition is notified whenever a new item is added to the queue.
@@ -274,9 +274,9 @@ class MessageQueue:
             # Wait for an item to enter the queue
             with self._queue_lock:
                 while len(self._queue) == 0:
-                    log(f'[{self}] Waiting for more requests...')
+                    log(f'[{self}] Waiting for more requests')
                     self._queue_condition.wait()
-                log(f'[{self}] Processing {len(self._queue)} items...')
+                log(f'[{self}] Processing {len(self._queue)} items')
 
                 # Get definition request
                 definition_request = self._queue.popleft()
@@ -504,8 +504,8 @@ class MessageQueue:
         """
         with self._queue_lock, self._definition_response_manager.voice_channel_map_lock:
             for item in self._queue:
-                if item.voice_state:
-                    self._definition_response_manager.voice_channels[item.voice_state.channel] -= 1
+                if item.voice_channel:
+                    self._definition_response_manager.voice_channels[item.voice_channel] -= 1
             self._queue.clear()
             self._queue_condition.notify()
 
@@ -538,7 +538,11 @@ class MessageQueue:
         self._client.sync(utils.send_split('Skipped to next word.', self._text_channel))
 
     def __repr__(self):
-        return f'MessageQueue {{G: "{self._text_channel.guild}", C: "{self._text_channel.name}"}}'
+        if isinstance(self._text_channel, discord.TextChannel):
+            return f'MessageQueue {{G: "{self._text_channel.guild}", C: "{self._text_channel.name}"}}'
+        elif isinstance(self._text_channel, discord.DMChannel):
+            return f'MessageQueue {{DM with {self._text_channel.recipient.name}}}'
+        return f'MessageQueue {{{self._text_channel}}}'
 
 
 def convert(source: bytes, ffmpeg_path='ffmpeg'):

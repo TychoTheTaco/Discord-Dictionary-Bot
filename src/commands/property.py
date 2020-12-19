@@ -32,6 +32,7 @@ class PropertyCommand(Command):
             set_parser = subparsers.add_parser('del')
             set_parser.add_argument('key')
 
+            # Do not remove!
             list_parser = subparsers.add_parser('list')
 
             # Parse arguments but suppress stderr output
@@ -44,8 +45,14 @@ class PropertyCommand(Command):
 
         # Determine scope
         if args.scope == 'global':
-            scope = message.guild
+            if isinstance(message.channel, discord.DMChannel):
+                scope = message.channel
+            else:
+                scope = message.guild
         elif args.scope == 'channel':
+            if isinstance(message.channel, discord.DMChannel):
+                self.client.sync(utils.send_split('`channel` scope not available in a DM. Use `global` instead.', message.channel))
+                return
             scope = message.channel
         else:
             self.client.sync(utils.send_split('`<scope>` must be one of: global, channel', message.channel))

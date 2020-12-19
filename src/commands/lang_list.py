@@ -32,7 +32,7 @@ class LangListCommand(Command):
             return
 
         # Check if we can embed links in this channel
-        if message.guild.me.permissions_in(message.channel).embed_links and not args.verbose:
+        if (isinstance(message.channel, discord.DMChannel) or message.guild.me.permissions_in(message.channel).embed_links) and not args.verbose:
 
             # Send reply
             e = discord.Embed()
