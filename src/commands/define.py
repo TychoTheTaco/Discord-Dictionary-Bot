@@ -73,9 +73,4 @@ class DefineCommand(Command):
         elif text_to_speech_property == 'disable':
             text_to_speech = False
 
-        # Check for language override
-        language_property = self.client.properties.get_channel_property(message.channel, 'language')
-        if language_property is not None:
-            language = language_property
-
         self._definition_response_manager.add(DefinitionRequest(user, word, message, reverse=reverse, text_to_speech=text_to_speech, language=language))

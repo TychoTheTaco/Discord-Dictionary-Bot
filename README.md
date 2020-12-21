@@ -47,7 +47,7 @@ Usage: `stop`<br>
 Aliases: `s`<br>
 
 ## Screenshots
-![test](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
+![taco](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
 ## Requirements
 If you want to run this bot yourself, you will need your own API tokens for the APIs that this bot uses. More specifically, you will need tokens for the following APIs:
