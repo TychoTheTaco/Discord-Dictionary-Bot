@@ -1,6 +1,5 @@
 import io
-
-from commands.command import Command
+from commands.command import Command, Context
 import discord
 import argparse
 import utils
@@ -15,7 +14,7 @@ class PropertyCommand(Command):
                          usage='<scope> (list | set <key> <value> | del <key>)')
         self._properties = properties
 
-    def execute(self, message: discord.Message, args: tuple):
+    def execute(self, context: Context, args: tuple):
         try:
             parser = argparse.ArgumentParser()
             parser.add_argument('scope', choices=['global', 'channel'])
@@ -40,22 +39,22 @@ class PropertyCommand(Command):
             with redirect_stderr(stderr_stream):
                 args = parser.parse_args(args)
         except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
+            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
             return
 
         # Determine scope
         if args.scope == 'global':
-            if isinstance(message.channel, discord.DMChannel):
-                scope = message.channel
+            if isinstance(context.channel, discord.DMChannel):
+                scope = context.channel
             else:
-                scope = message.guild
+                scope = context.channel.guild
         elif args.scope == 'channel':
-            if isinstance(message.channel, discord.DMChannel):
-                self.client.sync(utils.send_split('`channel` scope not available in a DM. Use `global` instead.', message.channel))
+            if isinstance(context.channel, discord.DMChannel):
+                self.client.sync(utils.send_split('`channel` scope not available in a DM. Use `global` instead.', context.channel))
                 return
-            scope = message.channel
+            scope = context.channel
         else:
-            self.client.sync(utils.send_split('`<scope>` must be one of: global, channel', message.channel))
+            self.client.sync(utils.send_split('`<scope>` must be one of: global, channel', context.channel))
             return
 
         if args.action == 'list':
@@ -69,21 +68,21 @@ class PropertyCommand(Command):
             properties = self._properties.list(scope=scope)
             for k, v in properties.items():
                 reply += f'{k}: `{v}`\n'
-            self.client.sync(utils.send_split(reply, message.channel))
+            self.client.sync(utils.send_split(reply, context.channel))
         elif args.action == 'set':
 
             # Set property
             if self._properties.set(scope, args.key, args.value):
-                self.client.sync(utils.send_split('Property set.', message.channel))
+                self.client.sync(utils.send_split('Property set.', context.channel))
             else:
-                self.client.sync(utils.send_split('Failed to set property.', message.channel))
+                self.client.sync(utils.send_split('Failed to set property.', context.channel))
 
         elif args.action == 'del':
 
             # Make sure scope is not global
             if args.scope == 'global':
-                self.client.sync(utils.send_split('Can\'t delete a global property!', message.channel))
+                self.client.sync(utils.send_split('Can\'t delete a global property!', context.channel))
                 return
 
             self._properties.delete(scope, args.key)
-            self.client.sync(utils.send_split('Property removed.', message.channel))
+            self.client.sync(utils.send_split('Property removed.', context.channel))

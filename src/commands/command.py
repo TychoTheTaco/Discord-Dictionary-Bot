@@ -1,7 +1,24 @@
 from abc import ABC, abstractmethod
 import discord
-
 import discord_bot_client
+
+
+class Context:
+    """
+    This is passed to each command's 'execute' function so that they are aware of the context in which they are executing.
+    """
+
+    def __init__(self, author: discord.User, channel: discord.abc.Messageable):
+        self._author = author
+        self._channel = channel
+
+    @property
+    def author(self):
+        return self._author
+
+    @property
+    def channel(self):
+        return self._channel
 
 
 class Command(ABC):
@@ -51,5 +68,8 @@ class Command(ABC):
         return string in [self._name] + self._aliases
 
     @abstractmethod
-    def execute(self, message: discord.Message, args: tuple) -> None:
+    def execute(self, context: Context, args: tuple) -> None:
         pass
+
+    def __repr__(self):
+        return f'Command {{name: {self._name}}}'

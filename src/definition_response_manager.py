@@ -72,17 +72,17 @@ def create_reply(word, definitions, reverse=False):
 
 class DefinitionRequest:
 
-    def __init__(self, user: discord.User, word, message: discord.Message, reverse=False, text_to_speech=False, language='en-us'):
+    def __init__(self, user: discord.User, word, text_channel: discord.abc.Messageable, reverse=False, text_to_speech=False, language='en-us'):
         self.user = user
         self.voice_channel = user.voice.channel if isinstance(user, discord.Member) and user.voice is not None else None
         self.word = word
-        self.message = message
+        self.text_channel = text_channel
         self.reverse = reverse
         self.text_to_speech = text_to_speech
         self.language = language
 
     def __repr__(self):
-        return f'{{W: "{self.word}", M: "{self.message.content}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
+        return f'{{W: "{self.word}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
 
 
 class DefinitionResponseManager:
@@ -140,8 +140,7 @@ class DefinitionResponseManager:
         Add a definition request.
         :param definition_request: The definition request to add.
         """
-        message = definition_request.message
-        text_channel = message.channel
+        text_channel = definition_request.text_channel
 
         # Add request to queue
         with self._request_queues_lock:
@@ -187,7 +186,7 @@ class MessageQueue:
     This class represents a single definition request queue and is responsible for processing requests on a single 'discord.TextChannel'. These are created by the DefinitionResponseManager.
     """
 
-    def __init__(self, definition_response_manager: DefinitionResponseManager, text_channel: discord.TextChannel, ffmpeg_path):
+    def __init__(self, definition_response_manager: DefinitionResponseManager, text_channel: discord.abc.Messageable, ffmpeg_path):
         self._ffmpeg_path = ffmpeg_path
         self._definition_response_manager = definition_response_manager
         self._text_channel: discord.abc.Messageable = text_channel
@@ -250,7 +249,7 @@ class MessageQueue:
         # Make sure the user is in a voice channel if text-to-speech is enabled
         if definition_request.text_to_speech:
             if definition_request.voice_channel is None:
-                self._client.sync(utils.send_split('You must be in a voice channel to use the text-to-speech flag!', definition_request.message.channel))
+                self._client.sync(utils.send_split('You must be in a voice channel to use the text-to-speech flag!', definition_request.text_channel))
                 return
 
         # Add request to thread pool
@@ -368,7 +367,6 @@ class MessageQueue:
         :param definition_request: The definition request to process.
         """
         word = definition_request.word
-        message = definition_request.message
         text_to_speech = definition_request.text_to_speech
         voice_channel = definition_request.voice_channel
 
@@ -451,7 +449,7 @@ class MessageQueue:
                 time.sleep(3)
 
                 # Send text chat reply
-                self._client.sync(utils.send_split(reply, message.channel))
+                self._client.sync(utils.send_split(reply, definition_request.text_channel))
 
                 # Speak
                 def after(error):
@@ -485,7 +483,7 @@ class MessageQueue:
                 # Release stop lock
                 self._stop_lock.release()
 
-                self._client.sync(utils.send_split('There was a problem processing the text-to-speech.', message.channel))
+                self._client.sync(utils.send_split('There was a problem processing the text-to-speech.', definition_request.text_channel))
 
         else:
 
@@ -493,7 +491,7 @@ class MessageQueue:
             self._stop_lock.release()
 
             # Send text chat reply
-            self._client.sync(utils.send_split(reply, message.channel))
+            self._client.sync(utils.send_split(reply, definition_request.text_channel))
 
             # Release process lock
             self._process_lock.release()

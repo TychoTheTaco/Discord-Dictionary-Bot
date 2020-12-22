@@ -1,13 +1,12 @@
 import io
 
-from commands.command import Command
+from commands.command import Command, Context
 import discord
 from google.cloud import texttospeech
 import utils
 import gtts
 import argparse
 from contextlib import redirect_stderr
-
 from discord_bot_client import DiscordBotClient
 
 
@@ -16,7 +15,7 @@ class LangListCommand(Command):
     def __init__(self, client: DiscordBotClient):
         super().__init__(client, 'lang', aliases=['l'], description='Shows the list of supported languages for text to speech.', usage='[-v]')
 
-    def execute(self, message: discord.Message, args: tuple):
+    def execute(self, context: Context, args: tuple):
 
         try:
             parser = argparse.ArgumentParser()
@@ -28,17 +27,17 @@ class LangListCommand(Command):
                 args = parser.parse_args(args)
 
         except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', message.channel))
+            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
             return
 
         # Check if we can embed links in this channel
-        if (isinstance(message.channel, discord.DMChannel) or message.guild.me.permissions_in(message.channel).embed_links) and not args.verbose:
+        if (isinstance(context.channel, discord.DMChannel) or context.channel.guild.me.permissions_in(context.channel).embed_links) and not args.verbose:
 
             # Send reply
             e = discord.Embed()
             e.title = 'Supported Languages'
             e.url = 'https://cloud.google.com/text-to-speech/docs/voices'
-            self.client.sync(message.channel.send(embed=e))
+            self.client.sync(context.channel.send(embed=e))
 
         else:
 
@@ -76,4 +75,4 @@ class LangListCommand(Command):
                         for voice_style in sorted(voice_styles):
                             reply += f'        {voice_style}\n'
                     reply += '\n'
-            self.client.sync(utils.send_split_nf(reply, message.channel, delim='\n[^ ]'))
+            self.client.sync(utils.send_split_nf(reply, context.channel, delim='\n[^ ]'))
