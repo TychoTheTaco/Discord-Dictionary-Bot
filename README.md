@@ -1,6 +1,6 @@
 # Discord Dictionary Bot
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
-A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you. [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot)
+A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you. [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands)
 
 
 
