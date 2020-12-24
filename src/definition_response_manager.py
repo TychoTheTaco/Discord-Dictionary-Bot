@@ -4,6 +4,7 @@ import threading
 import io
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
+from typing import Tuple
 from exceptions import InsufficientPermissionsException
 from dictionary_api import DictionaryAPI
 from m_logging import log
@@ -16,8 +17,8 @@ import subprocess
 from discord_bot_client import DiscordBotClient
 
 
-def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL):
-    # Create a text-to-speech client with maximum receive size of 24MB
+def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL) -> bytes:
+    # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified because the default of 4MB is not enough for some definitions.
     channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
     transport = TextToSpeechGrpcTransport(channel=channel)
     client = texttospeech.TextToSpeechClient(transport=transport)
@@ -47,11 +48,11 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
         response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
         return response.audio_content
     except Exception as e:
-        log(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: {language_code}', 'error')
+        log(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language_code}"', 'error')
         return b''
 
 
-def create_reply(word, definitions, reverse=False):
+def create_reply(word, definitions, reverse=False) -> Tuple[str, str]:
     if reverse:
         word = word[::-1]
     reply = f'__**{word}**__\n'

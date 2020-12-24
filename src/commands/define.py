@@ -71,4 +71,8 @@ class DefineCommand(Command):
         elif text_to_speech_property == 'disable':
             text_to_speech = False
 
+        # Add to definition queue
         self._definition_response_manager.add(DefinitionRequest(user, word, channel, reverse=reverse, text_to_speech=text_to_speech, language=language))
+
+        # Acknowledge request
+        self.client.sync(channel.send(f':white_check_mark: Word added to queue.'))
