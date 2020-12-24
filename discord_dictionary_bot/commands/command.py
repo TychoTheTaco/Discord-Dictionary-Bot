@@ -20,6 +20,9 @@ class Context:
     def channel(self):
         return self._channel
 
+    def __repr__(self):
+        return f'Context {{author: \'{self._author}\', channel: \'{self._channel}\'}}'
+
 
 class Command(ABC):
 

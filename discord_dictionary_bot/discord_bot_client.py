@@ -3,6 +3,8 @@ import threading
 import logging
 
 import discord
+from discord_slash import SlashCommand
+
 from . import utils
 from .exceptions import InsufficientPermissionsException
 from .properties import Properties
@@ -23,9 +25,15 @@ class DiscordBotClient(discord.Client):
         # Initialize properties
         self._properties = Properties()
 
+        self._slash_command_decorator = SlashCommand(self)
+
         # List of commands this bot supports. All bots support the 'Help' and 'Property' commands by default. Subclasses can add more by calling 'add_command()'.
         from .commands import HelpCommand, PropertyCommand
         self._commands = [HelpCommand(self), PropertyCommand(self, self._properties)]
+
+    @property
+    def slash_command_decorator(self):
+        return self._slash_command_decorator
 
     @property
     def commands(self):
