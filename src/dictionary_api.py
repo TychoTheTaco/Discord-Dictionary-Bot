@@ -9,6 +9,9 @@ class DictionaryAPI(ABC):
     def define(self, word: str) -> {}:
         pass
 
+    def __repr__(self):
+        return f'[{type(self).__name__}]'
+
 
 class OwlBotDictionaryAPI(DictionaryAPI):
 
@@ -51,5 +54,26 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
         return result
 
-    def __repr__(self):
-        return '[Owlbot]'
+
+class UnofficialGoogleAPI(DictionaryAPI):
+
+    def define(self, word: str) -> {}:
+        response = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json')
+
+        if response.status_code != 200:
+            log(f'{self} Error getting definition! {{Status code: {response.status_code}, Word: "{word}"}}', 'error')
+            return []
+
+        result = []
+        try:
+            json = response.json()
+            for d in json[0]['meanings']:
+                definition = {
+                    'word_type': d['partOfSpeech'],
+                    'definition': d['definitions'][0]['definition']
+                }
+                result.append(definition)
+        except Exception as e:
+            log(f'{self} Failed to parse API response: {e}', 'error')
+
+        return result
