@@ -64,8 +64,8 @@ To start the bot, simply run `main.py` with the appropriate arguments as specifi
 |`--discord-token <token>`|Your discord bot token.|
 |`--google-credentials-path <path>`| Path to the Google application credentials file.|
 |`--ffmpeg-path <token>`| Path to the FFmpeg executable.|
-|`--dictionary-api <api>`| Determines which dictionary API to use. Must be one of `google`, `owlbot`.|
-|`--owlbot-api-token <token>`| Your [Owlbot](https://owlbot.info/) API token. Only required if `--dictionary-api` is `owlbot`.|
+|`--dictionary-api <api>`| Determines which dictionary API to use. Must be one of `google`, `owlbot`. `google` will use [Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI). `owlbot` will use  [Owlbot](https://owlbot.info/).|
+|`--owlbot-api-token <token>`| Your Owlbot API token. Only required if `--dictionary-api` is `owlbot`.|
 
 ## Credits
 #### Dictionary icon
