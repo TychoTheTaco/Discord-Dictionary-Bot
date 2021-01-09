@@ -50,18 +50,22 @@ Aliases: `s`<br>
 ![taco](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
 ## Requirements
-If you want to run this bot yourself, you will need your own API tokens for the APIs that this bot uses. More specifically, you will need tokens for the following APIs:
-- [Owlbot](https://owlbot.info/)
+If you want to run this bot yourself, you will need your own API tokens for the following APIs:
 - [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
 - [Google Cloud Firestore](https://firebase.google.com/products/firestore)
 
 Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 
-Finally, run `main.py` with the following arguments:<br>
-`--discord-token <token>`: Your discord bot token.<br>
-`--google-credentials-path <path>`: Path to the Google application credentials file.<br>
-`--owlbot-api-token <token>`: Your Owlbot API token.<br>
-`--ffmpeg-path <token>`: Path to the FFmpeg executable.<br>
+To start the bot, simply run `main.py` with the appropriate arguments as specified below.
+
+### Program Arguments
+|Argument            | Description |
+| --- | --- |
+|`--discord-token <token>`|Your discord bot token.|
+|`--google-credentials-path <path>`| Path to the Google application credentials file.|
+|`--ffmpeg-path <token>`| Path to the FFmpeg executable.|
+|`--dictionary-api <api>`| Determines which dictionary API to use. Must be one of `google`, `owlbot`. `google` will use [Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI). `owlbot` will use  [Owlbot](https://owlbot.info/).|
+|`--owlbot-api-token <token>`| Your Owlbot API token. Only required if `--dictionary-api` is `owlbot`.|
 
 ## Credits
 #### Dictionary icon
