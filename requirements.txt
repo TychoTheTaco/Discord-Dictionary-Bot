@@ -4,3 +4,4 @@ pyNaCl
 gTTS
 google-cloud-firestore
 google-cloud-texttospeech
+google-cloud-logging
