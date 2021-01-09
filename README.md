@@ -59,7 +59,7 @@ Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 To start the bot, simply run `main.py` with the appropriate arguments as specified below.
 
 ### Program Arguments
-| Argument | Description |
+|                 Argument | Description |
 | --- | --- |
 |`--discord-token <token>`|Your discord bot token.|
 |`--google-credentials-path <path>`| Path to the Google application credentials file.|
