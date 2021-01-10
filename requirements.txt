@@ -5,3 +5,4 @@ gTTS
 google-cloud-firestore
 google-cloud-texttospeech
 google-cloud-logging
+google-cloud-bigquery

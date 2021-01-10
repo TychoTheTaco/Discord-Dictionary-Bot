@@ -113,7 +113,7 @@ class DiscordBotClient(discord.Client):
         # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
-                threading.Thread(target=command.execute, args=[message, command_input[1:]]).start()
+                threading.Thread(target=command.execute, args=[message, command_input[1:]]).start()  # This doesn't seem like a good idea but it prevents blocking
                 return
 
         # Send invalid command message

@@ -15,6 +15,34 @@ from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 import subprocess
 from discord_bot_client import DiscordBotClient
+from google.cloud import bigquery
+import json
+import datetime
+
+
+def catch_exceptions(function):
+    """
+    This decorator will catch and log all exceptions thrown in the decorated function.
+    :param function:
+    :return:
+    """
+    def f(*args, **kargs):
+        try:
+            function(*args, *kargs)
+        except Exception as e:
+            log(f'Exception: {e}', 'error')
+    return f
+
+
+def run_on_another_thread(function):
+    """
+    This decorator will run the decorated function in another thread, starting it immediately.
+    :param function:
+    :return:
+    """
+    def f(*args, **kargs):
+        threading.Thread(target=function, args=[*args, *kargs]).start()
+    return f
 
 
 def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL) -> bytes:
@@ -83,7 +111,7 @@ class DefinitionRequest:
         self.language = language
 
     def __repr__(self):
-        return f'{{W: "{self.word}", R: "{self.reverse}", TTS: "{self.text_to_speech}", L: "{self.language}"}}'
+        return f'{{word: "{self.word}", reverse: {self.reverse}, text_to_speech: {self.text_to_speech}, language: "{self.language}"}}'
 
 
 class DefinitionResponseManager:
@@ -136,15 +164,59 @@ class DefinitionResponseManager:
     def voice_channels_locks(self):
         return self._voice_channels_locks
 
+    @run_on_another_thread
+    @catch_exceptions
+    def _send_analytics(self, definition_request: DefinitionRequest) -> None:
+        client = bigquery.Client()
+        job_config = bigquery.LoadJobConfig(
+            schema=[
+                bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
+                bigquery.SchemaField("text_to_speech", "BOOLEAN", mode="REQUIRED"),
+                bigquery.SchemaField("language", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("guild_id", "INTEGER"),
+                bigquery.SchemaField("channel_id", "INTEGER"),
+                bigquery.SchemaField("time", "TIMESTAMP"),
+            ],
+            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+            autodetect=True
+        )
+
+        data = {
+            'word': definition_request.word,
+            'reverse': definition_request.reverse,
+            'text_to_speech': definition_request.text_to_speech,
+            'language': definition_request.language,
+            'guild_id': None,
+            'channel_id': None,
+            'time': datetime.datetime.now().isoformat()
+        }
+
+        if isinstance(definition_request.text_channel, discord.TextChannel):
+            data['guild_id'] = definition_request.text_channel.guild.id
+            data['channel_id'] = definition_request.text_channel.id
+        elif isinstance(definition_request.text_channel, discord.DMChannel):
+            data['channel_id'] = definition_request.text_channel.id
+
+        data_as_file = io.StringIO(json.dumps(data))
+        job = client.load_table_from_file(data_as_file, 'formal-scout-290305.definition_requests.definition_requests', job_config=job_config)
+
+        try:
+            job.result()  # Waits for the job to complete.
+        except Exception as e:
+            raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+
     def add(self, definition_request: DefinitionRequest) -> None:
         """
         Add a definition request.
         :param definition_request: The definition request to add.
         """
-        text_channel = definition_request.text_channel
+        # Analytics
+        self._send_analytics(definition_request)
 
         # Add request to queue
         with self._request_queues_lock:
+            text_channel = definition_request.text_channel
             if text_channel not in self._request_queues:
                 self._request_queues[text_channel] = MessageQueue(self, text_channel, self._ffmpeg_path)
             self._request_queues[text_channel].add(definition_request)
