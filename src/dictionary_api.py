@@ -67,7 +67,7 @@ class UnofficialGoogleAPI(DictionaryAPI):
     def define(self, word: str) -> {}:
         response = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json')
 
-        self.logger.log_struct({'word': word, 'response:': {'status_code': response.status_code}})
+        self.logger.log_struct({'word': word, 'response': {'status_code': response.status_code}})
 
         if response.status_code != 200:
             log(f'{self} Error getting definition! {{Status code: {response.status_code}, Word: "{word}"}}', 'error')
