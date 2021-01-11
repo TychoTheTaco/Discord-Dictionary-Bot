@@ -1,6 +1,5 @@
-from commands.command import Command, Context
-
-from discord_bot_client import DiscordBotClient
+from .command import Command, Context
+from ..discord_bot_client import DiscordBotClient
 
 
 class NextCommand(Command):

@@ -1,8 +1,7 @@
 import pathlib
-
 from .discord_bot_client import DiscordBotClient
 
-from commands import *
+from .commands import *
 from .definition_response_manager import DefinitionResponseManager
 from .dictionary_api import DictionaryAPI
 

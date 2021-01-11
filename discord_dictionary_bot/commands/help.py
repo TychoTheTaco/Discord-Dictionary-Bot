@@ -1,6 +1,6 @@
-from commands import Command, Context
-import utils
-from discord_bot_client import DiscordBotClient
+from .command import Command, Context
+from .. import utils
+from ..discord_bot_client import DiscordBotClient
 
 
 class HelpCommand(Command):

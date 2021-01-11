@@ -1,13 +1,13 @@
 import io
-
-from commands.command import Command, Context
 import discord
 from google.cloud import texttospeech
-import utils
 import gtts
 import argparse
 from contextlib import redirect_stderr
-from discord_bot_client import DiscordBotClient
+
+from .command import Command, Context
+from ..discord_bot_client import DiscordBotClient
+from .. import utils
 
 
 class LangListCommand(Command):

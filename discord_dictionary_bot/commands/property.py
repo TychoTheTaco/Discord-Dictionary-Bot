@@ -1,10 +1,10 @@
 import io
-from commands import Command, Context
+from .command import Command, Context
 import discord
 import argparse
-import utils
-from properties import Properties
-from discord_bot_client import DiscordBotClient
+from .. import utils
+from ..properties import Properties
+from ..discord_bot_client import DiscordBotClient
 from contextlib import redirect_stderr
 
 

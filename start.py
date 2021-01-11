@@ -1,10 +1,14 @@
 import argparse
-from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI
-from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
+import sys
 import os
 import logging.config
+
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
+
+
+from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI
+from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
 def logging_filter_bot_only(record):

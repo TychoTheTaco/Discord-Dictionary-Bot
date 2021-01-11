@@ -1,8 +1,7 @@
-from commands.command import Command
+from .command import Command
 import discord
-import utils
-
-from discord_bot_client import DiscordBotClient
+from .. import utils
+from ..discord_bot_client import DiscordBotClient
 
 
 class ActiveServerCountCommand(Command):

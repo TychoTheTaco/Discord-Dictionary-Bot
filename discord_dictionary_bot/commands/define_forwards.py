@@ -1,5 +1,5 @@
-from commands.define import DefineCommand
-from discord_bot_client import DiscordBotClient
+from .define import DefineCommand
+from ..discord_bot_client import DiscordBotClient
 
 
 class DefineForwardsCommand(DefineCommand):

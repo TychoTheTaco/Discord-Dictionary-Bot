@@ -1,13 +1,13 @@
 import io
 from contextlib import redirect_stderr
-from definition_response_manager import DefinitionRequest
-from commands.command import Command, Context
+from ..definition_response_manager import DefinitionRequest
+from .command import Command, Context
 import discord
 import argparse
-import utils
+from .. import utils
 import re
 from google.cloud import texttospeech
-from discord_bot_client import DiscordBotClient
+from ..discord_bot_client import DiscordBotClient
 
 
 class DefineCommand(Command):

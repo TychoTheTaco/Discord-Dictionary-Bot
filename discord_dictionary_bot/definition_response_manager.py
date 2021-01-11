@@ -13,7 +13,7 @@ import utils
 from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 import subprocess
-from discord_bot_client import DiscordBotClient
+from .discord_bot_client import DiscordBotClient
 from google.cloud import bigquery
 import json
 import datetime
