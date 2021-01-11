@@ -1,14 +1,10 @@
 import asyncio
 import threading
 import discord
-from commands.command import Command
-from commands.help import HelpCommand
 import utils
-from commands.property import PropertyCommand
 from exceptions import InsufficientPermissionsException
 from properties import Properties
 import logging
-
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -26,6 +22,7 @@ class DiscordBotClient(discord.Client):
         self._properties = Properties()
 
         # List of commands this bot supports. All bots support the 'Help' and 'Property' commands by default. Subclasses can add more by calling 'add_command()'.
+        from commands import HelpCommand, PropertyCommand
         self._commands = [HelpCommand(self), PropertyCommand(self, self._properties)]
 
     @property
@@ -36,7 +33,7 @@ class DiscordBotClient(discord.Client):
     def properties(self):
         return self._properties
 
-    def add_command(self, command: Command) -> None:
+    def add_command(self, command: 'commands.Command') -> None:
         """
         Add a command to this discord bot client.
         :param command: The command to add.
@@ -121,4 +118,5 @@ class DiscordBotClient(discord.Client):
                 return
 
         # Send invalid command message
+        from commands import HelpCommand
         await utils.send_split(f'Unrecognized command. Use `{prefix + HelpCommand(self).name}` to see available commands.', message.channel)

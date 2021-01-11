@@ -1,15 +1,16 @@
 import io
-from commands.command import Command, Context
+from commands import Command, Context
 import discord
 import argparse
 import utils
-from discord_dictionary_bot.properties import Properties
+from properties import Properties
+from discord_bot_client import DiscordBotClient
 from contextlib import redirect_stderr
 
 
 class PropertyCommand(Command):
 
-    def __init__(self, client: 'DiscordBotClient', properties: Properties):
+    def __init__(self, client: DiscordBotClient, properties: Properties):
         super().__init__(client, 'property', aliases=['p'], description='Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.',
                          usage='<scope> (list | set <key> <value> | del <key>)')
         self._properties = properties

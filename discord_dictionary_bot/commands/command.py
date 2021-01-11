@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import discord
-import discord_bot_client
+from discord_dictionary_bot.discord_bot_client import DiscordBotClient
 
 
 class Context:
@@ -23,7 +23,7 @@ class Context:
 
 class Command(ABC):
 
-    def __init__(self, client: 'discord_bot_client.DiscordBotClient', name, aliases=None, description='', usage='', secret=False):
+    def __init__(self, client: DiscordBotClient, name, aliases=None, description='', usage='', secret=False):
         """
         This is the base class for commands.
         :param client: The client this command is attached to.
@@ -41,7 +41,7 @@ class Command(ABC):
         self._secret = secret
 
     @property
-    def client(self) -> 'discord_bot_client.DiscordBotClient':
+    def client(self) -> DiscordBotClient:
         return self._client
 
     @property

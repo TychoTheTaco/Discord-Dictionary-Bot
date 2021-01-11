@@ -1,13 +1,8 @@
 import pathlib
 
-from discord_bot_client import DiscordBotClient
+from .discord_bot_client import DiscordBotClient
 
-from commands.define_forwards import DefineForwardsCommand
-from commands.stop import StopCommand
-from commands.define_backwards import DefineReverseCommand
-from commands.next import NextCommand
-from commands.lang_list import LangListCommand
-from commands.active_server_count import ActiveServerCountCommand
+from commands import *
 from .definition_response_manager import DefinitionResponseManager
 from .dictionary_api import DictionaryAPI
 
