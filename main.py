@@ -15,8 +15,8 @@ def logging_filter_bot_only(record):
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
 logging.getLogger().handlers[0].addFilter(logging_filter_bot_only)
 
-if __name__ == '__main__':
 
+def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--discord-token',
@@ -59,29 +59,31 @@ if __name__ == '__main__':
         pass  # Ignore and assume the argument is a token string not a file path
 
     # Check which dictionary API we should use
-    dictionary_api = None
     if args.dictionary_api == 'google':
         dictionary_api = UnofficialGoogleAPI()
     elif args.dictionary_api == 'owlbot':
 
-        if 'owlbot_api_token' in args:
-
-            # Read owlbot API token from file
-            try:
-                with open(args.owlbot_api_token) as file:
-                    args.owlbot_api_token = file.read()
-            except IOError:
-                pass  # Ignore and assume the argument is a token string not a file path
-
-            dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
-
-        else:
-
+        if 'owlbot_api_token' not in args:
             print(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!')
+            return
+
+        # Read owlbot API token from file
+        try:
+            with open(args.owlbot_api_token) as file:
+                args.owlbot_api_token = file.read()
+        except IOError:
+            pass  # Ignore and assume the argument is a token string not a file path
+
+        dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
 
     else:
         print(f'Invalid dictionary API: {args.dictionary_api}')
+        return
 
     # Start client
     client = DictionaryBotClient(args.ffmpeg_path, dictionary_api)
     client.run(args.discord_bot_token)
+
+
+if __name__ == '__main__':
+    main()
