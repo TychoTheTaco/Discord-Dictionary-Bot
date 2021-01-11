@@ -3,10 +3,17 @@ from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, Unofficia
 from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 import os
 import logging.config
+import google.cloud.logging
+from google.cloud.logging.handlers import CloudLoggingHandler
+
+
+def logging_filter_bot_only(record):
+    return record.name.startswith('discord_dictionary_bot')
+
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger().handlers[0].addFilter(lambda record: record.name.startswith('discord_dictionary_bot'))
+logging.getLogger().handlers[0].addFilter(logging_filter_bot_only)
 
 if __name__ == '__main__':
 
@@ -38,6 +45,12 @@ if __name__ == '__main__':
     # Set Google API credentials
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = args.google_credentials_path
 
+    # Set up GCP logging
+    gcp_logging_client = google.cloud.logging.Client()
+    gcp_logging_handler = CloudLoggingHandler(gcp_logging_client, name='discord-dictionary-bot')
+    gcp_logging_handler.addFilter(logging_filter_bot_only)
+    logging.getLogger().addHandler(gcp_logging_handler)
+
     # Read discord bot token from file
     try:
         with open(args.discord_bot_token) as file:
@@ -51,17 +64,20 @@ if __name__ == '__main__':
         dictionary_api = UnofficialGoogleAPI()
     elif args.dictionary_api == 'owlbot':
 
-        if 'owlbot_api_token' not in args:
+        if 'owlbot_api_token' in args:
+
+            # Read owlbot API token from file
+            try:
+                with open(args.owlbot_api_token) as file:
+                    args.owlbot_api_token = file.read()
+            except IOError:
+                pass  # Ignore and assume the argument is a token string not a file path
+
+            dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
+
+        else:
+
             print(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!')
-
-        # Read owlbot API token from file
-        try:
-            with open(args.owlbot_api_token) as file:
-                args.owlbot_api_token = file.read()
-        except IOError:
-            pass  # Ignore and assume the argument is a token string not a file path
-
-        dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
 
     else:
         print(f'Invalid dictionary API: {args.dictionary_api}')

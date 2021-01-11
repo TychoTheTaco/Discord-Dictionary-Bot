@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import requests
-from google.cloud import logging as gcp_logging
 import logging
 
 # Set up logging
@@ -8,11 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class DictionaryAPI(ABC):
-
-    def __init__(self):
-        # Create logging client
-        gcp_logging_client = gcp_logging.Client()
-        self.gcp_logger = gcp_logging_client.logger('dictionary-api-requests')
 
     @abstractmethod
     def define(self, word: str) -> {}:
@@ -70,13 +64,11 @@ class UnofficialGoogleAPI(DictionaryAPI):
     def define(self, word: str) -> {}:
         response = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json')
 
-        self.gcp_logger.log_struct({'word': word, 'response': {'status_code': response.status_code}})
-
         if response.status_code != 200:
-            logger.error(f'{self} Error getting definition! {{Status code: {response.status_code}, Word: "{word}"}}')
+            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}"}}')
             return []
 
-        logger.info(f'{self} word: "{word}", status_code: {response.status_code}')
+        logger.info(f'{self} {{status_code: {response.status_code}, word: "{word}"}}')
 
         result = []
         try:
