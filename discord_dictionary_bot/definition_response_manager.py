@@ -5,19 +5,22 @@ import io
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Tuple
-from exceptions import InsufficientPermissionsException
-from dictionary_api import DictionaryAPI
-import discord
 import pathlib
-import utils
-from google.cloud import texttospeech
-from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 import subprocess
-from .discord_bot_client import DiscordBotClient
-from google.cloud import bigquery
 import json
 import datetime
 import logging
+
+import discord
+from google.cloud import texttospeech
+from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
+from google.cloud import bigquery
+
+from .exceptions import InsufficientPermissionsException
+from .dictionary_api import DictionaryAPI
+from . import utils
+from .discord_bot_client import DiscordBotClient
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
