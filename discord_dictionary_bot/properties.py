@@ -1,7 +1,10 @@
 import discord
 from typing import Union
 from google.cloud import firestore
-from m_logging import log
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class Property:
@@ -67,16 +70,16 @@ class Properties:
                     return False
         dictionary = self._get_dict(scope)
         dictionary[key] = value
-        log(f'Set property "{key}" to "{value}" for scope "{scope}"')
+        logger.info(f'Set property "{key}" to "{value}" for scope "{scope}"')
         self._get_snapshot(scope).reference.set(dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
         return True
 
     # TODO: Cache values if they are unchanged to limit firestore reads
-    def get(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], key: str) -> str:
+    def get(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], key: str) -> Union[str, None]:
         if isinstance(scope, (discord.Guild, discord.DMChannel)):
             d = self._get_dict(scope)
             if key not in d:
-                log(f'Key "{key}" not in dict "{d}" for scope {scope}', 'error')
+                logger.error(f'Key "{key}" not in dict "{d}" for scope {scope}')
             return self._get_dict(scope)[key]
         elif type(scope) is discord.TextChannel:
             d = self._get_dict(scope)
@@ -86,7 +89,8 @@ class Properties:
             # The text-channel did not have the requested property, maybe the guild has it
             return self.get(scope.guild, key)
         else:
-            log(f'Scope is not a guild or channel: {type(scope)} "{scope}"', 'error')
+            logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+            return None
 
     def get_channel_property(self, channel: discord.TextChannel, key: str) -> Union[str, None]:
         """
@@ -110,7 +114,7 @@ class Properties:
 
             # Write default preferences
             if not snapshot.exists:
-                log(f'Preferences for "{scope.name}" did not exist. Setting defaults.')
+                logger.info(f'Preferences for "{scope.name}" did not exist. Setting defaults.')
                 guild_document.set({p.key: p.default for p in Properties.PROPERTIES})
                 snapshot = guild_document.get()
 
@@ -126,13 +130,13 @@ class Properties:
 
             # Write default preferences
             if not snapshot.exists:
-                log(f'Preferences for "DM with {scope.recipient.name}" did not exist. Setting defaults.')
+                logger.info(f'Preferences for "DM with {scope.recipient.name}" did not exist. Setting defaults.')
                 guild_document.set({p.key: p.default for p in Properties.PROPERTIES})
                 snapshot = guild_document.get()
 
             return snapshot
         else:
-            log(f'Scope is not a guild or channel: {type(scope)} "{scope}"', 'error')
+            logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
 
     def _get_dict(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> dict:
         """

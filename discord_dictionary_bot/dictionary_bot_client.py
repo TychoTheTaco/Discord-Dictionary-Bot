@@ -8,8 +8,8 @@ from commands.define_backwards import DefineReverseCommand
 from commands.next import NextCommand
 from commands.lang_list import LangListCommand
 from commands.active_server_count import ActiveServerCountCommand
-from definition_response_manager import DefinitionResponseManager
-from dictionary_api import DictionaryAPI
+from .definition_response_manager import DefinitionResponseManager
+from .dictionary_api import DictionaryAPI
 
 
 class DictionaryBotClient(DiscordBotClient):

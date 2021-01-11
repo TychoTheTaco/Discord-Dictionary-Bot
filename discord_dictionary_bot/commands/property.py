@@ -3,7 +3,7 @@ from commands.command import Command, Context
 import discord
 import argparse
 import utils
-from properties import Properties
+from discord_dictionary_bot.properties import Properties
 from contextlib import redirect_stderr
 
 

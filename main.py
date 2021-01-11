@@ -1,8 +1,12 @@
 import argparse
-from dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI
-from dictionary_bot_client import DictionaryBotClient
+from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI
+from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 import os
-from m_logging import log
+import logging.config
+
+# Set up logging
+logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.getLogger().handlers[0].addFilter(lambda record: record.name.startswith('discord_dictionary_bot'))
 
 if __name__ == '__main__':
 
@@ -48,7 +52,7 @@ if __name__ == '__main__':
     elif args.dictionary_api == 'owlbot':
 
         if 'owlbot_api_token' not in args:
-            log(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!', 'error')
+            print(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!')
 
         # Read owlbot API token from file
         try:
@@ -60,7 +64,7 @@ if __name__ == '__main__':
         dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
 
     else:
-        log(f'Invalid dictionary API: {args.dictionary_api}', 'error')
+        print(f'Invalid dictionary API: {args.dictionary_api}')
 
     # Start client
     client = DictionaryBotClient(args.ffmpeg_path, dictionary_api)

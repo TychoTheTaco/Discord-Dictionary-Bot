@@ -7,7 +7,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Tuple
 from exceptions import InsufficientPermissionsException
 from dictionary_api import DictionaryAPI
-from m_logging import log
 import discord
 import pathlib
 import utils
@@ -18,6 +17,10 @@ from discord_bot_client import DiscordBotClient
 from google.cloud import bigquery
 import json
 import datetime
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def catch_exceptions(function):
@@ -30,7 +33,7 @@ def catch_exceptions(function):
         try:
             function(*args, *kargs)
         except Exception as e:
-            log(f'Exception: {e}', 'error')
+            logger.exception(f'Exception: {e}')
     return f
 
 
@@ -76,7 +79,7 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
         response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
         return response.audio_content
     except Exception as e:
-        log(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language_code}"', 'error')
+        logger.error(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language_code}"')
         return b''
 
 
@@ -345,9 +348,9 @@ class MessageQueue:
             # Wait for an item to enter the queue
             with self._queue_lock:
                 while len(self._queue) == 0:
-                    log(f'[{self}] Waiting for more requests')
+                    logger.debug(f'[{self}] Waiting for more requests')
                     self._queue_condition.wait()
-                log(f'[{self}] Processing {len(self._queue)} items')
+                logger.debug(f'[{self}] Processing {len(self._queue)} items')
 
                 # Get definition request
                 definition_request = self._queue.popleft()
@@ -391,7 +394,7 @@ class MessageQueue:
                 return
 
             except Exception as e:
-                log(f'{self} Failed to connect to the voice channel: {e}', 'error')
+                logger.error(f'{self} Failed to connect to the voice channel: {e}')
                 self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
 
                 # Call pass-through callback
@@ -411,7 +414,7 @@ class MessageQueue:
             def after(error):
 
                 if error is not None:
-                    log(f'Exception occurred while playing audio: {error}', 'error')
+                    logger.error(f'An error occurred while playing audio: {error}')
 
                 # Release voice channel lock
                 with self._voice_client_lock:
@@ -442,7 +445,7 @@ class MessageQueue:
         text_to_speech = definition_request.text_to_speech
         voice_channel = definition_request.voice_channel
 
-        log(f'[{self}] Processing request: {definition_request}')
+        logger.debug(f'[{self}] Processing request: {definition_request}')
 
         # Get result from request future
         with self._request_futures_lock:
@@ -455,7 +458,7 @@ class MessageQueue:
             def after(error):
 
                 if error is not None:
-                    log(f'Exception occurred while playing audio: {error}', 'error')
+                    logger.error(f'An error occurred while playing audio: {error}')
 
                 if text_to_speech and voice_channel is not None:
 
@@ -503,7 +506,7 @@ class MessageQueue:
                     return
 
                 except Exception as e:
-                    log(f'{self} Failed to connect to voice channel: {e}', 'error')
+                    logger.error(f'{self} Failed to connect to voice channel: {e}')
                     self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
 
                     # Release stop lock
@@ -530,7 +533,7 @@ class MessageQueue:
                 def after(error):
 
                     if error is not None:
-                        log(f'Exception occurred while playing audio: {error}', 'error')
+                        logger.error(f'An error occurred while playing audio: {error}')
 
                     with self._voice_client_lock:
                         self._voice_client = None
