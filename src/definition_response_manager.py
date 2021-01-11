@@ -114,6 +114,49 @@ class DefinitionRequest:
         return f'{{word: "{self.word}", reverse: {self.reverse}, text_to_speech: {self.text_to_speech}, language: "{self.language}"}}'
 
 
+@run_on_another_thread
+@catch_exceptions
+def send_analytics(definition_request: DefinitionRequest) -> None:
+    client = bigquery.Client()
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
+            bigquery.SchemaField("text_to_speech", "BOOLEAN", mode="REQUIRED"),
+            bigquery.SchemaField("language", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("guild_id", "INTEGER"),
+            bigquery.SchemaField("channel_id", "INTEGER"),
+            bigquery.SchemaField("time", "TIMESTAMP"),
+        ],
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        autodetect=True
+    )
+
+    data = {
+        'word': definition_request.word,
+        'reverse': definition_request.reverse,
+        'text_to_speech': definition_request.text_to_speech,
+        'language': definition_request.language,
+        'guild_id': None,
+        'channel_id': None,
+        'time': datetime.datetime.now().isoformat()
+    }
+
+    if isinstance(definition_request.text_channel, discord.TextChannel):
+        data['guild_id'] = definition_request.text_channel.guild.id
+        data['channel_id'] = definition_request.text_channel.id
+    elif isinstance(definition_request.text_channel, discord.DMChannel):
+        data['channel_id'] = definition_request.text_channel.id
+
+    data_as_file = io.StringIO(json.dumps(data))
+    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.definition_requests.definition_requests', job_config=job_config)
+
+    try:
+        job.result()  # Waits for the job to complete.
+    except Exception as e:
+        raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+
+
 class DefinitionResponseManager:
     """
     This class is responsible for scheduling and executing definition requests. This class maintains a separate queue for each 'discord.TextChannel' and incoming definition requests get added to the appropriate queue. If a definition
@@ -164,55 +207,11 @@ class DefinitionResponseManager:
     def voice_channels_locks(self):
         return self._voice_channels_locks
 
-    @run_on_another_thread
-    @catch_exceptions
-    def _send_analytics(self, definition_request: DefinitionRequest) -> None:
-        client = bigquery.Client()
-        job_config = bigquery.LoadJobConfig(
-            schema=[
-                bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
-                bigquery.SchemaField("text_to_speech", "BOOLEAN", mode="REQUIRED"),
-                bigquery.SchemaField("language", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("guild_id", "INTEGER"),
-                bigquery.SchemaField("channel_id", "INTEGER"),
-                bigquery.SchemaField("time", "TIMESTAMP"),
-            ],
-            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-            autodetect=True
-        )
-
-        data = {
-            'word': definition_request.word,
-            'reverse': definition_request.reverse,
-            'text_to_speech': definition_request.text_to_speech,
-            'language': definition_request.language,
-            'guild_id': None,
-            'channel_id': None,
-            'time': datetime.datetime.now().isoformat()
-        }
-
-        if isinstance(definition_request.text_channel, discord.TextChannel):
-            data['guild_id'] = definition_request.text_channel.guild.id
-            data['channel_id'] = definition_request.text_channel.id
-        elif isinstance(definition_request.text_channel, discord.DMChannel):
-            data['channel_id'] = definition_request.text_channel.id
-
-        data_as_file = io.StringIO(json.dumps(data))
-        job = client.load_table_from_file(data_as_file, 'formal-scout-290305.definition_requests.definition_requests', job_config=job_config)
-
-        try:
-            job.result()  # Waits for the job to complete.
-        except Exception as e:
-            raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
-
     def add(self, definition_request: DefinitionRequest) -> None:
         """
         Add a definition request.
         :param definition_request: The definition request to add.
         """
-        # Analytics
-        self._send_analytics(definition_request)
 
         # Add request to queue
         with self._request_queues_lock:
@@ -479,6 +478,9 @@ class MessageQueue:
             self._stop_lock.release()
 
             return
+
+        else:
+            send_analytics(definition_request)
 
         if text_to_speech and voice_channel is not None:
 
