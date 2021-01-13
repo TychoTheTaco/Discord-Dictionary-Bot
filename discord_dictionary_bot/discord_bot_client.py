@@ -19,8 +19,8 @@ class DiscordBotClient(discord.Client):
     A general discord bot client that supports 'Command's and includes some other helper functions.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # Initialize properties
         self._properties = Properties()
@@ -99,6 +99,9 @@ class DiscordBotClient(discord.Client):
 
     async def on_message(self, message: discord.Message):
 
+        if message.guild.id != 454852632528420876:
+            return
+
         # Ignore our own messages
         if message.author == self.user:
             return
@@ -124,9 +127,19 @@ class DiscordBotClient(discord.Client):
         # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
-                threading.Thread(target=command.execute, args=[message, command_input[1:]]).start()  # This doesn't seem like a good idea but it prevents blocking
+                from.commands import Context
+                threading.Thread(target=command.execute, args=[Context(message.author, message.channel), command_input[1:]]).start()  # This doesn't seem like a good idea but it prevents blocking
                 return
 
         # Send invalid command message
         from .commands import HelpCommand
         await utils.send_split(f'Unrecognized command. Use `{prefix + HelpCommand(self).name}` to see available commands.', message.channel)
+
+    def get_member(self, guild_id: int, user_id: int):
+        print(guild_id, user_id)
+        guild = self.get_guild(guild_id)
+        print(type(guild), guild)
+        print(guild._members)
+        if guild is not None:
+            return guild.get_member(user_id)
+        return None

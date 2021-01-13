@@ -32,9 +32,9 @@ def catch_exceptions(function):
     :param function:
     :return:
     """
-    def f(*args, **kargs):
+    def f(*args, **kwargs):
         try:
-            function(*args, *kargs)
+            function(*args, *kwargs)
         except Exception as e:
             logger.exception(f'Exception: {e}')
     return f

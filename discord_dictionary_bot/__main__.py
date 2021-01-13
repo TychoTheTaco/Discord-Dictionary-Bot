@@ -2,6 +2,7 @@ import argparse
 import os
 import logging.config
 
+import discord
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
@@ -83,7 +84,9 @@ def main():
         return
 
     # Start client
-    client = DictionaryBotClient(args.ffmpeg_path, dictionary_api)
+    intents = discord.Intents.default()
+    intents.members = True  # The members intent is required for slash commands to work correctly. It is used to lookup a 'discord.Member' based on their user ID.
+    client = DictionaryBotClient(args.ffmpeg_path, dictionary_api, intents=intents)
     client.run(args.discord_bot_token)
 
 

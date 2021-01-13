@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+
 import discord
+from discord_slash import SlashContext
+
 from discord_dictionary_bot.discord_bot_client import DiscordBotClient
 
 
@@ -8,9 +11,10 @@ class Context:
     This is passed to each command's 'execute' function so that they are aware of the context in which they are executing.
     """
 
-    def __init__(self, author: discord.User, channel: discord.abc.Messageable):
+    def __init__(self, author: discord.User, channel: discord.abc.Messageable, slash_context: SlashContext = None):
         self._author = author
         self._channel = channel
+        self._slash_context = slash_context
 
     @property
     def author(self):
@@ -20,13 +24,14 @@ class Context:
     def channel(self):
         return self._channel
 
-    def __repr__(self):
-        return f'Context {{author: \'{self._author}\', channel: \'{self._channel}\'}}'
+    @property
+    def slash_context(self):
+        return self._slash_context
 
 
 class Command(ABC):
 
-    def __init__(self, client: DiscordBotClient, name, aliases=None, description='', usage='', secret=False):
+    def __init__(self, client: DiscordBotClient, name, aliases=None, description='', usage='', secret=False, slash_command_options=None):
         """
         This is the base class for commands.
         :param client: The client this command is attached to.
@@ -42,6 +47,14 @@ class Command(ABC):
         self._description = description
         self._usage = usage
         self._secret = secret
+        slash_command_options = [] if slash_command_options is None else slash_command_options
+
+        # Set up slash command support  # TODO: Remove guild ID
+        if len(slash_command_options) > 0:
+            @client.slash_command_decorator.slash(name=name, guild_ids=[454852632528420876], options=slash_command_options)
+            async def _on_slash_command(slash_context, word, text_to__speech=False, language='pie'):
+                print({'word': word, 'text_to__speech': text_to__speech, 'language': language})
+                self.execute_slash_command(slash_context, {'word': word, 'text_to__speech': text_to__speech, 'language': language})
 
     @property
     def client(self) -> DiscordBotClient:
@@ -74,5 +87,5 @@ class Command(ABC):
     def execute(self, context: Context, args: tuple) -> None:
         pass
 
-    def __repr__(self):
-        return f'Command {{name: {self._name}}}'
+    def execute_slash_command(self, slash_context: SlashContext, args: dict):
+        pass
