@@ -29,4 +29,5 @@ class DefineForwardsCommand(DefineCommand):
                     'description': 'The language to use when reading the definition.',
                     'type': 3,
                 }
-            ])
+            ]
+        )

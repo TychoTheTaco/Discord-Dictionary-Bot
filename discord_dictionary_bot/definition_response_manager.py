@@ -491,7 +491,7 @@ class MessageQueue:
         if text_to_speech and voice_channel is not None:
 
             # If we need the voice channel, send both the text and audio response at the same time
-            if buffer is not None:
+            if buffer is not None and buffer.getbuffer().nbytes > 0:
 
                 # Join the voice channel
                 try:
@@ -565,6 +565,9 @@ class MessageQueue:
                 self._stop_lock.release()
 
                 self._client.sync(utils.send_split('There was a problem processing the text-to-speech.', definition_request.text_channel))
+
+                # Send text chat reply
+                self._client.sync(utils.send_split(reply, definition_request.text_channel))
 
         else:
 

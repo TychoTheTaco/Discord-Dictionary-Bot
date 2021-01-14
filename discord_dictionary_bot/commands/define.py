@@ -6,6 +6,7 @@ import re
 import discord
 from google.cloud import texttospeech
 from discord_slash import SlashContext
+from typing import Tuple
 
 from ..definition_response_manager import DefinitionRequest
 from .command import Command, Context
@@ -50,12 +51,36 @@ class DefineCommand(Command):
         self._add_request(context.author, word, context.channel, False, args.text_to_speech, args.language)
         self.client.sync(context.channel.send(f':white_check_mark: Word added to queue.'))
 
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
-        word = args[0]
-        text_to_speech = False if len(args) < 2 else args[1]
-        language = self.client.properties.get(slash_context.channel, 'language') if len(args) < 3 else args[2]
+    def _validate_slash_command_arguments(self, slash_context, args: tuple) -> Tuple[str, dict]:
+        results = {}
 
-        self._add_request(slash_context.author, word, slash_context.channel, False, text_to_speech, language)
+        word = args[0]
+
+        index = 1
+
+        # Text to speech
+        if len(args) > index:
+            if type(args[index]) is bool:
+                results['text_to_speech'] = args[index]
+                index += 1
+
+        if 'text_to_speech' not in results:
+            results['text_to_speech'] = False
+
+        # Language
+        if len(args) > index:
+            if type(args[index]) is str:
+                results['language'] = args[index]
+                index += 1
+
+        if 'language' not in results:
+            results['language'] = self.client.properties.get(slash_context.channel, 'language')
+
+        return word, results
+
+    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
+        word, kwargs = self._validate_slash_command_arguments(slash_context, args)
+        self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs)
         self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))
 
     def _add_request(self, user: discord.User, word, channel: discord.abc.Messageable, reverse, text_to_speech, language):
@@ -67,13 +92,14 @@ class DefineCommand(Command):
             return
 
         # TODO: Find closest matching language, prefer wavenet by default?
-        if language != self.client.properties.get(channel, 'language'):
-            if language not in DefineCommand._LANGUAGES:
-                for language_code in DefineCommand._LANGUAGES:
-                    if language.lower() in language_code.lower():
-                        language = language_code
-                        self.client.sync(utils.send_split(f'Incomplete language code. Assuming you mean `{language}`', channel))
-                        break
+        if text_to_speech:
+            if language != self.client.properties.get(channel, 'language'):
+                if language not in DefineCommand._LANGUAGES:
+                    for language_code in DefineCommand._LANGUAGES:
+                        if language.lower() in language_code.lower():
+                            language = language_code
+                            self.client.sync(utils.send_split(f'Incomplete language code. Assuming you mean `{language}`', channel))
+                            break
 
         # Check for text-to-speech override
         text_to_speech_property = self.client.properties.get(channel, 'text_to_speech')

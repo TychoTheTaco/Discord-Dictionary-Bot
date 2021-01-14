@@ -47,14 +47,14 @@ class Command(ABC):
         self._description = description
         self._usage = usage
         self._secret = secret
-        slash_command_options = [] if slash_command_options is None else slash_command_options
 
         # Set up slash command support  # TODO: Remove guild ID
-        if len(slash_command_options) > 0:
+        if slash_command_options is not None:
+            # Note: discord_slash currently doesn't support keyword arguments or default arguments so 'args' may contain values in the wrong position when some optional arguments are not given. Therefore, each 'Command' subclass needs to
+            # validate the arguments based on their type. If the arguments are the same type, there is unfortunately no good way to differentiate them since all we get here is a tuple.
             @client.slash_command_decorator.slash(name=name, guild_ids=[454852632528420876], options=slash_command_options)
-            async def _on_slash_command(slash_context, word, text_to__speech=False, language='pie'):
-                print({'word': word, 'text_to__speech': text_to__speech, 'language': language})
-                self.execute_slash_command(slash_context, {'word': word, 'text_to__speech': text_to__speech, 'language': language})
+            async def _on_slash_command(slash_context, *args):
+                self.execute_slash_command(slash_context, args)
 
     @property
     def client(self) -> DiscordBotClient:
@@ -87,5 +87,5 @@ class Command(ABC):
     def execute(self, context: Context, args: tuple) -> None:
         pass
 
-    def execute_slash_command(self, slash_context: SlashContext, args: dict):
+    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
         pass
