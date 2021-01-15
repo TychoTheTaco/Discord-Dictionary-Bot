@@ -131,12 +131,3 @@ class DiscordBotClient(discord.Client):
         # Send invalid command message
         from .commands import HelpCommand
         await utils.send_split(f'Unrecognized command. Use `{prefix + HelpCommand(self).name}` to see available commands.', message.channel)
-
-    def get_member(self, guild_id: int, user_id: int):
-        print(guild_id, user_id)
-        guild = self.get_guild(guild_id)
-        print(type(guild), guild)
-        print(guild._members)
-        if guild is not None:
-            return guild.get_member(user_id)
-        return None
