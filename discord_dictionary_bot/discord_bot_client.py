@@ -99,9 +99,6 @@ class DiscordBotClient(discord.Client):
 
     async def on_message(self, message: discord.Message):
 
-        if message.guild.id != 454852632528420876:
-            return
-
         # Ignore our own messages
         if message.author == self.user:
             return

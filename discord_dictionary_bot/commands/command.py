@@ -48,11 +48,16 @@ class Command(ABC):
         self._usage = usage
         self._secret = secret
 
-        # Set up slash command support  # TODO: Remove guild ID
+        # Set up slash command support
         if slash_command_options is not None:
+
+            # If the command options contain a subcommand, they will each need their own decorator. This case needs to be handled manually by the subclass.
+            if any(x['type'] < 3 for x in slash_command_options):
+                return
+
             # Note: discord_slash currently doesn't support keyword arguments or default arguments so 'args' may contain values in the wrong position when some optional arguments are not given. Therefore, each 'Command' subclass needs to
             # validate the arguments based on their type. If the arguments are the same type, there is unfortunately no good way to differentiate them since all we get here is a tuple.
-            @client.slash_command_decorator.slash(name=name, guild_ids=[454852632528420876], options=slash_command_options)
+            @client.slash_command_decorator.slash(name=name, options=slash_command_options)
             async def _on_slash_command(slash_context, *args):
                 self.execute_slash_command(slash_context, args)
 
