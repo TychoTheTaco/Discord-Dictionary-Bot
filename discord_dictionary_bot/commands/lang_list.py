@@ -17,7 +17,7 @@ class LangListCommand(Command):
         super().__init__(
             client,
             'languages',
-            aliases=['l'],
+            aliases=['l', 'lang'],
             description='Shows the list of supported languages for text to speech.',
             usage='[-v]',
             slash_command_options=[
