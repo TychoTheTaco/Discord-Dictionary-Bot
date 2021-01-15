@@ -49,14 +49,19 @@ Aliases: `s`<br>
 ## Screenshots
 ![taco](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
 
-## Requirements
-If you want to run this bot yourself, you will need your own API tokens for the following APIs:
+## Installation
+
+### Requirements
+Below is a list of APIs that are currently used by the bot. To run the bot yourself, you will need to provide your own API key for these services.
 - [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
 - [Google Cloud Firestore](https://firebase.google.com/products/firestore)
+- [Google Cloud Logging](https://cloud.google.com/logging)
+- [Google Cloud BigQuery](https://cloud.google.com/bigquery)
 
 Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 
-To start the bot, simply run `main.py` with the appropriate arguments as specified below.
+### Installation
+To install, simply run `pip install .` in the project's root directory. You can then run the bot using `python -m discord_dictionary_bot` along with the appropriate arguments described below.
 
 ### Program Arguments
 |Argument            | Description |
