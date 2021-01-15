@@ -48,8 +48,8 @@ class DefineCommand(Command):
         # Extract word from arguments
         word = ' '.join(args.word).strip()
 
-        self._add_request(context.author, word, context.channel, False, args.text_to_speech, args.language)
-        self.client.sync(context.channel.send(f':white_check_mark: Word added to queue.'))
+        if self._add_request(context.author, word, context.channel, False, args.text_to_speech, args.language):
+            self.client.sync(context.channel.send(f':white_check_mark: Word added to queue.'))
 
     def _validate_slash_command_arguments(self, slash_context, args: tuple) -> Tuple[str, dict]:
         results = {}
@@ -80,16 +80,16 @@ class DefineCommand(Command):
 
     def execute_slash_command(self, slash_context: SlashContext, args: tuple):
         word, kwargs = self._validate_slash_command_arguments(slash_context, args)
-        self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs)
-        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))
+        if self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs):
+            self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))
 
-    def _add_request(self, user: discord.User, word, channel: discord.abc.Messageable, reverse, text_to_speech, language):
+    def _add_request(self, user: discord.User, word, channel: discord.abc.Messageable, reverse, text_to_speech, language) -> bool:
 
         # Check for non-word characters
         pattern = re.compile('(?:[^ \\w]|\\d)')
         if pattern.search(word) is not None:
             self.client.sync(utils.send_split(f'That\'s not a word.', channel))
-            return
+            return False
 
         # TODO: Find closest matching language, prefer wavenet by default?
         if text_to_speech:
@@ -110,3 +110,4 @@ class DefineCommand(Command):
 
         # Add to definition queue
         self._definition_response_manager.add(DefinitionRequest(user, word, channel, reverse=reverse, text_to_speech=text_to_speech, language=language))
+        return True

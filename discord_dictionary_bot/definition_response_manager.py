@@ -410,6 +410,9 @@ class MessageQueue:
             with self._voice_client_lock:
                 self._voice_client = voice_client
 
+            # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
+            time.sleep(3)
+
             # Send text chat reply
             self._client.sync(utils.send_split(text, self._text_channel))
 

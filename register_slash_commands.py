@@ -93,7 +93,21 @@ def register_all_commands(guild_id=None):
                                 'name': 'name',
                                 'description': 'Property name.',
                                 'type': 3,
-                                'required': True
+                                'required': True,
+                                'choices': [
+                                    {
+                                        'name': 'prefix',
+                                        'value': 'prefix'
+                                    },
+                                    {
+                                        'name': 'text-to-speech',
+                                        'value': 'text_to_speech'
+                                    },
+                                    {
+                                        'name': 'language',
+                                        'value': 'language'
+                                    }
+                                ]
                             },
                             {
                                 'name': 'value',
@@ -124,7 +138,21 @@ def register_all_commands(guild_id=None):
                                 'name': 'name',
                                 'description': 'Property name.',
                                 'type': 3,
-                                'required': True
+                                'required': True,
+                                'choices': [
+                                    {
+                                        'name': 'prefix',
+                                        'value': 'prefix'
+                                    },
+                                    {
+                                        'name': 'text-to-speech',
+                                        'value': 'text_to_speech'
+                                    },
+                                    {
+                                        'name': 'language',
+                                        'value': 'language'
+                                    }
+                                ]
                             },
                             {
                                 'name': 'value',
@@ -143,7 +171,21 @@ def register_all_commands(guild_id=None):
                                 'name': 'name',
                                 'description': 'The name of the property to delete.',
                                 'type': 3,
-                                'required': True
+                                'required': True,
+                                'choices': [
+                                    {
+                                        'name': 'prefix',
+                                        'value': 'prefix'
+                                    },
+                                    {
+                                        'name': 'text-to-speech',
+                                        'value': 'text_to_speech'
+                                    },
+                                    {
+                                        'name': 'language',
+                                        'value': 'language'
+                                    }
+                                ]
                             }
                         ]
                     }
