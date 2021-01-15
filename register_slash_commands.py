@@ -11,51 +11,33 @@ def register(json, guild_id):
         print(result)
     else:
         result = requests.post(f'https://discord.com/api/v8/applications/{DISCORD_APP_ID}/guilds/{guild_id}/commands', json=json, headers=HEADERS)
+        print(result, result.content)
+
+
+def delete(command_id, guild_id=None):
+    if guild_id is None:
+        result = requests.delete(f'https://discord.com/api/v8/applications/{DISCORD_APP_ID}/commands/{command_id}', headers=HEADERS)
+        print(result)
+    else:
+        result = requests.delete(f'https://discord.com/api/v8/applications/{DISCORD_APP_ID}/guilds/{guild_id}/commands/{command_id}', headers=HEADERS)
         print(result)
 
 
-if __name__ == '__main__':
+def delete_guild_commands():
+    command_ids = [
 
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--discord-token',
-                        help='You can either use the raw token string or a path to a text file containing the token.',
-                        dest='discord_bot_token',
-                        default='discord_token.txt')
-    parser.add_argument('--discord-app-id',
-                        help='You can either use the raw id string or a path to a text file containing the id.',
-                        dest='discord_app_id',
-                        default='discord_app_id.txt')
-    args = parser.parse_args()
+    ]
 
-    # Read discord bot token from file
-    try:
-        with open(args.discord_bot_token) as file:
-            args.discord_bot_token = file.read()
-    except IOError:
-        pass  # Ignore and assume the argument is a token string not a file path
+    for command_id in command_ids:
+        delete(command_id, guild_id=454852632528420876)
 
-    # Read discord app id from file
-    try:
-        with open(args.discord_app_id) as file:
-            args.discord_app_id = file.read()
-    except IOError:
-        pass  # Ignore and assume the argument is an id string not a file path
 
-    headers = {
-        'Authorization': f'Bot {args.discord_bot_token}'
-    }
-    print(headers)
-
-    HEADERS = headers
-    MY_GUILD_ID = None  # Use None for global commands
-    DISCORD_APP_ID = args.discord_app_id
-
+def register_all_commands(guild_id=None):
     # Help command
     register({
         'name': 'help',
         'description': 'Shows you a helpful message.'
-    }, MY_GUILD_ID)
+    }, guild_id)
 
     # Define command
     register({
@@ -79,13 +61,13 @@ if __name__ == '__main__':
                 'type': 3,
             }
         ]
-    }, MY_GUILD_ID)
+    }, guild_id)
 
     # Next command
     register({
         'name': 'next',
         'description': 'If the bot is currently reading out a definition, this will make it skip to the next one.'
-    }, MY_GUILD_ID)
+    }, guild_id)
 
     # Property command
     register({
@@ -168,13 +150,13 @@ if __name__ == '__main__':
                 ]
             }
         ]
-    }, MY_GUILD_ID)
+    }, guild_id)
 
     # Stop command
     register({
         'name': 'stop',
         'description': 'Makes this bot stop talking and removes all definition requests.'
-    }, MY_GUILD_ID)
+    }, guild_id)
 
     # Lang command
     register({
@@ -187,4 +169,46 @@ if __name__ == '__main__':
                 'type': 5
             }
         ]
-    }, MY_GUILD_ID)
+    }, guild_id)
+
+
+if __name__ == '__main__':
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--discord-token',
+                        help='You can either use the raw token string or a path to a text file containing the token.',
+                        dest='discord_bot_token',
+                        default='discord_token.txt')
+    parser.add_argument('--discord-app-id',
+                        help='You can either use the raw id string or a path to a text file containing the id.',
+                        dest='discord_app_id',
+                        default='discord_app_id.txt')
+    args = parser.parse_args()
+
+    # Read discord bot token from file
+    try:
+        with open(args.discord_bot_token) as file:
+            args.discord_bot_token = file.read()
+    except IOError:
+        pass  # Ignore and assume the argument is a token string not a file path
+
+    # Read discord app id from file
+    try:
+        with open(args.discord_app_id) as file:
+            args.discord_app_id = file.read()
+    except IOError:
+        pass  # Ignore and assume the argument is an id string not a file path
+
+    headers = {
+        'Authorization': f'Bot {args.discord_bot_token}'
+    }
+    print(headers)
+
+    HEADERS = headers
+    #MY_GUILD_ID = None  # Use None for global commands
+    MY_GUILD_ID = 454852632528420876
+    DISCORD_APP_ID = args.discord_app_id
+
+    #delete_guild_commands()
+    register_all_commands()
