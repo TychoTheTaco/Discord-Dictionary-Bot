@@ -5,7 +5,7 @@ A simple bot that can fetch definitions and post them in chat. If you are connec
 
 
 ## Usage
-Default command prefix: `.`<br>
+Default command prefix: `.` This bot also supports [Slash Commands](https://discord.com/developers/docs/interactions/slash-commands). The syntax for slash commands is a little from the usage shown below, though mostly the same. The Discord UI provides usage hints for slash commands. Note that currently slash commands do not support aliases.<br>
 
 ### Commands
 **define**<br>
@@ -21,11 +21,11 @@ Shows available commands.<br>
 Usage: `help`<br>
 Aliases: `h`<br>
 
-**lang**<br>
+**languages**<br>
 Shows the list of supported languages for text to speech.<br>
-Usage: `lang [-v]`<br>
+Usage: `languages [-v]`<br>
 `-v`: Verbose mode. Prints out all the languages in chat instead of posting a link.<br>
-Aliases: `l`<br>
+Aliases: `l`, `lang`<br>
 
 **next**<br>
 If the bot is currently reading out a definition, this will make it skip to the next one.<br>
