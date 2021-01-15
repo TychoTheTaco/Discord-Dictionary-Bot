@@ -26,10 +26,10 @@ def main():
     @client.event
     async def on_ready():
         message = 'Hello everyone, Dictionary Bot now supports using [Slash Commands](https://discord.com/developers/docs/interactions/slash-commands)! To use them, you just need to grant the bot an ' \
-                  '[additional permission](https://discord.com/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands). ' \
-                  'You can still use the bot in the same way as before if you don\'t want to use the new Slash Commands. Note that you may have to restart Discord to see the new Slash Commands.'
+                  '[additional permission](https://discord.com/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) (You might also have to restart Discord). ' \
+                  'If you don\'t want to use them, you can continue to use the bot in the same way as before.'
         channel_ids = [
-            799455809808891986
+            # TODO: Load IDs from file
         ]
 
         CONFIRM_MESSAGE = 'Yes, I\'m sure'
@@ -40,13 +40,19 @@ def main():
 
         print(f'Broadcasting message to {len(channel_ids)} channels!')
         for channel_id in channel_ids:
-            channel: discord.TextChannel = client.get_channel(channel_id)
+            channel = client.get_channel(channel_id)
+            if not isinstance(channel, discord.TextChannel):
+                print(f'Ignoring channel because it is not a text channel: {type(channel)}, "{channel}"')
+                continue
             print(f'Sending message to "{channel}"')
 
-            e = discord.Embed()
-            e.title = 'Slash Commands Support'
-            e.description = message
-            asyncio.run_coroutine_threadsafe(channel.send(embed=e), client.loop)
+            try:
+                e = discord.Embed()
+                e.title = 'Slash Commands Support'
+                e.description = message
+                await channel.send(embed=e)
+            except discord.errors.Forbidden:
+                print(f'Failed to send to channel {channel_id}!')
         print('Broadcast complete')
 
     # Start client
