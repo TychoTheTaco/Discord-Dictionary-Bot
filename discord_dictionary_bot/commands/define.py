@@ -92,7 +92,7 @@ class DefineCommand(Command):
             return
 
         self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs)
-        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))
+        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))  # TODO: Sometimes this gets sent after the definition request was already processed
 
     def _is_valid_word(self, word) -> bool:
         pattern = re.compile('(?:[^ \\w]|\\d)')
