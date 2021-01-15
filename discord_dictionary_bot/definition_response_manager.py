@@ -123,6 +123,12 @@ class DefinitionRequest:
 @run_on_another_thread
 @catch_exceptions
 def send_analytics(definition_request: DefinitionRequest) -> None:
+
+    # Ignore dev server
+    if isinstance(definition_request.text_channel, discord.TextChannel) and definition_request.text_channel.guild.id in [454852632528420876, 799455809297842177]:
+        logger.info(f'Ignoring analytics submission for development server.')
+        return
+
     client = bigquery.Client()
     job_config = bigquery.LoadJobConfig(
         schema=[
