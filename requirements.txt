@@ -6,3 +6,4 @@ google-cloud-firestore
 google-cloud-texttospeech
 google-cloud-logging
 google-cloud-bigquery
+discord-py-slash-command
