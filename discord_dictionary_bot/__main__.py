@@ -1,6 +1,8 @@
 import argparse
 import os
 import logging.config
+import sys
+import threading
 
 import discord
 import google.cloud.logging
@@ -10,13 +12,51 @@ from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, Unofficia
 from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
-def logging_filter_bot_only(record):
-    return record.name.startswith('discord_dictionary_bot')
+def logging_filter(record):
+    """
+    Filter logs so that only records from this module are shown.
+    :param record:
+    :return:
+    """
+    return 'discord_dictionary_bot' in record.name or 'discord_dictionary_bot' in record.pathname
 
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger().handlers[0].addFilter(logging_filter_bot_only)
+logging.getLogger().handlers[0].addFilter(logging_filter)
+
+
+def install_thread_excepthook():
+    """
+    Workaround for bug (https://bugs.python.org/issue1230540).
+    Install thread excepthook.
+    By default, all exceptions raised in thread run() method are caught internally
+    by the threading module (see _bootstrap_inner method). Current implementation
+    simply dumps the traceback to stderr and did not exit the process.
+    This change explicitly catches exceptions and invokes sys.excepthook handler.
+    """
+    _init = threading.Thread.__init__
+
+    def init(self, *args, **kwargs):
+        _init(self, *args, **kwargs)
+        _run = self.run
+
+        def run(*args, **kwargs):
+            try:
+                _run(*args, **kwargs)
+            except:
+                sys.excepthook(*sys.exc_info())
+        self.run = run
+
+    threading.Thread.__init__ = init
+
+
+def on_uncaught_exception(etype, value, trace):
+    logging.getLogger().critical(f'Uncaught Exception!', exc_info=True)
+
+
+install_thread_excepthook()
+sys.excepthook = on_uncaught_exception
 
 
 def main():
@@ -51,7 +91,7 @@ def main():
     # Set up GCP logging
     gcp_logging_client = google.cloud.logging.Client()
     gcp_logging_handler = CloudLoggingHandler(gcp_logging_client, name='discord-dictionary-bot')
-    gcp_logging_handler.addFilter(logging_filter_bot_only)
+    gcp_logging_handler.addFilter(logging_filter)
     logging.getLogger().addHandler(gcp_logging_handler)
 
     # Read discord bot token from file
