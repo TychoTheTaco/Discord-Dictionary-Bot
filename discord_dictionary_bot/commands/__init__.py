@@ -8,3 +8,4 @@ from .lang_list import LangListCommand
 from .next import NextCommand
 from .property import PropertyCommand
 from .stop import StopCommand
+from .stats import StatsCommand

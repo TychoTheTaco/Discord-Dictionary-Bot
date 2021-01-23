@@ -24,3 +24,4 @@ class DictionaryBotClient(DiscordBotClient):
         self.add_command(NextCommand(self, self._definition_response_manager))
         self.add_command(LangListCommand(self))
         self.add_command(ActiveServerCountCommand(self))
+        self.add_command(StatsCommand(self))
