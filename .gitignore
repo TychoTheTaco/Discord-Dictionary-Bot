@@ -12,3 +12,6 @@ credentials.json
 
 # Merriam Webster dictionary API token
 webster_api_token.txt
+
+# RapidAPI WordsAPI dictionary API token
+rapid_words_api_token.txt

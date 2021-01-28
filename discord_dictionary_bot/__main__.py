@@ -8,7 +8,7 @@ import discord
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
-from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI
+from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI
 from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
@@ -79,7 +79,7 @@ def main():
                         help='The dictionary API to use for fetching definitions.',
                         dest='dictionary_api',
                         default='google',
-                        choices=['google', 'owlbot', 'webster'])
+                        choices=['google', 'owlbot', 'webster', 'rapid-words'])
     parser.add_argument('--owlbot-api-token',
                         help='The token to use for the Owlbot dictionary API. You can use either the raw token string or a path to a text file containing the token.',
                         dest='owlbot_api_token',
@@ -88,6 +88,10 @@ def main():
                         help='The token to use for the Merriam Webster dictionary API. You can use either the raw token string or a path to a text file containing the token.',
                         dest='webster_api_token',
                         default='webster_api_token.txt')
+    parser.add_argument('--rapid-words-api-token',
+                        help='The token to use for the RapidAPI WordsAPI dictionary API. You can use either the raw token string or a path to a text file containing the token.',
+                        dest='rapid_words_api_token',
+                        default='rapid_words_api_token.txt')
     args = parser.parse_args()
 
     # Set Google API credentials
@@ -138,6 +142,21 @@ def main():
             pass  # Ignore and assume the argument is a token string not a file path
 
         dictionary_api = MerriamWebsterAPI(args.webster_api_token)
+
+    elif args.dictionary_api == 'rapid-words':
+
+        if 'rapid_words_api_token' not in args:
+            print(f'You must specify an API token with --rapid-words-api-token to use the Rapid API WordsAPI dictionary API!')
+            return
+
+        # Read API token from file
+        try:
+            with open(args.rapid_words_api_token) as file:
+                args.rapid_words_api_token = file.read()
+        except IOError:
+            pass  # Ignore and assume the argument is a token string not a file path
+
+        dictionary_api = RapidWordsAPI(args.rapid_words_api_token)
 
     else:
         print(f'Invalid dictionary API: {args.dictionary_api}')

@@ -191,3 +191,43 @@ class MerriamWebsterAPI(DictionaryAPI):
                     return r
 
         return None
+
+
+class RapidWordsAPI(DictionaryAPI):
+
+    def __init__(self, api_key):
+        self._api_key = api_key
+
+    def define(self, word: str) -> {}:
+        headers = {
+            'x-rapidapi-key': self._api_key,
+            'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
+        }
+        response = requests.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers)
+
+        if response.status_code != 200:
+            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}", content: "{response.content}"}}')
+            return []
+
+        logger.info(f'{self} {{status_code: {response.status_code}, word: "{word}"}}')
+
+        results = []
+        try:
+            response_json = response.json()
+
+            if 'results' not in response_json:
+                logger.warning(f'{self} No results for word: "{word}"')
+                return []
+
+            results_json = response_json['results']
+            for definition_json in results_json:
+                results.append({
+                    'word_type': definition_json['partOfSpeech'],
+                    'definition': definition_json['definition']
+                })
+
+        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
+            logger.error(f'{self} Failed to parse response: {response}')
+            return []
+
+        return results
