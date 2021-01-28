@@ -244,7 +244,7 @@ class RapidWordsAPI(DictionaryAPI):
             for definition_json in results_json:
                 results.append({
                     'word_type': definition_json['partOfSpeech'],
-                    'definition': definition_json['definition']
+                    'definition': definition_json['definition'] + '.'
                 })
 
         except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
