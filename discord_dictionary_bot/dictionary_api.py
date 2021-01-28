@@ -104,8 +104,8 @@ class MerriamWebsterAPI(DictionaryAPI):
         result = []
         try:
             result = self._get_first_definition_of_each_entry(word, response.json())
-        except Exception as e:
-            logger.error(f'{self} Failed to parse API response: {e}', exc_info=True)
+        except Exception:
+            logger.error(f'{self} Failed to parse API response!', exc_info=True)
 
         return result
 
@@ -123,7 +123,6 @@ class MerriamWebsterAPI(DictionaryAPI):
         return results
 
     def _get_first_definition_of_each_entry(self, word: str, response_json) -> []:
-        print(response_json)
         results = []
 
         for entry_json in response_json:
@@ -143,8 +142,7 @@ class MerriamWebsterAPI(DictionaryAPI):
             sense = self._find_first_sense(entry_json['def'][0]['sseq'][0])
 
             # Get definition text from sense
-            definition_text = [x[1] for x in sense['dt'] if x[0] == 'text'][0]
-            print(definition_text)
+            definition_text = self._get_text_from_dt(sense['dt'])
 
             # Clean up definition text (https://dictionaryapi.com/products/json#sec-2.tokens)
             definition_text = definition_text.replace('{bc}', '')
@@ -177,6 +175,18 @@ class MerriamWebsterAPI(DictionaryAPI):
         for sense in sense_sequence:
             if isinstance(sense, list):
                 r = self._find_first_sense(sense)
+                if r is not None:
+                    return r
+
+        return None
+
+    def _get_text_from_dt(self, dt):
+        if dt[0] == 'text':
+            return dt[1]
+
+        for item in dt:
+            if isinstance(item, list):
+                r = self._get_text_from_dt(item)
                 if r is not None:
                     return r
 
