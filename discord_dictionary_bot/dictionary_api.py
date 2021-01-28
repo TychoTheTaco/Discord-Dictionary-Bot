@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import requests
 import logging
+import re
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -72,8 +73,8 @@ class UnofficialGoogleAPI(DictionaryAPI):
 
         result = []
         try:
-            json = response.json()
-            for d in json[0]['meanings']:
+            response_json = response.json()
+            for d in response_json[0]['meanings']:
                 definition = {
                     'word_type': d['partOfSpeech'],
                     'definition': d['definitions'][0]['definition']

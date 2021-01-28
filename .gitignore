@@ -9,3 +9,6 @@ token.txt
 
 # GCP Credentials
 credentials.json
+
+# Merriam Webster dictionary API token
+webster_api_token.txt

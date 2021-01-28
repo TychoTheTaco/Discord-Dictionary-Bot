@@ -8,7 +8,7 @@ import discord
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
-from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI
+from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI
 from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
@@ -46,13 +46,14 @@ def install_thread_excepthook():
                 _run(*args, **kwargs)
             except:
                 sys.excepthook(*sys.exc_info())
+
         self.run = run
 
     threading.Thread.__init__ = init
 
 
 def on_uncaught_exception(etype, value, trace):
-    logging.getLogger().critical(f'Uncaught Exception!', exc_info=True)
+    logging.getLogger().critical(f'Uncaught Exception!', exc_info=(etype, value, trace))
 
 
 install_thread_excepthook()
@@ -78,11 +79,15 @@ def main():
                         help='The dictionary API to use for fetching definitions.',
                         dest='dictionary_api',
                         default='google',
-                        choices=['google', 'owlbot'])
+                        choices=['google', 'owlbot', 'webster'])
     parser.add_argument('--owlbot-api-token',
                         help='The token to use for the Owlbot dictionary API. You can use either the raw token string or a path to a text file containing the token.',
                         dest='owlbot_api_token',
                         default='owlbot_api_token.txt')
+    parser.add_argument('--webster-api-token',
+                        help='The token to use for the Merriam Webster dictionary API. You can use either the raw token string or a path to a text file containing the token.',
+                        dest='webster_api_token',
+                        default='webster_api_token.txt')
     args = parser.parse_args()
 
     # Set Google API credentials
@@ -118,6 +123,21 @@ def main():
             pass  # Ignore and assume the argument is a token string not a file path
 
         dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
+
+    elif args.dictionary_api == 'webster':
+
+        if 'webster_api_token' not in args:
+            print(f'You must specify an API token with --webster-api-token to use the Merriam Webster dictionary API!')
+            return
+
+        # Read API token from file
+        try:
+            with open(args.webster_api_token) as file:
+                args.webster_api_token = file.read()
+        except IOError:
+            pass  # Ignore and assume the argument is a token string not a file path
+
+        dictionary_api = MerriamWebsterAPI(args.webster_api_token)
 
     else:
         print(f'Invalid dictionary API: {args.dictionary_api}')
