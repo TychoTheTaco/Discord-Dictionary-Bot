@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import requests
 import logging
 import re
+from datetime import datetime, timedelta
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -198,7 +199,27 @@ class RapidWordsAPI(DictionaryAPI):
     def __init__(self, api_key):
         self._api_key = api_key
 
+        # Maximum number of request we can make in a 24hr period. If we exceed this, all future definition requests will return an empty response until the next time period
+        self._request_limit = 2000
+
+        self._request_period_start = datetime.now()
+
+        # Number of requests made in the current time period
+        self._request_count = 0
+
     def define(self, word: str) -> {}:
+
+        # Reset request count
+        if datetime.now() > self._request_period_start + timedelta(days=1):
+            self._request_count = 0
+            logger.info(f'{self} Reset request count.')
+
+        # Increment request count
+        self._request_count += 1
+        if self._request_count > self._request_limit:
+            logger.critical(f'{self} Request limit reached!')
+            return []
+
         headers = {
             'x-rapidapi-key': self._api_key,
             'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
