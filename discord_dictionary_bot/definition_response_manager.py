@@ -395,7 +395,7 @@ class MessageQueue:
 
             # Join voice channel
             try:
-                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+                voice_client = self._client.sync(self._client.join_voice_channel(voice_channel))
             except InsufficientPermissionsException as e:
 
                 if user is None:
@@ -519,7 +519,7 @@ class MessageQueue:
 
                 # Join the voice channel
                 try:
-                    voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
+                    voice_client = self._client.sync(self._client.join_voice_channel(voice_channel))
                 except InsufficientPermissionsException as e:
 
                     self._client.sync(utils.send_or_dm(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', definition_request.text_channel,
