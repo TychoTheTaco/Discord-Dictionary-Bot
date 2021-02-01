@@ -42,7 +42,7 @@ class DefineCommand(Command):
                 args = parser.parse_args(args)
 
         except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
+            self.client.sync(utils.send_or_dm(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
             return
 
         # Extract word from arguments
@@ -50,11 +50,11 @@ class DefineCommand(Command):
 
         # Make sure this could be a word
         if not self._is_valid_word(word):
-            self.client.sync(context.channel.send('That\'s not a word'))
+            self.client.sync(utils.send_or_dm('That\'s not a word', context.channel, context.author))
             return
 
         if self._add_request(context.author, word, context.channel, False, args.text_to_speech, args.language):
-            self.client.sync(context.channel.send(f':white_check_mark: Word added to queue.'))
+            self.client.sync(utils.send_or_dm(':white_check_mark: Word added to queue.', context.channel, context.author))
 
     def _validate_slash_command_arguments(self, slash_context, args: tuple) -> Tuple[str, dict]:
         results = {}
