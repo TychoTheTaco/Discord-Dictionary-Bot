@@ -92,7 +92,7 @@ class DiscordBotClient(discord.Client):
         Submit a coroutine to the client's event loop.
         :param coroutine: A coroutine to run on this client's event loop.
         """
-        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+        return asyncio.run_coroutine_threadsafe(coroutine, self.loop).result()
 
     async def on_ready(self):
         print(f'Logged on as {self.user}!')

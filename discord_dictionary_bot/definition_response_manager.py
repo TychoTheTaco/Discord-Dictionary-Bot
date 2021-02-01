@@ -21,7 +21,6 @@ from .dictionary_api import DictionaryAPI
 from . import utils
 from .discord_bot_client import DiscordBotClient
 
-
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -32,11 +31,13 @@ def catch_exceptions(function):
     :param function:
     :return:
     """
+
     def f(*args, **kwargs):
         try:
             function(*args, *kwargs)
         except Exception as e:
             logger.exception(f'Exception: {e}')
+
     return f
 
 
@@ -46,8 +47,10 @@ def run_on_another_thread(function):
     :param function:
     :return:
     """
+
     def f(*args, **kargs):
         threading.Thread(target=function, args=[*args, *kargs]).start()
+
     return f
 
 
@@ -107,7 +110,7 @@ def create_reply(word, definitions, reverse=False) -> Tuple[str, str]:
 
 class DefinitionRequest:
 
-    def __init__(self, user: discord.User, word, text_channel: discord.abc.Messageable, reverse=False, text_to_speech=False, language='en-us'):
+    def __init__(self, user: discord.User, word: str, text_channel: discord.abc.Messageable, reverse=False, text_to_speech=False, language='en-us'):
         self.user = user
         self.voice_channel = user.voice.channel if isinstance(user, discord.Member) and user.voice is not None else None
         self.word = word
@@ -123,7 +126,6 @@ class DefinitionRequest:
 @run_on_another_thread
 @catch_exceptions
 def send_analytics(definition_request: DefinitionRequest) -> None:
-
     # Ignore dev server
     if isinstance(definition_request.text_channel, discord.TextChannel) and definition_request.text_channel.guild.id in [454852632528420876, 799455809297842177]:
         logger.info(f'Ignoring analytics submission for development server.')
@@ -383,7 +385,7 @@ class MessageQueue:
 
         return result
 
-    def _say(self, text: str, voice_channel=None, language='en-us', tts_input=None, after_callback=None):
+    def _say(self, text: str, voice_channel=None, language='en-us', tts_input=None, after_callback=None, user=None):
 
         # Send voice channel reply
         if voice_channel is not None:
@@ -396,7 +398,10 @@ class MessageQueue:
                 voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
             except InsufficientPermissionsException as e:
 
-                self._client.sync(utils.send_split(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel))
+                if user is None:
+                    self._client.sync(utils.send_split(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel))
+                else:
+                    self._client.sync(utils.send_or_dm(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel, user))
 
                 # Call pass-through callback
                 after_callback(None)
@@ -404,7 +409,11 @@ class MessageQueue:
 
             except Exception as e:
                 logger.error(f'{self} Failed to connect to the voice channel: {e}')
-                self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
+
+                if user is None:
+                    self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
+                else:
+                    self._client.sync(utils.send_or_dm(f'I could not connect to the voice channel!', self._text_channel, user))
 
                 # Call pass-through callback
                 after_callback(None)
@@ -420,7 +429,10 @@ class MessageQueue:
             time.sleep(3)
 
             # Send text chat reply
-            self._client.sync(utils.send_split(text, self._text_channel))
+            if user is None:
+                self._client.sync(utils.send_split(text, self._text_channel))
+            else:
+                self._client.sync(utils.send_or_dm(text, self._text_channel, user))
 
             # Create callback for when we are done speaking
             def after(error):
@@ -443,7 +455,10 @@ class MessageQueue:
         else:
 
             # Send text chat reply
-            self._client.sync(utils.send_split(text, self._text_channel))
+            if user is None:
+                self._client.sync(utils.send_split(text, self._text_channel))
+            else:
+                self._client.sync(utils.send_or_dm(text, self._text_channel, user))
 
             # Call pass-through callback
             after_callback(None)
@@ -487,7 +502,7 @@ class MessageQueue:
 
             # Send response
             self._say(f'__**{word}**__\nThere was a problem finding that word.', voice_channel=None if not text_to_speech else voice_channel, language=definition_request.language, tts_input=f'{word}. There was a problem finding that word.',
-                      after_callback=after)
+                      after_callback=after, user=definition_request.user)
 
             # Release stop lock
             self._stop_lock.release()
@@ -507,7 +522,8 @@ class MessageQueue:
                     voice_client = self._client.sync(self._client.join_voice_channel(voice_channel)).result()
                 except InsufficientPermissionsException as e:
 
-                    self._client.sync(utils.send_split(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', self._text_channel))
+                    self._client.sync(utils.send_or_dm(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.', definition_request.text_channel,
+                                                       definition_request.user))
 
                     # Release stop lock
                     self._stop_lock.release()
@@ -519,7 +535,7 @@ class MessageQueue:
 
                 except Exception as e:
                     logger.error(f'{self} Failed to connect to voice channel: {e}')
-                    self._client.sync(utils.send_split(f'I could not connect to the voice channel!', self._text_channel))
+                    self._client.sync(utils.send_or_dm(f'I could not connect to the voice channel!', definition_request.text_channel, definition_request.user))
 
                     # Release stop lock
                     self._stop_lock.release()
@@ -539,7 +555,7 @@ class MessageQueue:
                 time.sleep(3)
 
                 # Send text chat reply
-                self._client.sync(utils.send_split(reply, definition_request.text_channel))
+                self._client.sync(utils.send_or_dm(reply, definition_request.text_channel, definition_request.user))
 
                 # Speak
                 def after(error):
@@ -573,10 +589,10 @@ class MessageQueue:
                 # Release stop lock
                 self._stop_lock.release()
 
-                self._client.sync(utils.send_split('There was a problem processing the text-to-speech.', definition_request.text_channel))
+                self._client.sync(utils.send_or_dm('There was a problem processing the text-to-speech.', definition_request.text_channel, definition_request.user))
 
                 # Send text chat reply
-                self._client.sync(utils.send_split(reply, definition_request.text_channel))
+                self._client.sync(utils.send_or_dm(reply, definition_request.text_channel, definition_request.user))
 
         else:
 
@@ -584,7 +600,7 @@ class MessageQueue:
             self._stop_lock.release()
 
             # Send text chat reply
-            self._client.sync(utils.send_split(reply, definition_request.text_channel))
+            self._client.sync(utils.send_or_dm(reply, definition_request.text_channel, definition_request.user))
 
             # Release process lock
             self._process_lock.release()
