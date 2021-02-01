@@ -212,6 +212,7 @@ class RapidWordsAPI(DictionaryAPI):
         # Reset request count
         if datetime.now() > self._request_period_start + timedelta(days=1):
             self._request_count = 0
+            self._request_period_start = datetime.now()
             logger.info(f'{self} Reset request count.')
 
         # Increment request count
