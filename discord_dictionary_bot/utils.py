@@ -1,10 +1,32 @@
-import discord
 import re
+import logging
+
+import discord
+
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def get_token(path='token.txt'):
     with open(path) as file:
         return file.read()
+
+
+async def send_or_dm(message: str, channel: discord.abc.Messageable, user: discord.User):
+    """
+    Send a message to the specified channel. If we don't have permission to send messages in that channel, this will send the message as a DM to the user instead.
+    :param message:
+    :param channel:
+    :param user:
+    :return:
+    """
+    try:
+        await channel.send(message)
+    except discord.errors.Forbidden:
+        logger.warning(f'Failed to send message to channel {channel}. Sending it as a DM to user {user} instead.')
+        await user.send(f'I do not have permission to send messages in `{channel}` so I am responding to you here:')
+        await user.send(message)
 
 
 async def send_split(message: str, channel: discord.abc.Messageable, split_size=2000, delim=None):

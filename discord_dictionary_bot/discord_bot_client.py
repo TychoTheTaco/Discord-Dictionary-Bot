@@ -131,9 +131,9 @@ class DiscordBotClient(discord.Client):
         # Send invalid command message
         help_command = self._get_command('help')
         if help_command is not None:
-            await utils.send_split(f'Unrecognized command! Use `{prefix + help_command.name}` to see available commands.', message.channel)
+            await utils.send_or_dm(f'Unrecognized command! Use `{prefix + help_command.name}` to see available commands.', message.channel, message.author)
         else:
-            await utils.send_split(f'Unrecognized command!', message.channel)
+            await utils.send_or_dm(f'Unrecognized command!', message.channel, message.author)
 
     def _get_command(self, name: str):
         for command in self._commands:
