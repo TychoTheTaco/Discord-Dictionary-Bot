@@ -103,7 +103,7 @@ class PropertyCommand(Command):
         @client.slash_command_decorator.subcommand(base=self.name, subcommand_group='guild', name='list')
         async def _on_guild_list_subcommand(slash_context: SlashContext, *args):
             reply = self._get_property_list(slash_context.guild)
-            self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))
+            await slash_context.send(send_type=3, content=reply, hidden=True)
 
         @client.slash_command_decorator.subcommand(base=self.name, subcommand_group='guild', name='set', options=[
             {
@@ -121,12 +121,12 @@ class PropertyCommand(Command):
         ])
         async def _on_guild_set_subcommand(slash_context, *args):
             reply = self._set_property(slash_context.guild, args[0], args[1])
-            self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))
+            await slash_context.send(send_type=3, content=reply, hidden=True)
 
         @client.slash_command_decorator.subcommand(base=self.name, subcommand_group='channel', name='list')
         async def _on_channel_list_subcommand(slash_context: SlashContext, *args):
             reply = self._get_property_list(slash_context.channel)
-            self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))
+            await slash_context.send(send_type=3, content=reply, hidden=True)
 
         @client.slash_command_decorator.subcommand(base=self.name, subcommand_group='channel', name='set', options=[
             {
@@ -144,7 +144,7 @@ class PropertyCommand(Command):
         ])
         async def _on_channel_set_subcommand(slash_context: SlashContext, *args):
             reply = self._set_property(slash_context.channel, args[0], args[1])
-            self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))
+            await slash_context.send(send_type=3, content=reply, hidden=True)
 
         @client.slash_command_decorator.subcommand(base=self.name, subcommand_group='channel', name='delete', options=[
             {
@@ -156,7 +156,7 @@ class PropertyCommand(Command):
         ])
         async def _on_channel_delete_subcommand(slash_context, *args):
             reply = self._delete_property(slash_context.channel, args[0])
-            self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))
+            await slash_context.send(send_type=3, content=reply, hidden=True)
 
     def execute(self, context: Context, args: tuple):
         try:

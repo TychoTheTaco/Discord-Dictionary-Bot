@@ -42,7 +42,7 @@ class DefineCommand(Command):
                 args = parser.parse_args(args)
 
         except SystemExit:
-            self.client.sync(utils.send_or_dm(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
+            self.client.sync(utils.send_or_dm(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel, user=context.author))
             return
 
         # Extract word from arguments
@@ -88,11 +88,11 @@ class DefineCommand(Command):
 
         # Make sure this could be a word
         if not self._is_valid_word(word):
-            self.client.sync(slash_context.send(send_type=3, content='That\'s not a word', hidden=True))
+            self.client.sync(slash_context.send(send_type=3, content='That\'s not a word', hidden=True), wait=False)
             return
 
         self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs)
-        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))  # TODO: Sometimes this gets sent after the definition request was already processed
+        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3), wait=False)  # TODO: Sometimes this gets sent after the definition request was already processed
 
     def _is_valid_word(self, word) -> bool:
         pattern = re.compile('(?:[^ \\w]|\\d)')

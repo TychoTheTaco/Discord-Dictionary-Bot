@@ -102,11 +102,11 @@ class LangListCommand(Command):
             e = discord.Embed()
             e.title = 'Supported Languages'
             e.url = 'https://cloud.google.com/text-to-speech/docs/voices'
-            self.client.sync(slash_context.send(send_type=4, embeds=[e]))  # We cannot send a hidden message with embeds, so this will show for everyone in the channel
+            self.client.sync(slash_context.send(send_type=4, embeds=[e]), wait=False)  # We cannot send a hidden message with embeds, so this will show for everyone in the channel
 
         else:
 
-            self.client.sync(slash_context.send(send_type=5))
+            self.client.sync(slash_context.send(send_type=5), wait=False)
 
             client = texttospeech.TextToSpeechClient()
             response = client.list_voices()

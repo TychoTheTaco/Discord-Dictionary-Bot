@@ -3,7 +3,6 @@ import logging
 
 import discord
 
-
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -21,6 +20,9 @@ async def send_or_dm(message: str, channel: discord.abc.Messageable, user: disco
     :param user:
     :return:
     """
+    if len(message) > 2000:
+        message = message[:2000]
+        logger.error('Message length too long!')
     try:
         await channel.send(message)
     except discord.errors.Forbidden:
@@ -118,18 +120,18 @@ def find_active_formatting(message):
 
 
 def split(message: str, split_size: int, delim='\n'):
-    #print('MESSAGE LENGTH:', len(message))
+    # print('MESSAGE LENGTH:', len(message))
     blocks = []
 
     # Find valid split locations
     pattern = re.compile(delim)
     matches = [m.span() for m in pattern.finditer(message)]
-    #print('MATCHES:', matches)
+    # print('MATCHES:', matches)
 
     i = 0
     while i < len(message) - 1:
         end_index = min(i + split_size - 1, len(message) - 1)
-        #print('SUB STR', i, end_index)
+        # print('SUB STR', i, end_index)
         block_size = end_index - i
 
         # Find the nearest valid split index
@@ -142,12 +144,12 @@ def split(message: str, split_size: int, delim='\n'):
                     if matches[0][0] > end_index:
                         break
 
-            #print('SPLIT AT', s)
+            # print('SPLIT AT', s)
             block_size = s[0] + 1 - i
 
-        blocks.append(message[i:i+block_size])
+        blocks.append(message[i:i + block_size])
 
-        #print('BLOCK SIZE', block_size)
+        # print('BLOCK SIZE', block_size)
         i += block_size
 
     return blocks

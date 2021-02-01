@@ -87,12 +87,16 @@ class DiscordBotClient(discord.Client):
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
 
-    def sync(self, coroutine):
+    def sync(self, coroutine, wait=True):
         """
         Submit a coroutine to the client's event loop.
         :param coroutine: A coroutine to run on this client's event loop.
+        :param wait:
         """
-        return asyncio.run_coroutine_threadsafe(coroutine, self.loop).result()
+        if wait:
+            return asyncio.run_coroutine_threadsafe(coroutine, self.loop).result()
+        else:
+            return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
