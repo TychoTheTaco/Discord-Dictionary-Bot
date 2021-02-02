@@ -33,27 +33,26 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         self._aio_client_session = aiohttp.ClientSession()
 
     async def define(self, word: str) -> []:
-        async with self._aio_client_session as session:
-            headers = {'Authorization': f'Token {self._token}'}
-            async with session.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers) as response:
+        headers = {'Authorization': f'Token {self._token}'}
+        async with self._aio_client_session.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers) as response:
 
-                if response.status == 401:
-                    logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
-                    return []
+            if response.status == 401:
+                logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
+                return []
 
-                if response.status != 200:
-                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
-                    return []
+            if response.status != 200:
+                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                return []
 
-                definitions = await response.json()
+            definitions = await response.json()
 
-                result = []
-                for d in definitions:
-                    definition = {
-                        'word_type': d['type'],
-                        'definition': d['definition']
-                    }
-                    result.append(definition)
+            result = []
+            for d in definitions:
+                definition = {
+                    'word_type': d['type'],
+                    'definition': d['definition']
+                }
+                result.append(definition)
 
         return result
 
@@ -64,24 +63,23 @@ class UnofficialGoogleAPI(DictionaryAPI):
         self._aio_client_session = aiohttp.ClientSession()
 
     async def define(self, word: str) -> {}:
-        async with self._aio_client_session as session:
-            async with session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
+        async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
-                if response.status != 200:
-                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
-                    return []
+            if response.status != 200:
+                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                return []
 
-                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-                result = []
+            result = []
 
-                response_json = await response.json()
-                for d in response_json[0]['meanings']:
-                    definition = {
-                        'word_type': d['partOfSpeech'],
-                        'definition': d['definitions'][0]['definition']
-                    }
-                    result.append(definition)
+            response_json = await response.json()
+            for d in response_json[0]['meanings']:
+                definition = {
+                    'word_type': d['partOfSpeech'],
+                    'definition': d['definitions'][0]['definition']
+                }
+                result.append(definition)
 
         return result
 
@@ -95,16 +93,15 @@ class MerriamWebsterAPI(DictionaryAPI):
     async def define(self, word: str) -> {}:
         word = word.lower()
 
-        async with self._aio_client_session:
-            async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
+        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-                if response.status != 200:
-                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
-                    return []
+            if response.status != 200:
+                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                return []
 
-                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-                result = self._get_first_definition_of_each_entry(word, await response.json())
+            result = self._get_first_definition_of_each_entry(word, await response.json())
 
         return result
 
@@ -220,36 +217,31 @@ class RapidWordsAPI(DictionaryAPI):
             logger.critical(f'{self} Request limit reached!')
             return []
 
-        async with self._aio_client_session:
-            headers = {
-                'x-rapidapi-key': self._api_key,
-                'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
-            }
-            async with self._aio_client_session.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
+        headers = {
+            'x-rapidapi-key': self._api_key,
+            'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
+        }
+        async with self._aio_client_session.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
 
-                if response.status != 200:
-                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
-                    return []
-
+            if response.status == 200:
                 logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+            else:
+                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                return []
 
-                results = []
-                try:
-                    response_json = await response.json()
+            results = []
 
-                    if 'results' not in response_json:
-                        logger.warning(f'{self} No results for word: "{word}"')
-                        return []
+            response_json = await response.json()
 
-                    results_json = response_json['results']
-                    for definition_json in results_json:
-                        results.append({
-                            'word_type': definition_json['partOfSpeech'],
-                            'definition': definition_json['definition'] + '.'
-                        })
+            if 'results' not in response_json:
+                logger.warning(f'{self} No results for word: "{word}"')
+                return []
 
-                except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-                    logger.error(f'{self} Failed to parse response: {response}')
-                    return []
+            results_json = response_json['results']
+            for definition_json in results_json:
+                results.append({
+                    'word_type': definition_json['partOfSpeech'],
+                    'definition': definition_json['definition'] + '.'
+                })
 
         return results
