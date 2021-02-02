@@ -74,16 +74,14 @@ class UnofficialGoogleAPI(DictionaryAPI):
                 logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
                 result = []
-                try:
-                    response_json = response.json()
-                    for d in response_json[0]['meanings']:
-                        definition = {
-                            'word_type': d['partOfSpeech'],
-                            'definition': d['definitions'][0]['definition']
-                        }
-                        result.append(definition)
-                except Exception as e:
-                    logger.error(f'{self} Failed to parse API response: {e}')
+
+                response_json = await response.json()
+                for d in response_json[0]['meanings']:
+                    definition = {
+                        'word_type': d['partOfSpeech'],
+                        'definition': d['definitions'][0]['definition']
+                    }
+                    result.append(definition)
 
         return result
 
