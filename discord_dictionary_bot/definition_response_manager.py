@@ -312,7 +312,7 @@ class MessageQueue:
         """
 
         # Get definitions
-        definitions = self._definition_response_manager.api.define(definition_request.word)
+        definitions = self._client.sync(self._definition_response_manager.api.define(definition_request.word)).result()
         if len(definitions) == 0:
             return None, None
 
@@ -341,6 +341,7 @@ class MessageQueue:
         # Add request to thread pool
         with self._request_futures_lock:
             self._request_futures[definition_request] = self._request_thread_pool.submit(self._get_definition_and_text_to_speech, definition_request)
+            #self._request_futures[definition_request] = asyncio.create_task(self._get_definition_and_text_to_speech(definition_request))
 
         # Add request to queue
         with self._queue_lock:
@@ -476,6 +477,8 @@ class MessageQueue:
 
         # Get result from request future
         with self._request_futures_lock:
+            while not self._request_futures[definition_request].done():
+                print('sleep')
             reply, buffer = self._request_futures[definition_request].result()
             self._request_futures.pop(definition_request)
 

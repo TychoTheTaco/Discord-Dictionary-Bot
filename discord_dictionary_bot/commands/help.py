@@ -28,4 +28,4 @@ class HelpCommand(Command):
                 reply += f'**/{command.name}**'
                 reply += '\n'
                 reply += f'{command.description}\n'
-        self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True), wait=False)
+        self.client.sync(slash_context.send(send_type=3, content=reply, hidden=True))

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import requests
+import aiohttp
 import logging
 import re
 from datetime import datetime, timedelta
@@ -11,16 +11,16 @@ logger = logging.getLogger(__name__)
 class DictionaryAPI(ABC):
 
     @abstractmethod
-    def define(self, word: str) -> {}:
+    async def define(self, word: str) -> {}:
         """
-        Get the definitions for the specified word. The format is:
+        Get the definitions for the specified word. The returned format should be as follows:
         [
         {word_type: 'str', definition: 'str'}
         ]
         :param word: The word to define.
-        :return:
+        :return: A list of definitions for the specified word.
         """
-        raise NotImplementedError
+        pass
 
     def __repr__(self):
         return f'[{type(self).__name__}]'
@@ -29,60 +29,61 @@ class DictionaryAPI(ABC):
 class OwlBotDictionaryAPI(DictionaryAPI):
 
     def __init__(self, token: str):
-        super().__init__()
         self._token = token
+        self._aio_client_session = aiohttp.ClientSession()
 
-    def define(self, word: str) -> []:
-        headers = {'Authorization': f'Token {self._token}'}
-        response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
+    async def define(self, word: str) -> []:
+        async with self._aio_client_session as session:
+            headers = {'Authorization': f'Token {self._token}'}
+            async with session.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers) as response:
 
-        if response.status_code == 401:
-            logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status_code}, Word: "{word}"}}')
-            return []
+                if response.status == 401:
+                    logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
+                    return []
 
-        if response.status_code != 200:
-            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}", content: "{response.content}"}}')
-            return []
+                if response.status != 200:
+                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                    return []
 
-        try:
-            definitions = response.json()
-        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-            logger.error(f'{self} Failed to parse response: {response}')
-            return []
+                definitions = await response.json()
 
-        result = []
-        for d in definitions:
-            definition = {
-                'word_type': d['type'],
-                'definition': d['definition']
-            }
-            result.append(definition)
+                result = []
+                for d in definitions:
+                    definition = {
+                        'word_type': d['type'],
+                        'definition': d['definition']
+                    }
+                    result.append(definition)
 
         return result
 
 
 class UnofficialGoogleAPI(DictionaryAPI):
 
-    def define(self, word: str) -> {}:
-        response = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json')
+    def __init__(self):
+        self._aio_client_session = aiohttp.ClientSession()
 
-        if response.status_code != 200:
-            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}", content: "{response.content}"}}')
-            return []
+    async def define(self, word: str) -> {}:
+        async with self._aio_client_session as session:
+            async with session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
-        logger.info(f'{self} {{status_code: {response.status_code}, word: "{word}"}}')
+                if response.status != 200:
+                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                    return []
 
-        result = []
-        try:
-            response_json = response.json()
-            for d in response_json[0]['meanings']:
-                definition = {
-                    'word_type': d['partOfSpeech'],
-                    'definition': d['definitions'][0]['definition']
-                }
-                result.append(definition)
-        except Exception as e:
-            logger.error(f'{self} Failed to parse API response: {e}')
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+
+                result = []
+                try:
+                    response_json = response.json()
+                    for d in response_json[0]['meanings']:
+                        definition = {
+                            'word_type': d['partOfSpeech'],
+                            'definition': d['definitions'][0]['definition']
+                        }
+                        result.append(definition)
+                except Exception as e:
+                    logger.error(f'{self} Failed to parse API response: {e}')
 
         return result
 
@@ -91,22 +92,21 @@ class MerriamWebsterAPI(DictionaryAPI):
 
     def __init__(self, api_key):
         self._api_key = api_key
+        self._aio_client_session = aiohttp.ClientSession()
 
-    def define(self, word: str) -> {}:
+    async def define(self, word: str) -> {}:
         word = word.lower()
-        response = requests.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key)
 
-        if response.status_code != 200:
-            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}", content: "{response.content}"}}')
-            return []
+        async with self._aio_client_session:
+            async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-        logger.info(f'{self} {{status_code: {response.status_code}, word: "{word}"}}')
+                if response.status != 200:
+                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                    return []
 
-        result = []
-        try:
-            result = self._get_first_definition_of_each_entry(word, response.json())
-        except Exception:
-            logger.error(f'{self} Failed to parse API response!', exc_info=True)
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+
+                result = self._get_first_definition_of_each_entry(word, await response.json())
 
         return result
 
@@ -198,6 +198,7 @@ class RapidWordsAPI(DictionaryAPI):
 
     def __init__(self, api_key):
         self._api_key = api_key
+        self._aio_client_session = aiohttp.ClientSession()
 
         # Maximum number of request we can make in a 24hr period. If we exceed this, all future definition requests will return an empty response until the next time period
         self._request_limit = 2000
@@ -207,7 +208,7 @@ class RapidWordsAPI(DictionaryAPI):
         # Number of requests made in the current time period
         self._request_count = 0
 
-    def define(self, word: str) -> {}:
+    async def define(self, word: str) -> {}:
 
         # Reset request count
         if datetime.now() > self._request_period_start + timedelta(days=1):
@@ -221,35 +222,36 @@ class RapidWordsAPI(DictionaryAPI):
             logger.critical(f'{self} Request limit reached!')
             return []
 
-        headers = {
-            'x-rapidapi-key': self._api_key,
-            'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
-        }
-        response = requests.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers)
+        async with self._aio_client_session:
+            headers = {
+                'x-rapidapi-key': self._api_key,
+                'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
+            }
+            async with self._aio_client_session.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
 
-        if response.status_code != 200:
-            logger.error(f'{self} Error getting definition! {{status_code: {response.status_code}, word: "{word}", content: "{response.content}"}}')
-            return []
+                if response.status != 200:
+                    logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+                    return []
 
-        logger.info(f'{self} {{status_code: {response.status_code}, word: "{word}"}}')
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-        results = []
-        try:
-            response_json = response.json()
+                results = []
+                try:
+                    response_json = await response.json()
 
-            if 'results' not in response_json:
-                logger.warning(f'{self} No results for word: "{word}"')
-                return []
+                    if 'results' not in response_json:
+                        logger.warning(f'{self} No results for word: "{word}"')
+                        return []
 
-            results_json = response_json['results']
-            for definition_json in results_json:
-                results.append({
-                    'word_type': definition_json['partOfSpeech'],
-                    'definition': definition_json['definition'] + '.'
-                })
+                    results_json = response_json['results']
+                    for definition_json in results_json:
+                        results.append({
+                            'word_type': definition_json['partOfSpeech'],
+                            'definition': definition_json['definition'] + '.'
+                        })
 
-        except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
-            logger.error(f'{self} Failed to parse response: {response}')
-            return []
+                except ValueError:  # Catch a ValueError here because sometimes requests uses simplejson instead of json as a backend
+                    logger.error(f'{self} Failed to parse response: {response}')
+                    return []
 
         return results
