@@ -27,8 +27,12 @@ async def send_or_dm(message: str, channel: discord.abc.Messageable, user: disco
         await channel.send(message)
     except discord.errors.Forbidden:
         logger.warning(f'Failed to send message to channel {channel}. Sending it as a DM to user {user} instead.')
-        await user.send(f'**I do not have permission to send messages in `{channel}` so I am responding to you here:**')
-        await user.send(message)
+
+        try:
+            await user.send(f'**I do not have permission to send messages in `{channel}` so I am responding to you here:**')
+            await user.send(message)
+        except discord.errors.Forbidden:
+            logger.warning(f'Failed to send DM to {user}. Nothing else we can do, this message will be lost.')
 
 
 async def send_split(message: str, channel: discord.abc.Messageable, split_size=2000, delim=None):
