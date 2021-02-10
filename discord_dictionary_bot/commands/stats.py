@@ -35,10 +35,10 @@ class StatsCommand(Command):
 
         # Top 5 words
         reply += '**Top 5 Words**\n'
-        top_5_words_job = self._bigquery_client.query('SELECT word, COUNT(word) AS count FROM definition_requests.definition_requests GROUP BY word HAVING count > 1 ORDER BY count DESC LIMIT 5')
+        top_5_words_job = self._bigquery_client.query('SELECT word, COUNT(word) AS count, MAX(time) as time FROM definition_requests.definition_requests GROUP BY word HAVING count > 1 ORDER BY count DESC, time DESC LIMIT 5')
         top_5_words_results = top_5_words_job.result()
         for i, row in enumerate(top_5_words_results):
-            reply += f'{i + 1}. `{row.word}` ({row.count} uses)\n'
+            reply += f'{i + 1}. `{row.word}` ({row.count})\n'
 
         self.client.sync(utils.send_split(reply, context.channel))
 
