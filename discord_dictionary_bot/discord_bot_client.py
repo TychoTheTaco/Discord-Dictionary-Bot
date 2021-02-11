@@ -105,9 +105,6 @@ class DiscordBotClient(discord.Client):
 
         # Check what prefix we have in this channel
         prefix = self.get_prefix(message.channel)
-        if type(prefix) is not str:
-            logger.critical(f'Message: "{message.content}"')
-            logger.critical(f'Invalid prefix: "{prefix}" M: "{message}" G: "{message.guild}" C: "{message.channel}"')
 
         # Check if the message starts with our prefix
         if not message.content.startswith(prefix):
@@ -124,8 +121,11 @@ class DiscordBotClient(discord.Client):
         # Execute command
         for command in self._commands:
             if command.matches(command_input[0]):
-                from.commands import Context
-                threading.Thread(target=command.execute, args=[Context(message.author, message.channel), command_input[1:]]).start()  # This doesn't seem like a good idea but it prevents blocking
+                from .commands import Context
+                try:
+                    command.execute(Context(message.author, message.channel), command_input[1:])
+                except Exception as e:
+                    logger.exception(f'Error executing command "{message.content}"', exc_info=e)
                 return
 
         # Send invalid command message

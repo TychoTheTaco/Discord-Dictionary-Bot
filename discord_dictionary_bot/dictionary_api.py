@@ -12,7 +12,15 @@ class DictionaryAPI(ABC):
 
     @abstractmethod
     def define(self, word: str) -> {}:
-        pass
+        """
+        Get the definitions for the specified word. The format is:
+        [
+        {word_type: 'str', definition: 'str'}
+        ]
+        :param word: The word to define.
+        :return:
+        """
+        raise NotImplementedError
 
     def __repr__(self):
         return f'[{type(self).__name__}]'
@@ -25,14 +33,6 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         self._token = token
 
     def define(self, word: str) -> []:
-        """
-        Get the definitions for the specified word. The format is:
-        [
-        {word_type: 'str', definition: 'str'}
-        ]
-        :param word: The word to define.
-        :return:
-        """
         headers = {'Authorization': f'Token {self._token}'}
         response = requests.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers)
 
