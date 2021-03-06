@@ -10,8 +10,8 @@ class NextCommand(Command):
         super().__init__(client, 'next', aliases=['n'], description='If the bot is currently reading out a definition, this will make it skip to the next one.', slash_command_options=[])
         self._definition_response_manager = definition_response_manager
 
-    def execute(self, context: Context, args: tuple):
+    async def execute(self, context: Context, args: tuple) -> None:
         self._definition_response_manager.next(context.channel)
 
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
-        self.execute(slash_context, args)  # SlashContext has a channel attribute so this is OK
+    async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
+        await self.execute(slash_context, args)  # SlashContext has a channel attribute so this is OK

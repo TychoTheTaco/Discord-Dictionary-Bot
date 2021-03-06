@@ -158,7 +158,7 @@ class PropertyCommand(Command):
             reply = self._delete_property(slash_context.channel, args[0])
             await slash_context.send(send_type=3, content=reply, hidden=True)
 
-    def execute(self, context: Context, args: tuple):
+    async def execute(self, context: Context, args: tuple) -> None:
         try:
             parser = argparse.ArgumentParser()
             parser.add_argument('scope', choices=['global', 'channel'])
@@ -183,7 +183,7 @@ class PropertyCommand(Command):
             with redirect_stderr(stderr_stream):
                 args = parser.parse_args(args)
         except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
+            await utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel)
             return
 
         # Determine scope
@@ -194,27 +194,27 @@ class PropertyCommand(Command):
                 scope = context.channel.guild
         elif args.scope == 'channel':
             if isinstance(context.channel, discord.DMChannel):
-                self.client.sync(utils.send_split('`channel` scope not available in a DM. Use `global` instead.', context.channel))
+                await utils.send_split('`channel` scope not available in a DM. Use `global` instead.', context.channel)
                 return
             scope = context.channel
         else:
-            self.client.sync(utils.send_split('`<scope>` must be one of: global, channel', context.channel))
+            await utils.send_split('`<scope>` must be one of: global, channel', context.channel)
             return
 
         if args.action == 'list':
 
             reply = self._get_property_list(scope)
-            self.client.sync(utils.send_split(reply, context.channel))
+            await utils.send_split(reply, context.channel)
 
         elif args.action == 'set':
 
             reply = self._set_property(scope, args.key, args.value)
-            self.client.sync(utils.send_split(reply, context.channel))
+            await utils.send_split(reply, context.channel)
 
         elif args.action == 'del':
 
             reply = self._delete_property(scope, args.key)
-            self.client.sync(utils.send_split(reply, context.channel))
+            await utils.send_split(reply, context.channel)
 
     def _get_property_list(self, scope):
         reply = '__'

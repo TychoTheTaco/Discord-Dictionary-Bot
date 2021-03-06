@@ -120,10 +120,10 @@ class DiscordBotClient(discord.Client):
 
         # Execute command
         for command in self._commands:
-            if command.matches(command_input[0]):
+            if command_input[0] in [command.name] + command.aliases:
                 from .commands import Context
                 try:
-                    command.execute(Context(message.author, message.channel), command_input[1:])
+                    await command.execute(Context(message.author, message.channel), command_input[1:])
                 except Exception as e:
                     logger.exception(f'Error executing command "{message.content}"', exc_info=e)
                 return

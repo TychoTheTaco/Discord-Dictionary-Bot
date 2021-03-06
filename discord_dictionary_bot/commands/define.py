@@ -29,7 +29,7 @@ class DefineCommand(Command):
             response = tts_client.list_voices()
             DefineCommand._LANGUAGES = frozenset(voice.name for voice in response.voices)
 
-    def execute(self, context: Context, args: tuple):
+    async def execute(self, context: Context, args: tuple) -> None:
         try:
             parser = argparse.ArgumentParser()
             parser.add_argument('word', nargs='+')
@@ -42,7 +42,7 @@ class DefineCommand(Command):
                 args = parser.parse_args(args)
 
         except SystemExit:
-            self.client.sync(utils.send_or_dm(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel, user=context.author))
+            await utils.send_or_dm(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel, user=context.author)
             return
 
         # Extract word from arguments
@@ -50,11 +50,11 @@ class DefineCommand(Command):
 
         # Make sure this could be a word
         if not self._is_valid_word(word):
-            self.client.sync(utils.send_or_dm('That\'s not a word', context.channel, context.author))
+            await utils.send_or_dm('That\'s not a word', context.channel, context.author)
             return
 
         if self._add_request(context.author, word, context.channel, False, args.text_to_speech, args.language):
-            self.client.sync(utils.send_or_dm(':white_check_mark: Word added to queue.', context.channel, context.author))
+            await utils.send_or_dm(':white_check_mark: Word added to queue.', context.channel, context.author)
 
     def _validate_slash_command_arguments(self, slash_context, args: tuple) -> Tuple[str, dict]:
         results = {}
@@ -83,16 +83,16 @@ class DefineCommand(Command):
 
         return word, results
 
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
+    async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
         word, kwargs = self._validate_slash_command_arguments(slash_context, args)
 
         # Make sure this could be a word
         if not self._is_valid_word(word):
-            self.client.sync(slash_context.send(send_type=3, content='That\'s not a word', hidden=True))
+            await slash_context.send(send_type=3, content='That\'s not a word', hidden=True)
             return
 
         self._add_request(slash_context.author, word, slash_context.channel, False, **kwargs)
-        self.client.sync(slash_context.send(content=f'Added **{word}** to queue.', send_type=3))  # TODO: Sometimes this gets sent after the definition request was already processed
+        await slash_context.send(content=f'Added **{word}** to queue.', send_type=3)  # TODO: Sometimes this gets sent after the definition request was already processed
 
     def _is_valid_word(self, word) -> bool:
         pattern = re.compile('(?:[^ \\w]|\\d)')

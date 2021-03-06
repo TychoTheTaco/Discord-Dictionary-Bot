@@ -477,8 +477,6 @@ class MessageQueue:
 
         # Get result from request future
         with self._request_futures_lock:
-            while not self._request_futures[definition_request].done():
-                print('sleep')
             reply, buffer = self._request_futures[definition_request].result()
             self._request_futures.pop(definition_request)
 

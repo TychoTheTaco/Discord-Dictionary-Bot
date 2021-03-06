@@ -29,7 +29,7 @@ class LangListCommand(Command):
             ]
         )
 
-    def execute(self, context: Context, args: tuple):
+    async def execute(self, context: Context, args: tuple) -> None:
 
         try:
             parser = argparse.ArgumentParser()
@@ -41,7 +41,7 @@ class LangListCommand(Command):
                 args = parser.parse_args(args)
 
         except SystemExit:
-            self.client.sync(utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel))
+            await utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel)
             return
 
         # Check if we can embed links in this channel
@@ -51,7 +51,7 @@ class LangListCommand(Command):
             e = discord.Embed()
             e.title = 'Supported Languages'
             e.url = 'https://cloud.google.com/text-to-speech/docs/voices'
-            self.client.sync(context.channel.send(embed=e))
+            await context.channel.send(embed=e)
 
         else:
 
@@ -90,9 +90,9 @@ class LangListCommand(Command):
                         for voice_style in sorted(voice_styles):
                             reply += f'        {voice_style}\n'
                     reply += '\n'
-            self.client.sync(utils.send_split_nf(reply, context.channel, delim='\n[^ ]'))  # TODO: Send this only to the user that requested it
+            await utils.send_split_nf(reply, context.channel, delim='\n[^ ]')  # TODO: Send this only to the user that requested it
 
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
+    async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
         verbose = False if len(args) < 1 else args[0]
 
         # Check if we can embed links in this channel
@@ -102,11 +102,11 @@ class LangListCommand(Command):
             e = discord.Embed()
             e.title = 'Supported Languages'
             e.url = 'https://cloud.google.com/text-to-speech/docs/voices'
-            self.client.sync(slash_context.send(send_type=4, embeds=[e]))  # We cannot send a hidden message with embeds, so this will show for everyone in the channel
+            await slash_context.send(send_type=4, embeds=[e])  # We cannot send a hidden message with embeds, so this will show for everyone in the channel
 
         else:
 
-            self.client.sync(slash_context.send(send_type=5))
+            await slash_context.send(send_type=5)
 
             client = texttospeech.TextToSpeechClient()
             response = client.list_voices()
@@ -144,4 +144,4 @@ class LangListCommand(Command):
                             reply += f'        {voice_style}\n'
                     reply += '\n'
 
-            self.client.sync(utils.send_split_nf(reply, slash_context.channel, delim='\n[^ ]'))  # TODO: Send this only to the user that requested it
+            await utils.send_split_nf(reply, slash_context.channel, delim='\n[^ ]')  # TODO: Send this only to the user that requested it

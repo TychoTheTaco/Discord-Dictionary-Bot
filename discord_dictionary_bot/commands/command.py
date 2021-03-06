@@ -59,7 +59,7 @@ class Command(ABC):
             # validate the arguments based on their type. If the arguments are the same type, there is unfortunately no good way to differentiate them since all we get here is a tuple.
             @client.slash_command_decorator.slash(name=name, options=slash_command_options)
             async def _on_slash_command(slash_context, *args):
-                self.execute_slash_command(slash_context, args)
+                await self.execute_slash_command(slash_context, args)
 
     @property
     def client(self) -> DiscordBotClient:
@@ -85,12 +85,9 @@ class Command(ABC):
     def secret(self) -> bool:
         return self._secret
 
-    def matches(self, string) -> bool:
-        return string in [self._name] + self._aliases
-
     @abstractmethod
-    def execute(self, context: Context, args: tuple) -> None:
+    async def execute(self, context: Context, args: tuple) -> None:
         pass
 
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
+    async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
         pass

@@ -12,7 +12,7 @@ class StatsCommand(Command):
         super().__init__(client, 'stats', description='Shows you some stats about this bot.')
         self._bigquery_client = bigquery.Client()
 
-    def execute(self, context: Context, args: tuple):
+    async def execute(self, context: Context, args: tuple) -> None:
         reply = '**----- Statistics -----**\n'
 
         # Channel count
@@ -47,7 +47,4 @@ class StatsCommand(Command):
         for i, row in enumerate(results):
             reply += f'{i + 1}. `{row.word}`\n'
 
-        self.client.sync(utils.send_split(reply, context.channel))
-
-    def execute_slash_command(self, slash_context: SlashContext, args: tuple):
-        print('SLASH COMMAND NOT IMPLEMENTED')
+        await utils.send_split(reply, context.channel)
