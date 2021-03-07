@@ -1,4 +1,3 @@
-from discord_slash import SlashContext
 from google.cloud import bigquery
 
 from .command import Command, Context

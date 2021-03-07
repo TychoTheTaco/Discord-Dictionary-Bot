@@ -81,12 +81,8 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
     # Request text-to-speech data
-    try:
-        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
-        return response.audio_content
-    except Exception as e:
-        logger.error(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language_code}"')
-        return b''
+    response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+    return response.audio_content
 
 
 def create_reply(word, definitions, reverse=False) -> Tuple[str, str]:
@@ -375,8 +371,10 @@ class MessageQueue:
     def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
         result = io.BytesIO()
 
-        text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
-        if len(text_to_speech_bytes) == 0:
+        try:
+            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
+        except Exception as e:
+            logger.error(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language}"')
             return result
 
         # Convert to proper format
@@ -393,6 +391,10 @@ class MessageQueue:
 
             # Generate text to speech data
             buffer = self._get_text_to_speech(tts_input, language)
+
+            if buffer.getbuffer().nbytes == 0:
+                self._client.sync(f'Failed to generate text-to-speech data! You might be using an invalid language: "{language}". Use the `lang` command to view supported language codes.')
+                return
 
             # Join voice channel
             try:
@@ -587,6 +589,10 @@ class MessageQueue:
 
             else:
 
+                # Update voice channel map
+                with self._definition_response_manager.voice_channel_map_lock:
+                    self._definition_response_manager.voice_channels[voice_channel] -= 1
+
                 # Release stop lock
                 self._stop_lock.release()
 
@@ -594,6 +600,9 @@ class MessageQueue:
 
                 # Send text chat reply
                 self._client.sync(utils.send_or_dm(reply, definition_request.text_channel, definition_request.user))
+
+                # Release process lock
+                self._process_lock.release()
 
         else:
 

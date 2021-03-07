@@ -1,5 +1,4 @@
 import asyncio
-import threading
 import logging
 
 import discord
