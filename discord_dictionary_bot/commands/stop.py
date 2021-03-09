@@ -18,3 +18,6 @@ class StopCommand(Command):
     @log_command(True)
     async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
         await self.execute(slash_context, args)  # SlashContext has a channel attribute so this is OK
+
+        # Acknowledge
+        await slash_context.send(send_type=5)
