@@ -1,4 +1,5 @@
 from discord_slash import SlashContext
+import discord
 
 from .command import Command, Context
 from ..discord_bot_client import DiscordBotClient
@@ -13,11 +14,14 @@ class NextCommand(Command):
 
     @log_command(False)
     async def execute(self, context: Context, args: tuple) -> None:
-        self._definition_response_manager.next(context.channel)
+        self._next(context.channel)
 
     @log_command(True)
     async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
-        await self.execute(slash_context, args)  # SlashContext has a channel attribute so this is OK
+        self._next(slash_context.channel)
 
         # Acknowledge
         await slash_context.send(send_type=5)
+
+    def _next(self, channel: discord.abc.Messageable):
+        self._definition_response_manager.next(channel)
