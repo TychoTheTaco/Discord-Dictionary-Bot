@@ -109,6 +109,10 @@ class DiscordBotClient(discord.Client):
         if not message.content.startswith(prefix):
             return
 
+        # Ignore messages with only the prefix
+        if message.content == prefix:
+            return
+
         # Ignore messages with mentions
         if len(message.mentions) + len(message.channel_mentions) + len(message.role_mentions) > 0:
             await utils.send_split('I don\'t approve of ping spamming.', message.channel)
@@ -125,6 +129,7 @@ class DiscordBotClient(discord.Client):
                     await command.execute(Context(message.author, message.channel), command_input[1:])
                 except Exception as e:
                     logger.exception(f'Error executing command "{message.content}"', exc_info=e)
+                    await utils.send_or_dm('There was an error executing that command!', message.channel, message.author)
                 return
 
         # Send invalid command message

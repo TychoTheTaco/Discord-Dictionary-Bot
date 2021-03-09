@@ -9,6 +9,7 @@ from contextlib import redirect_stderr
 from .command import Command, Context
 from ..discord_bot_client import DiscordBotClient
 from .. import utils
+from ..analytics import log_command
 
 
 class LangListCommand(Command):
@@ -29,6 +30,7 @@ class LangListCommand(Command):
             ]
         )
 
+    @log_command(False)
     async def execute(self, context: Context, args: tuple) -> None:
 
         try:
@@ -92,6 +94,7 @@ class LangListCommand(Command):
                     reply += '\n'
             await utils.send_split_nf(reply, context.channel, delim='\n[^ ]')  # TODO: Send this only to the user that requested it
 
+    @log_command(True)
     async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
         verbose = False if len(args) < 1 else args[0]
 

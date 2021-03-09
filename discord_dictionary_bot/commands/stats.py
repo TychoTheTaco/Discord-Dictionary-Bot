@@ -3,6 +3,7 @@ from google.cloud import bigquery
 from .command import Command, Context
 from .. import utils
 from ..discord_bot_client import DiscordBotClient
+from ..analytics import log_command
 
 
 class StatsCommand(Command):
@@ -11,6 +12,7 @@ class StatsCommand(Command):
         super().__init__(client, 'stats', description='Shows you some stats about this bot.')
         self._bigquery_client = bigquery.Client()
 
+    @log_command(False)
     async def execute(self, context: Context, args: tuple) -> None:
         reply = '**----- Statistics -----**\n'
 

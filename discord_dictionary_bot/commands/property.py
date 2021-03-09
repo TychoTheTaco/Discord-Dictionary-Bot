@@ -9,6 +9,7 @@ from .. import utils
 from ..properties import Properties
 from ..discord_bot_client import DiscordBotClient
 from contextlib import redirect_stderr
+from ..analytics import log_command
 
 
 class PropertyCommand(Command):
@@ -158,6 +159,7 @@ class PropertyCommand(Command):
             reply = self._delete_property(slash_context.channel, args[0])
             await slash_context.send(send_type=3, content=reply, hidden=True)
 
+    @log_command(False)
     async def execute(self, context: Context, args: tuple) -> None:
         try:
             parser = argparse.ArgumentParser()
