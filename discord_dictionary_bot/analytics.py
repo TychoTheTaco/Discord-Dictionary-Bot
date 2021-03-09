@@ -17,7 +17,8 @@ def _is_blacklisted(context: Context):
     # Ignore dev server
     if isinstance(context.channel, discord.TextChannel) and context.channel.guild.id in [454852632528420876, 799455809297842177]:
         logger.info(f'Ignoring analytics submission for development server.')
-        return
+        return True
+    return False
 
 
 def _log_command(command_name: str, is_slash: bool, context: Context):
