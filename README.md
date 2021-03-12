@@ -63,14 +63,26 @@ Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 ### Installation
 To install, simply run `pip install .` in the project's root directory. You can then run the bot using `python -m discord_dictionary_bot` along with the appropriate arguments described below.
 
+### Dictionary API's
+This bot supports the following dictionary API's.
+
+| Name      | Description |
+| --- | --- |
+|`google`|[Unofficial Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI)|
+|`owlbot`| [Owlbot](https://owlbot.info/)|
+|`webster`| [Merriam Webster](https://dictionaryapi.com/)|
+|`rapid-words`| [RapidAPI WordsAPI](https://www.wordsapi.com/)|
+
 ### Program Arguments
 |Argument            | Description |
 | --- | --- |
 |`--discord-token <token>`|Your discord bot token.|
 |`--google-credentials-path <path>`| Path to the Google application credentials file.|
 |`--ffmpeg-path <token>`| Path to the FFmpeg executable.|
-|`--dictionary-api <api>`| Determines which dictionary API to use. Must be one of `google`, `owlbot`. `google` will use [Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI). `owlbot` will use  [Owlbot](https://owlbot.info/).|
-|`--owlbot-api-token <token>`| Your Owlbot API token. Only required if `--dictionary-api` is `owlbot`.|
+|`--dictionary-api <apis>`| Determines which dictionary API's to use. Multiple API's can be specified by separating each API name with a comma. The bot will use them in the order provided. This is useful for when the preferred API fails.|
+|`--owlbot-api-token <token>`| Your Owlbot API token. Only required if using the `owlbot` API.|
+|`--webster-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster` API.|
+|`--rapid-words-api-token <token>`| Your RapidAPI WordsAPI token. Only required if using the `rapid-words` API.|
 
 ## Credits
 #### Dictionary icon
