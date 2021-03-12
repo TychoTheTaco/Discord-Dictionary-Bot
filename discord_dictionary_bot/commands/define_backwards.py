@@ -1,5 +1,4 @@
 import discord
-from discord_slash import SlashContext
 
 from . import Context
 from .define import DefineCommand
@@ -18,7 +17,3 @@ class DefineReverseCommand(DefineCommand):
     @log_command(False)
     async def execute(self, context: Context, args: tuple) -> None:
         return await super().execute(context, args)
-
-    @log_command(True)
-    async def execute_slash_command(self, slash_context: SlashContext, args: tuple) -> None:
-        return await super().execute_slash_command(slash_context, args)

@@ -8,7 +8,7 @@ import discord
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
-from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI
+from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI, BackupDictionaryAPI
 from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
@@ -60,6 +60,20 @@ install_thread_excepthook()
 sys.excepthook = on_uncaught_exception
 
 
+def try_read_token(token_or_path: str) -> str:
+    """
+    Try to read from the given file. If the file can be read, return the file contents. Otherwise, return the argument.
+    :param token_or_path:
+    :return:
+    """
+    try:
+        with open(token_or_path) as file:
+            return file.read()
+    except IOError:
+        pass  # Ignore and assume the argument is a token string not a file path
+    return token_or_path
+
+
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
@@ -76,10 +90,10 @@ def main():
                         dest='google_credentials_path',
                         default='google_credentials.json')
     parser.add_argument('--dictionary-api',
-                        help='The dictionary API to use for fetching definitions.',
+                        help='A list of dictionary API\'s to use for fetching definitions. These should be in order of priority and separated by comma\'s. Available API\'s are'
+                             '\'google\', \'owlbot\', \'webster\', and \'rapid-words\'. Some API\'s require tokens that must be provided with the appropriate arguments.',
                         dest='dictionary_api',
-                        default='google',
-                        choices=['google', 'owlbot', 'webster', 'rapid-words'])
+                        default='google')
     parser.add_argument('--owlbot-api-token',
                         help='The token to use for the Owlbot dictionary API. You can use either the raw token string or a path to a text file containing the token.',
                         dest='owlbot_api_token',
@@ -103,70 +117,54 @@ def main():
     gcp_logging_handler.addFilter(logging_filter)
     logging.getLogger().addHandler(gcp_logging_handler)
 
-    # Read discord bot token from file
-    try:
-        with open(args.discord_bot_token) as file:
-            args.discord_bot_token = file.read()
-    except IOError:
-        pass  # Ignore and assume the argument is a token string not a file path
-
     # Check which dictionary API we should use
-    if args.dictionary_api == 'google':
-        dictionary_api = UnofficialGoogleAPI()
-    elif args.dictionary_api == 'owlbot':
+    dictionary_apis = []
+    for name in args.dictionary_api.split(','):
 
-        if 'owlbot_api_token' not in args:
-            print(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!')
+        if name == 'google':
+            dictionary_apis.append(UnofficialGoogleAPI())
+        elif name == 'owlbot':
+
+            if 'owlbot_api_token' not in args:
+                print(f'You must specify an API token with --owlbot-api-token to use the owlbot dictionary API!')
+                return
+
+            # Read owlbot API token from file
+            owlbot_api_token = try_read_token(args.owlbot_api_token)
+
+            dictionary_apis.append(OwlBotDictionaryAPI(owlbot_api_token))
+
+        elif name == 'webster':
+
+            if 'webster_api_token' not in args:
+                print(f'You must specify an API token with --webster-api-token to use the Merriam Webster dictionary API!')
+                return
+
+            # Read API token from file
+            webster_api_token = try_read_token(args.webster_api_token)
+
+            dictionary_apis.append(MerriamWebsterAPI(webster_api_token))
+
+        elif name == 'rapid-words':
+
+            if 'rapid_words_api_token' not in args:
+                print(f'You must specify an API token with --rapid-words-api-token to use the Rapid API WordsAPI dictionary API!')
+                return
+
+            # Read API token from file
+            rapid_words_api_token = try_read_token(args.rapid_words_api_token)
+
+            dictionary_apis.append(RapidWordsAPI(rapid_words_api_token))
+
+        else:
+            print(f'Invalid dictionary API: {args.dictionary_api}')
             return
-
-        # Read owlbot API token from file
-        try:
-            with open(args.owlbot_api_token) as file:
-                args.owlbot_api_token = file.read()
-        except IOError:
-            pass  # Ignore and assume the argument is a token string not a file path
-
-        dictionary_api = OwlBotDictionaryAPI(args.owlbot_api_token)
-
-    elif args.dictionary_api == 'webster':
-
-        if 'webster_api_token' not in args:
-            print(f'You must specify an API token with --webster-api-token to use the Merriam Webster dictionary API!')
-            return
-
-        # Read API token from file
-        try:
-            with open(args.webster_api_token) as file:
-                args.webster_api_token = file.read()
-        except IOError:
-            pass  # Ignore and assume the argument is a token string not a file path
-
-        dictionary_api = MerriamWebsterAPI(args.webster_api_token)
-
-    elif args.dictionary_api == 'rapid-words':
-
-        if 'rapid_words_api_token' not in args:
-            print(f'You must specify an API token with --rapid-words-api-token to use the Rapid API WordsAPI dictionary API!')
-            return
-
-        # Read API token from file
-        try:
-            with open(args.rapid_words_api_token) as file:
-                args.rapid_words_api_token = file.read()
-        except IOError:
-            pass  # Ignore and assume the argument is a token string not a file path
-
-        dictionary_api = RapidWordsAPI(args.rapid_words_api_token)
-
-    else:
-        print(f'Invalid dictionary API: {args.dictionary_api}')
-        return
 
     # Start client
     intents = discord.Intents.default()
     intents.members = True  # The members intent is required for slash commands to work correctly. It is used to lookup a 'discord.Member' based on their user ID.
-    client = DictionaryBotClient(args.ffmpeg_path, dictionary_api, intents=intents)
-    client.run(args.discord_bot_token)
+    client = DictionaryBotClient(args.ffmpeg_path, BackupDictionaryAPI(dictionary_apis), intents=intents)
+    client.run(try_read_token(args.discord_bot_token))
 
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
     async def define(self, word: str) -> []:
         headers = {'Authorization': f'Token {self._token}'}
-        async with self._aio_client_session.get('https://owlbot.info/api/v2/dictionary/' + word.replace(' ', '%20') + '?format=json', headers=headers) as response:
+        async with self._aio_client_session.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
             if response.status == 401:
                 logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
@@ -44,15 +44,14 @@ class OwlBotDictionaryAPI(DictionaryAPI):
                 logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
                 return []
 
-            definitions = await response.json()
+            response_json = await response.json()
 
             result = []
-            for d in definitions:
-                definition = {
+            for d in response_json['definitions']:
+                result.append({
                     'word_type': d['type'],
                     'definition': d['definition']
-                }
-                result.append(definition)
+                })
 
         return result
 
@@ -101,6 +100,7 @@ class MerriamWebsterAPI(DictionaryAPI):
 
             logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
+            # TODO: Improve response parsing, sometimes it crashes
             result = self._get_first_definition_of_each_entry(word, await response.json())
 
         return result
@@ -245,3 +245,20 @@ class RapidWordsAPI(DictionaryAPI):
                 })
 
         return results
+
+
+class BackupDictionaryAPI(DictionaryAPI):
+    """
+    This class is a wrapper for other 'DictionaryAPI's. The API's will be called sequentially until one succeeds.
+    """
+
+    def __init__(self, apis: [DictionaryAPI]):
+        self._apis = apis
+
+    async def define(self, word: str) -> {}:
+        for api in self._apis:
+            definitions = await api.define(word)
+            if len(definitions) > 0:
+                return definitions
+            logger.info(f'Dictionary API {api} did not return any definitions for {word}.')
+        return []
