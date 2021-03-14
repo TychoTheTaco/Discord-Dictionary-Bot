@@ -1,7 +1,8 @@
 import discord
-from typing import Union
+from typing import Union, Any, Iterable, Optional
 from google.cloud import firestore
 import logging
+from abc import ABC, abstractmethod
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -9,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 class Property:
 
-    def __init__(self, key, values=None, default=None, dtype=str):
+    def __init__(self, key, choices=Optional[Iterable[Any]], default=Optional[Any], dtype: Any = str):
         self._key = key
-        self._values = values
+        self._choices = choices
         self._default = default
         self._dtype = dtype
 
@@ -20,24 +21,70 @@ class Property:
         return self._key
 
     @property
-    def values(self):
-        return self._values
+    def choices(self):
+        return self._choices
 
     @property
     def default(self):
         return self._default
 
     def is_valid(self, value):
-        if self._values is not None:
-            return value in self._values
+        if self._choices is not None:
+            return value in self._choices
         return type(value) is self._dtype
+
+
+class ScopedPropertyManager(ABC):
+
+    def __init__(self, properties: Iterable[Property]):
+        self._properties = properties
+
+    @property
+    def properties(self):
+        return self._properties
+
+    @abstractmethod
+    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        pass
+
+    @abstractmethod
+    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        pass
+
+    @abstractmethod
+    def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        pass
+
+
+class FirestorePropertyManager(ScopedPropertyManager):
+
+    def __init__(self, properties: Iterable[Property]):
+        super().__init__(properties)
+        self._firestore_client = firestore.Client()
+
+    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        pass
+
+    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        # Make sure the key and value are valid
+        for p in self.properties:
+            if p.key == key:
+                if p.is_valid(value):
+                    break
+                else:
+                    raise RuntimeError('Invalid value!')
+        else:
+            raise RuntimeError('Invalid key!')
+
+    def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+        pass
 
 
 class Properties:
 
     PROPERTIES = [
         Property('prefix', default='.'),
-        Property('text_to_speech', values=['force', 'flag', 'disable'], default='flag'),
+        Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
         Property('language', default='en-us-wavenet-c')
     ]
 

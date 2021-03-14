@@ -67,7 +67,7 @@ def log_command(is_slash: bool):
     def decorator(function):
 
         async def wrapper(command: Command, *args, **kwargs):
-            logger.info(f'Executing command: {command.name}')
+            logger.info(f'Logging command: {command.name}')
             threading.Thread(target=_log_command, args=[command.name, is_slash, args[0]]).start()
             await function(command, *args, **kwargs)
 

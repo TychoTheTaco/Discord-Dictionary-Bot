@@ -6,7 +6,7 @@ from discord_slash import SlashCommand
 
 from . import utils
 from .exceptions import InsufficientPermissionsException
-from .properties import Properties
+from .properties import Properties, ScopedPropertyManager, Property
 
 
 # Set up logging
@@ -22,7 +22,11 @@ class DiscordBotClient(discord.Client):
         super().__init__(**kwargs)
 
         # Initialize properties
-        self._properties = Properties()
+        self._properties = ScopedPropertyManager([
+            Property('prefix', default='.'),
+            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
+            Property('language', default='en-us-wavenet-c')
+        ])
 
         self._slash_command_decorator = SlashCommand(self)
 
@@ -94,7 +98,7 @@ class DiscordBotClient(discord.Client):
         return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
 
     async def on_ready(self):
-        print(f'Logged on as {self.user}!')
+        logger.info(f'Logged on as {self.user}!')
 
     async def on_message(self, message: discord.Message):
 
