@@ -257,8 +257,11 @@ class BackupDictionaryAPI(DictionaryAPI):
 
     async def define(self, word: str) -> {}:
         for api in self._apis:
-            definitions = await api.define(word)
-            if len(definitions) > 0:
-                return definitions
+            try:
+                definitions = await api.define(word)
+                if len(definitions) > 0:
+                    return definitions
+            except aiohttp.ClientError as e:
+                logger.error(f'Client error for API "{api}"', exc_info=e)
             logger.info(f'Dictionary API {api} did not return any definitions for {word}.')
         return []
