@@ -249,8 +249,28 @@ if __name__ == '__main__':
 
     HEADERS = headers
     #MY_GUILD_ID = None  # Use None for global commands
-    MY_GUILD_ID = 454852632528420876
+    MY_GUILD_ID = 799455809297842177
     DISCORD_APP_ID = args.discord_app_id
 
-    #delete_guild_commands()
-    register_all_commands()
+    register({
+        'name': 'define',
+        'description': 'Gets the definition of a word.',
+        'options': [
+            {
+                'name': 'word',
+                'description': 'The word to define.',
+                'type': 3,
+                'required': True
+            },
+            {
+                'name': 'text_to_speech',
+                'description': 'Reads the definition to you.',
+                'type': 5
+            },
+            {
+                'name': 'language',
+                'description': 'The language to use when reading the definition.',
+                'type': 3,
+            }
+        ]
+    }, MY_GUILD_ID)

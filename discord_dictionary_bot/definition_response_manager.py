@@ -16,10 +16,10 @@ from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 from google.cloud import bigquery
 
-from .exceptions import InsufficientPermissionsException
-from .dictionary_api import DictionaryAPI
-from . import utils
-from .discord_bot_client import DiscordBotClient
+from exceptions import InsufficientPermissionsException
+from dictionary_api import DictionaryAPI
+import utils
+from discord_bot_client import DiscordBotClient
 
 # Set up logging
 logger = logging.getLogger(__name__)

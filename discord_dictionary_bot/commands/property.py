@@ -2,17 +2,16 @@ import io
 
 from discord_slash import SlashContext
 
-from .command import Command, Context
 import discord
 import argparse
-from .. import utils
-from ..properties import Properties
-from ..discord_bot_client import DiscordBotClient
+import utils
+from properties import Properties
+from discord_bot_client import DiscordBotClient
 from contextlib import redirect_stderr
-from ..analytics import log_command
+#from analytics import log_command
 
 
-class PropertyCommand(Command):
+class PropertyCommand:
 
     def __init__(self, client: DiscordBotClient, properties: Properties):
         super().__init__(
@@ -159,34 +158,8 @@ class PropertyCommand(Command):
             reply = self._delete_property(slash_context.channel, args[0])
             await slash_context.send(send_type=3, content=reply, hidden=True)
 
-    @log_command(False)
-    async def execute(self, context: Context, args: tuple) -> None:
-        try:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('scope', choices=['global', 'channel'])
-
-            subparsers = parser.add_subparsers(dest='action')
-            subparsers.required = True
-
-            # Set
-            set_parser = subparsers.add_parser('set')
-            set_parser.add_argument('key')
-            set_parser.add_argument('value')
-
-            # Delete
-            set_parser = subparsers.add_parser('del')
-            set_parser.add_argument('key')
-
-            # Do not remove!
-            list_parser = subparsers.add_parser('list')
-
-            # Parse arguments but suppress stderr output
-            stderr_stream = io.StringIO()
-            with redirect_stderr(stderr_stream):
-                args = parser.parse_args(args)
-        except SystemExit:
-            await utils.send_split(f'Invalid arguments!\nUsage: `{self.name} {self.usage}`', context.channel)
-            return
+    #@log_command(False)
+    async def execute(self, context, args: tuple) -> None:
 
         # Determine scope
         if args.scope == 'global':
@@ -202,45 +175,3 @@ class PropertyCommand(Command):
         else:
             await utils.send_split('`<scope>` must be one of: global, channel', context.channel)
             return
-
-        if args.action == 'list':
-
-            reply = self._get_property_list(scope)
-            await utils.send_split(reply, context.channel)
-
-        elif args.action == 'set':
-
-            reply = self._set_property(scope, args.key, args.value)
-            await utils.send_split(reply, context.channel)
-
-        elif args.action == 'del':
-
-            reply = self._delete_property(scope, args.key)
-            await utils.send_split(reply, context.channel)
-
-    def _get_property_list(self, scope):
-        reply = '__'
-        if isinstance(scope, discord.Guild):
-            reply += 'Server '
-        elif isinstance(scope, discord.TextChannel):
-            reply += 'Channel '
-        reply += 'properties__\n'
-
-        properties = self._properties.list(scope=scope)
-        for k, v in properties.items():
-            reply += f'{k}: `{v}`\n'
-
-        return reply
-
-    def _set_property(self, scope, key, value):
-        if self._properties.set(scope, key, value):
-            return f'Set property `{key}` to `{value}`.'
-        else:
-            return 'Failed to set property.'
-
-    def _delete_property(self, scope, key):
-        if isinstance(scope, discord.Guild):
-            return 'Can\'t delete a global property!'
-
-        self._properties.delete(scope, key)
-        return f'Deleted property `{key}`'

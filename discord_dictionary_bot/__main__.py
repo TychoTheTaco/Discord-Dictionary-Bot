@@ -4,12 +4,11 @@ import logging.config
 import sys
 import threading
 
-import discord
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
+from discord_bot_client import DiscordBotClient
 from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI, BackupDictionaryAPI
-from discord_dictionary_bot.dictionary_bot_client import DictionaryBotClient
 
 
 def logging_filter(record):
@@ -161,10 +160,11 @@ def main():
             return
 
     # Start client
-    intents = discord.Intents.default()
-    intents.members = True  # The members intent is required for slash commands to work correctly. It is used to lookup a 'discord.Member' based on their user ID.
-    client = DictionaryBotClient(args.ffmpeg_path, BackupDictionaryAPI(dictionary_apis), intents=intents)
-    client.run(try_read_token(args.discord_bot_token))
+    #intents = discord.Intents.default()
+    #intents.members = True  # The members intent is required for slash commands to work correctly. It is used to lookup a 'discord.Member' based on their user ID.
+    #client = DictionaryBotClient(args.ffmpeg_path, BackupDictionaryAPI(dictionary_apis), intents=intents)
+    bot = DiscordBotClient(BackupDictionaryAPI(dictionary_apis), args.ffmpeg_path)
+    bot.run(try_read_token(args.discord_bot_token))
 
 
 if __name__ == '__main__':

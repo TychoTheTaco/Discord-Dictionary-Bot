@@ -1,19 +1,22 @@
+from discord.ext import commands
 from google.cloud import bigquery
+import logging
 
-from .command import Command, Context
-from .. import utils
-from ..discord_bot_client import DiscordBotClient
-from ..analytics import log_command
+import utils
+from analytics import log_command
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
-class StatsCommand(Command):
+class Miscellaneous(commands.Cog):
 
-    def __init__(self, client: DiscordBotClient):
-        super().__init__(client, 'stats', description='Shows you some stats about this bot.')
+    def __init__(self, bot: commands.Bot):
+        self._bot = bot
         self._bigquery_client = bigquery.Client()
 
-    @log_command(False)
-    async def execute(self, context: Context, args: tuple) -> None:
+    @commands.command(name='stats', hidden=True)
+    async def stats(self, context):
         reply = '**----- Statistics -----**\n'
 
         # Channel count
@@ -24,7 +27,7 @@ class StatsCommand(Command):
 
         # Guild count
         reply += '**Guilds**\n'
-        reply += f'Active in **{len(self.client.guilds)}** guilds and **{channel_count}** channels.\n\n'
+        reply += f'Active in **{len(self._bot.guilds)}** guilds and **{channel_count}** channels.\n\n'
 
         # Total requests
         reply += '**Total Requests**\n'
@@ -36,7 +39,8 @@ class StatsCommand(Command):
 
         # Most common words
         reply += '**Most Common Words**\n'
-        top_5_words_job = self._bigquery_client.query('SELECT word, COUNT(word) AS count, MAX(time) as time FROM definition_requests.definition_requests GROUP BY word HAVING count > 1 ORDER BY count DESC, time DESC LIMIT 5')
+        top_5_words_job = self._bigquery_client.query(
+            'SELECT word, COUNT(word) AS count, MAX(time) as time FROM definition_requests.definition_requests GROUP BY word HAVING count > 1 ORDER BY count DESC, time DESC LIMIT 5')
         top_5_words_results = top_5_words_job.result()
         for i, row in enumerate(top_5_words_results):
             reply += f'{i + 1}. `{row.word}` ({row.count})\n'
