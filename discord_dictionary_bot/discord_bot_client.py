@@ -4,10 +4,11 @@ from typing import Union
 
 from discord import Message
 from discord.ext.commands.bot import Bot
-from discord.ext import commands
 
 from cogs import dictionary, preferences, misc
 from dictionary_api import DictionaryAPI
+from discord.ext import commands
+from discord_slash import SlashCommand
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class DiscordBotClient(Bot):
 
     def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
         super().__init__(DiscordBotClient.gp, **kwargs)
+        slash = SlashCommand(self, override_type=True)
         self.add_cog(dictionary.Dictionary(self, dictionary_api, ffmpeg_path))
         self.add_cog(preferences.Preferences())
         self.add_cog(misc.Miscellaneous(self))

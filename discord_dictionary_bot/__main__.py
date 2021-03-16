@@ -160,9 +160,6 @@ def main():
             return
 
     # Start client
-    #intents = discord.Intents.default()
-    #intents.members = True  # The members intent is required for slash commands to work correctly. It is used to lookup a 'discord.Member' based on their user ID.
-    #client = DictionaryBotClient(args.ffmpeg_path, BackupDictionaryAPI(dictionary_apis), intents=intents)
     bot = DiscordBotClient(BackupDictionaryAPI(dictionary_apis), args.ffmpeg_path)
     bot.run(try_read_token(args.discord_bot_token))
 

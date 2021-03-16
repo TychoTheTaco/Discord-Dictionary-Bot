@@ -91,8 +91,9 @@ class Dictionary(commands.Cog):
 
     @commands.command(name='define', aliases=['d'])
     async def define(self, context: commands.Context, *args):
-        word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-        await self._define_or_befine(context, word, False, text_to_speech, language)
+        async with context.typing():
+            word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
+            await self._define_or_befine(context, word, False, text_to_speech, language)
 
     @cog_ext.cog_slash(
         name='define',
@@ -117,7 +118,7 @@ class Dictionary(commands.Cog):
         ]
     )
     async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: str = 'English'):
-        await context.respond(True)
+        await context.respond(False)
         await self._define_or_befine(context, word, False, text_to_speech, language)
 
     @commands.command(name='befine', aliases=['b'], hidden=True)
@@ -172,44 +173,44 @@ class Dictionary(commands.Cog):
         elif text_to_speech_property == 'disable':
             text_to_speech = False
 
-        # Get voice code from language argument
         if text_to_speech:
+
+            # Get voice code from language argument
             voice_code = self._get_voice_code(language)
             if voice_code is None:
                 await send_maybe_hidden(context, f'Could not find a language matching `{language}`!')
                 return
             language = voice_code
 
+            # Increment counter for this voice channel
+            if voice_channel not in self._voice_channels:
+                self._voice_channels[voice_channel] = 0
+            if voice_channel is not None:
+                self._voice_channels[voice_channel] += 1
+
+            if context.guild not in self._guild_locks:
+                self._guild_locks[context.guild] = asyncio.Lock()
+
         logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
 
-        if voice_channel not in self._voice_channels:
-            self._voice_channels[voice_channel] = 0
-        if voice_channel is not None:
-            self._voice_channels[voice_channel] += 1
+        # Get definition
+        definitions = await self._dictionary_api.define(word)
 
-        if context.guild not in self._guild_locks:
-            self._guild_locks[context.guild] = asyncio.Lock()
-
-        async with context.typing():
-
-            # Get definition
-            definitions = await self._dictionary_api.define(word)
-
-            if len(definitions) == 0:
-                reply = f'__**{word}**__\nI couldn\'t find any definitions for that word.'
-                if text_to_speech:
-                    await self._say(reply, context, voice_channel, language, f'{word}. I couldn\'t find any definitions for that word.')
-                else:
-                    await context.send(reply)
-                return
-
-            # Prepare response text and text-to-speech input
-            reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse)
-
+        if len(definitions) == 0:
+            reply = f'__**{word}**__\nI couldn\'t find any definitions for that word.'
             if text_to_speech:
-                await self._say(reply, context, voice_channel, language, text_to_speech_input)
+                await self._say(reply, context, voice_channel, language, f'{word}. I couldn\'t find any definitions for that word.')
             else:
                 await context.send(reply)
+            return
+
+        # Prepare response text and text-to-speech input
+        reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse)
+
+        if text_to_speech:
+            await self._say(reply, context, voice_channel, language, text_to_speech_input)
+        else:
+            await context.send(reply)
 
     async def _say(self, text: str, context: Union[commands.Context, SlashContext], voice_channel, language, text_to_speech_input=None):
 
@@ -321,10 +322,19 @@ class Dictionary(commands.Cog):
 
     @commands.command(name='stop', aliases=['s'])
     async def stop(self, context: commands.Context):
+        # Make sure user is in the same voice channel as the bot
         for voice_client in self._bot.voice_clients:
             if voice_client == context.voice_client:
                 voice_client.stop()
                 await context.send('Okay, I\'ll be quiet.')
+
+    @cog_ext.cog_slash(name='stop')
+    async def slash_stop(self, context: SlashContext):
+        await context.respond(True)
+        await self._stop(context)
+
+    async def _stop(self, context: Union[commands.Context, SlashContext]):
+        pass
 
     @commands.command(name='voices', aliases=['voice', 'v'], help='Shows the list of supported voices for text to speech.')
     async def voices(self, context: commands.Context):
@@ -346,7 +356,7 @@ class Dictionary(commands.Cog):
             e.title = 'Supported Voices'
             e.url = supported_voices_url
 
-            await send_maybe_hidden(context, embed=e)
+            await context.send(embed=e)
 
         else:
 
