@@ -25,21 +25,6 @@ from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import
 logger = logging.getLogger(__name__)
 
 
-class DefinitionRequest:
-
-    def __init__(self, user: discord.User, word: str, text_channel: discord.abc.Messageable, reverse=False, text_to_speech=False, language='en-us'):
-        self.user = user
-        self.voice_channel = user.voice.channel if isinstance(user, discord.Member) and user.voice is not None else None
-        self.word = word
-        self.text_channel = text_channel
-        self.reverse = reverse
-        self.text_to_speech = text_to_speech
-        self.language = language
-
-    def __repr__(self):
-        return f'{{word: "{self.word}", reverse: {self.reverse}, text_to_speech: {self.text_to_speech}, language: "{self.language}"}}'
-
-
 def convert(source: bytes, ffmpeg_path='ffmpeg'):
     # Start ffmpeg process
     process = subprocess.Popen(
@@ -91,190 +76,6 @@ async def send_maybe_hidden(context: Union[commands.Context, SlashContext], text
     return await context.send(text, **kwargs)
 
 
-class DefinitionResponseManager:
-    """
-    This class is responsible for handling definition requests for a single guild.
-    """
-
-    def __init__(self, bot: commands.Bot, guild: discord.Guild, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path]):
-        self._bot = bot
-        self._guild = guild
-        self._dictionary_api = dictionary_api
-        self._ffmpeg_path = ffmpeg_path
-
-        # Each text channel will have its own request queue to allow simultaneous responses across channels
-        self._request_queues = {}
-
-        # Keep track of which voice channels we need to respond to. This way we can leave the channel only when we have finished all requests for that channel
-        self._voice_channels = collections.defaultdict(int)
-
-        # This lock is used to ensure that we only connect to 1 voice channel at a time
-        self._voice_channel_lock = asyncio.Lock()
-
-    async def submit(self, definition_request: DefinitionRequest):
-        if definition_request.text_channel not in self._request_queues:
-            queue = asyncio.Queue()
-            self._request_queues[definition_request.text_channel] = queue
-            task = asyncio.create_task(self._process_definition_requests(queue))
-
-        if definition_request.text_to_speech:
-            if definition_request.voice_channel not in self._voice_channels:
-                self._voice_channels[definition_request.voice_channel] = 0
-            self._voice_channels[definition_request.voice_channel] += 1
-
-        await self._request_queues[definition_request.text_channel].put(definition_request)
-
-    async def _process_definition_requests(self, queue: asyncio.Queue):
-        # This lock is used to ensure that only 1 definition request is processed at a time (per text channel)
-        master_lock = asyncio.Lock()
-
-        while True:
-
-            # Wait for an item to enter the queue
-            logger.debug(f'[{self}] Waiting for more requests...')
-            definition_request: DefinitionRequest = await queue.get()
-            logger.debug(f'[{self}] Processing request: {definition_request}')
-
-            async with definition_request.text_channel.typing():
-
-                word = definition_request.word
-
-                # Get definition
-                definitions = await self._dictionary_api.define(word)
-
-                if len(definitions) == 0:
-                    await master_lock.acquire()
-                    await definition_request.text_channel.send('I couldn\'t find any definitions for that word.')
-                    master_lock.release()
-                    continue
-
-                # Prepare response text and text-to-speech input
-                reply, text_to_speech_input = self.create_reply(word, definitions, reverse=definition_request.reverse)
-
-                if definition_request.text_to_speech:
-
-                    # Get text-to-speech data
-                    text_to_speech_bytes = self._get_text_to_speech(text_to_speech_input, language=definition_request.language)
-
-                    await master_lock.acquire()
-
-                    # Check if we got valid text-to-speech data
-                    if text_to_speech_bytes.getbuffer().nbytes <= 0:
-                        await definition_request.text_channel.send('There was a problem generating the text-to-speech!')
-                        master_lock.release()
-                        continue
-
-                    # Join the voice channel
-                    voice_channel = definition_request.voice_channel
-                    try:
-                        await self._voice_channel_lock.acquire()
-                        voice_client = await self._join_voice_channel(voice_channel)
-                    except InsufficientPermissionsException as e:
-                        self._voice_channel_lock.release()
-                        await definition_request.text_channel.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
-                        master_lock.release()
-                        continue
-
-                    # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
-                    await asyncio.sleep(2.5)
-
-                    # Send text chat reply
-                    await definition_request.text_channel.send(reply)
-
-                    # Create a callback to be invoked when the bot is finished playing audio
-                    def after(error):
-
-                        # A nested async function is used here to ensure that the bot leaves the voice channel before releasing the associated locks
-                        async def after_coroutine(error):
-
-                            if error is not None:
-                                logger.error(f'An error occurred while playing audio: {error}')
-
-                            # Update voice channel map
-                            self._voice_channels[voice_channel] -= 1
-
-                            # Disconnect from the voice channel if we don't need it anymore
-                            if self._voice_channels[voice_channel] == 0:
-                                await self._leave_voice_channel(voice_channel)
-
-                            self._voice_channel_lock.release()
-                            master_lock.release()
-
-                        asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
-
-                    # Speak
-                    voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
-
-                else:
-                    await master_lock.acquire()
-                    await definition_request.text_channel.send(reply)
-                    master_lock.release()
-
-    async def _join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceProtocol:
-        """
-        Connect to the specified voice channel if we are not already connected.
-        :param voice_channel: The voice channel to connect to.
-        :return: A 'discord.VoiceClient' representing our voice connection.
-        """
-
-        # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
-        permissions = voice_channel.permissions_for(voice_channel.guild.me)
-        if not all([permissions.view_channel, permissions.connect, permissions.speak]):
-            raise InsufficientPermissionsException(['View Channel', 'Connect', 'Speak'])
-
-        # Check if we are already connected to this voice channel
-        for voice_client in self._bot.voice_clients:
-            if voice_client.channel == voice_channel:
-                return voice_client
-
-        # Connect to the voice channel
-        return await voice_channel.connect()
-
-    async def _leave_voice_channel(self, voice_channel: discord.VoiceChannel) -> None:
-        """
-        Leave the specified voice channel if we were connected to it.
-        :param voice_channel: The voice channel to leave.
-        """
-        for voice_client in self._bot.voice_clients:
-            if voice_client.channel == voice_channel:
-                await voice_client.disconnect()
-
-    @staticmethod
-    def create_reply(word, definitions, reverse=False) -> (str, str):
-        if reverse:
-            word = word[::-1]
-        reply = f'__**{word}**__\n'
-        tts_input = f'{word}, '
-        for i, definition in enumerate(definitions):
-            word_type = definition['word_type']
-            definition_text = definition['definition']
-
-            if reverse:
-                word_type = word_type[::-1]
-                definition_text = definition_text[::-1]
-
-            reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
-            tts_input += f' {i + 1}, {word_type}, {definition_text}'
-
-        return reply, tts_input
-
-    def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
-        result = io.BytesIO()
-
-        try:
-            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
-        except Exception as e:
-            logger.error(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language}"')
-            return result
-
-        # Convert to proper format
-        text_to_speech_bytes = convert(text_to_speech_bytes, ffmpeg_path=self._ffmpeg_path)
-        result.write(text_to_speech_bytes)
-        result.seek(0)
-
-        return result
-
-
 class Dictionary(commands.Cog):
 
     def __init__(self, bot: commands.Bot, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path]):
@@ -285,7 +86,8 @@ class Dictionary(commands.Cog):
         # Create and populate table of supported text-to-speech voices
         self._create_voices_table()
 
-        self._definition_response_managers = {}
+        self._guild_locks = {}
+        self._voice_channels = {}
 
     @commands.command(name='define', aliases=['d'])
     async def define(self, context: commands.Context, *args):
@@ -355,7 +157,7 @@ class Dictionary(commands.Cog):
             return
 
         # Get current voice channel
-        voice_channel = context.author.voice.channel if context.author.voice is not None else None
+        voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
 
         # Make sure that the user that requested this definition is in a voice channel if text-to-speech is enabled
         if text_to_speech and voice_channel is None:
@@ -378,26 +180,144 @@ class Dictionary(commands.Cog):
                 return
             language = voice_code
 
-        # Add request to queue
-        if context.guild not in self._definition_response_managers:
-            self._definition_response_managers[context.guild] = DefinitionResponseManager(self._bot, context.guild, self._dictionary_api, self._ffmpeg_path)
-        await self._definition_response_managers[context.guild].submit(DefinitionRequest(context.author, word, context.channel, reverse, text_to_speech, language))
+        logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
 
-        # Acknowledge
-        await context.send(f'Added **{word}** to queue.')
+        if voice_channel not in self._voice_channels:
+            self._voice_channels[voice_channel] = 0
+        if voice_channel is not None:
+            self._voice_channels[voice_channel] += 1
+
+        if context.guild not in self._guild_locks:
+            self._guild_locks[context.guild] = asyncio.Lock()
+
+        async with context.typing():
+
+            # Get definition
+            definitions = await self._dictionary_api.define(word)
+
+            if len(definitions) == 0:
+                await context.send('I couldn\'t find any definitions for that word.')
+                return
+
+            # Prepare response text and text-to-speech input
+            reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse)
+
+            if text_to_speech:
+
+                # Get text-to-speech data
+                text_to_speech_bytes = self._get_text_to_speech(text_to_speech_input, language=language)
+
+                # Check if we got valid text-to-speech data
+                if text_to_speech_bytes.getbuffer().nbytes <= 0:
+                    await context.send('There was a problem generating the text-to-speech!')
+                    return
+
+                # Join the voice channel
+                try:
+                    await self._guild_locks[context.guild].acquire()
+                    voice_client = await self._join_voice_channel(voice_channel)
+                except InsufficientPermissionsException as e:
+                    self._guild_locks[context.guild].release()
+                    await context.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
+                    return
+
+                # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
+                await asyncio.sleep(2.5)
+
+                # Send text chat reply
+                await context.send(reply)
+
+                # Create a callback to be invoked when the bot is finished playing audio
+                def after(error):
+
+                    # A nested async function is used here to ensure that the bot leaves the voice channel before releasing the associated locks
+                    async def after_coroutine(error):
+
+                        if error is not None:
+                            logger.error(f'An error occurred while playing audio: {error}')
+
+                        # Update voice channel map
+                        self._voice_channels[voice_channel] -= 1
+
+                        # Disconnect from the voice channel if we don't need it anymore
+                        if self._voice_channels[voice_channel] <= 0:
+                            await self._leave_voice_channel(voice_channel)
+
+                        self._guild_locks[context.guild].release()
+
+                    asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
+
+                # Speak
+                voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
+
+            else:
+                await context.send(reply)
 
     @staticmethod
     def _is_valid_word(word) -> bool:
         pattern = re.compile(r'^[a-zA-Z-\' ]+$')
         return pattern.search(word) is not None
 
-    @commands.command(name='next', aliases=['n'])
-    async def next(self, context: commands.Context):
-        print('next')
+    async def _join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceProtocol:
+        # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
+        permissions = voice_channel.permissions_for(voice_channel.guild.me)
+        if not all([permissions.view_channel, permissions.connect, permissions.speak]):
+            raise InsufficientPermissionsException(['View Channel', 'Connect', 'Speak'])
+
+        # Check if we are already connected to this voice channel
+        for voice_client in self._bot.voice_clients:
+            if voice_client.channel == voice_channel:
+                return voice_client
+
+        # Connect to the voice channel
+        return await voice_channel.connect()
+
+    async def _leave_voice_channel(self, voice_channel: discord.VoiceChannel) -> None:
+        for voice_client in self._bot.voice_clients:
+            if voice_client.channel == voice_channel:
+                await voice_client.disconnect()
+
+    @staticmethod
+    def create_reply(word, definitions, reverse=False) -> (str, str):
+        if reverse:
+            word = word[::-1]
+        reply = f'__**{word}**__\n'
+        tts_input = f'{word}, '
+        for i, definition in enumerate(definitions):
+            word_type = definition['word_type']
+            definition_text = definition['definition']
+
+            if reverse:
+                word_type = word_type[::-1]
+                definition_text = definition_text[::-1]
+
+            reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
+            tts_input += f' {i + 1}, {word_type}, {definition_text}'
+
+        return reply, tts_input
+
+    def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
+        result = io.BytesIO()
+
+        try:
+            text_to_speech_bytes = text_to_speech_pcm(tts_input, language=language)
+        except Exception as e:
+            logger.error(f'Failed to generate text-to-speech data: {e}. You might be using an invalid language: "{language}"')
+            return result
+
+        # Convert to proper format
+        text_to_speech_bytes = convert(text_to_speech_bytes, ffmpeg_path=self._ffmpeg_path)
+        result.write(text_to_speech_bytes)
+        result.seek(0)
+
+        return result
 
     @commands.command(name='stop', aliases=['s'])
     async def stop(self, context: commands.Context):
-        pass
+        for voice_client in self._bot.voice_clients:
+            if voice_client == context.voice_client:
+                voice_client.stop()
+                await context.send('Okay, I\'ll be quiet.')
 
     @commands.command(name='voices', aliases=['voice', 'v'], help='Shows the list of supported voices for text to speech.')
     async def voices(self, context: commands.Context):
