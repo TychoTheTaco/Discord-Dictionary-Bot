@@ -22,7 +22,7 @@ def logging_filter(record):
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S')
-logging.getLogger().handlers[0].addFilter(logging_filter)
+#logging.getLogger().handlers[0].addFilter(logging_filter)
 
 
 def install_thread_excepthook():
