@@ -8,7 +8,8 @@ from discord.ext.commands.bot import Bot
 from cogs import Help, Preferences, Dictionary, Statistics
 from dictionary_api import DictionaryAPI
 from discord.ext import commands
-from discord_slash import SlashCommand
+from discord_slash import SlashCommand, SlashContext
+from analytics import log_command
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -28,6 +29,14 @@ class DiscordBotClient(Bot):
         self.add_cog(Dictionary(self, dictionary_api, ffmpeg_path))
         self.add_cog(Preferences())
         self.add_cog(Statistics(self))
+
+        @self.before_invoke
+        async def before_command_invoked(context: commands.Context):
+            log_command(context.command.name, False, context)
+
+        @self.event
+        async def on_slash_command(context: SlashContext):
+            log_command(context.command, True, context)
 
     async def on_command_error(self, context: commands.Context, exception):
         if isinstance(exception, commands.errors.MissingRequiredArgument):

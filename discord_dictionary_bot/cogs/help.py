@@ -2,7 +2,6 @@ from discord.ext import commands
 import logging
 
 from utils import send_maybe_hidden
-from analytics import log_command
 
 # Set up logging
 logger = logging.getLogger(__name__)

@@ -3,9 +3,12 @@ import io
 import json
 import datetime
 import threading
+from typing import Union
 
 from google.cloud import bigquery
 import discord
+from discord.ext import commands
+from discord_slash import SlashContext
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -19,7 +22,7 @@ def _is_blacklisted(context):
     return False
 
 
-def _log_command(command_name: str, is_slash: bool, context):
+def _log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
 
     if _is_blacklisted(context):
         return
@@ -60,16 +63,5 @@ def _log_command(command_name: str, is_slash: bool, context):
         raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
 
 
-def log_command(is_slash: bool):
-
-    def decorator(function):
-
-        async def wrapper(cog, *args, **kwargs):
-            print(function.name)
-            #logger.info(f'Logging command: {cog.name}')
-            #threading.Thread(target=_log_command, args=[command.name, is_slash, args[0]]).start()
-            #await function(command, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
+def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
+    threading.Thread(target=_log_command, args=(command_name, is_slash, context)).start()
