@@ -28,7 +28,9 @@ class DiscordBotClient(Bot):
             await context.send('Invalid command usage!')
         elif isinstance(exception, commands.errors.ArgumentParsingError):
             await context.send('Invalid arguments!')
-        return await super().on_command_error(context, exception)
+        else:
+            logger.error('Error on command!', exc_info=exception)
+            await super().on_command_error(context, exception)
 
     @staticmethod
     def gp(bot: Bot, message: Message) -> str:

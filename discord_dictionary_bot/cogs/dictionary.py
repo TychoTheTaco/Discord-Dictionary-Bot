@@ -22,6 +22,7 @@ from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import
 
 from dictionary_api import DictionaryAPI
 from exceptions import InsufficientPermissionsException
+from utils import send_maybe_hidden
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -72,12 +73,6 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
     return response.audio_content
 
 
-async def send_maybe_hidden(context: Union[commands.Context, SlashContext], text: Optional[str] = None, **kwargs):
-    if isinstance(context, SlashContext):
-        return await context.send(text, hidden=True, **kwargs)
-    return await context.send(text, **kwargs)
-
-
 def catch_exceptions(function):
     """
     This decorator will catch and log all exceptions thrown in the decorated function.
@@ -111,9 +106,9 @@ def run_on_another_thread(function):
 @catch_exceptions
 def send_analytics(word, reverse, text_to_speech, language, text_channel) -> None:
     # Ignore dev server
-    #if isinstance(text_channel, discord.TextChannel) and text_channel.guild.id in [454852632528420876, 799455809297842177]:
-    #    logger.info(f'Ignoring analytics submission for development server.')
-    #    return
+    if isinstance(text_channel, discord.TextChannel) and text_channel.guild.id in [454852632528420876, 799455809297842177]:
+       logger.info(f'Ignoring analytics submission for development server.')
+       return
 
     client = bigquery.Client()
     job_config = bigquery.LoadJobConfig(

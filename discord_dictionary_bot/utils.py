@@ -1,7 +1,10 @@
 import re
 import logging
+from typing import Union, Optional
 
 import discord
+from discord.ext import commands
+from discord_slash import SlashContext
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -10,6 +13,12 @@ logger = logging.getLogger(__name__)
 def get_token(path='token.txt'):
     with open(path) as file:
         return file.read()
+
+
+async def send_maybe_hidden(context: Union[commands.Context, SlashContext], text: Optional[str] = None, **kwargs):
+    if isinstance(context, SlashContext):
+        return await context.send(text, hidden=True, **kwargs)
+    return await context.send(text, **kwargs)
 
 
 async def send_or_dm(message: str, channel: discord.abc.Messageable, user: discord.User):

@@ -8,6 +8,31 @@ from abc import ABC, abstractmethod
 logger = logging.getLogger(__name__)
 
 
+class InvalidKeyError(BaseException):
+
+    def __init__(self, key: str):
+        self._key = key
+
+    @property
+    def key(self):
+        return self._key
+
+
+class InvalidValueError(BaseException):
+
+    def __init__(self, key: str, value: Any):
+        self._key = key
+        self._value = value
+
+    @property
+    def key(self):
+        return self._key
+
+    @property
+    def value(self):
+        return self._value
+
+
 class Property:
 
     def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str):
@@ -91,9 +116,9 @@ class FirestorePropertyManager(ScopedPropertyManager):
                 if p.is_valid(value):
                     break
                 else:
-                    raise RuntimeError('Invalid value!')
+                    raise InvalidValueError(key, value)
         else:
-            raise RuntimeError('Invalid key!')
+            raise InvalidKeyError(key)
 
         dictionary = self.get_all(scope)
         dictionary[key] = value
@@ -103,8 +128,9 @@ class FirestorePropertyManager(ScopedPropertyManager):
 
     def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
         dictionary = self.get_all(scope)
-        del dictionary[key]
-        self._get_snapshot(scope).reference.set(dictionary)
+        if key in dictionary:
+            del dictionary[key]
+            self._get_snapshot(scope).reference.set(dictionary)
 
     def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
         """
