@@ -3,17 +3,18 @@ import io
 import json
 import datetime
 import threading
+from typing import Union
 
 from google.cloud import bigquery
 import discord
-
-from .commands import Command, Context
+from discord.ext import commands
+from discord_slash import SlashContext
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-def _is_blacklisted(context: Context):
+def _is_blacklisted(context):
     # Ignore dev server
     if isinstance(context.channel, discord.TextChannel) and context.channel.guild.id in [454852632528420876, 799455809297842177]:
         logger.info(f'Ignoring analytics submission for development server.')
@@ -21,7 +22,7 @@ def _is_blacklisted(context: Context):
     return False
 
 
-def _log_command(command_name: str, is_slash: bool, context: Context):
+def _log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
 
     if _is_blacklisted(context):
         return
@@ -62,15 +63,5 @@ def _log_command(command_name: str, is_slash: bool, context: Context):
         raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
 
 
-def log_command(is_slash: bool):
-
-    def decorator(function):
-
-        async def wrapper(command: Command, *args, **kwargs):
-            logger.info(f'Executing command: {command.name}')
-            threading.Thread(target=_log_command, args=[command.name, is_slash, args[0]]).start()
-            await function(command, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
+def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
+    threading.Thread(target=_log_command, args=(command_name, is_slash, context)).start()

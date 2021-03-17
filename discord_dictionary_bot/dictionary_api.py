@@ -1,8 +1,10 @@
+import asyncio
 from abc import ABC, abstractmethod
 import aiohttp
 import logging
 import re
 from datetime import datetime, timedelta
+import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -258,10 +260,14 @@ class BackupDictionaryAPI(DictionaryAPI):
     async def define(self, word: str) -> {}:
         for api in self._apis:
             try:
-                definitions = await api.define(word)
+                start_time = time.time()
+                definitions = await asyncio.wait_for(api.define(word), 2)
+                logger.debug(f'{api} responded in {time.time() - start_time:.03f} seconds')
                 if len(definitions) > 0:
                     return definitions
             except aiohttp.ClientError as e:
                 logger.error(f'Client error for API "{api}"', exc_info=e)
-            logger.info(f'Dictionary API {api} did not return any definitions for {word}.')
+            except asyncio.TimeoutError as e:
+                logger.warning(f'{api} Took too long to respond!')
+            logger.info(f'{api} did not return any definitions for {word}.')
         return []

@@ -1,146 +1,51 @@
-import asyncio
 import logging
+from pathlib import Path
+from typing import Union
 
-import discord
-from discord_slash import SlashCommand
+from discord import Message
+from discord.ext.commands.bot import Bot
 
-from . import utils
-from .exceptions import InsufficientPermissionsException
-from .properties import Properties
-
+from cogs import Help, Preferences, Dictionary, Statistics
+from dictionary_api import DictionaryAPI
+from discord.ext import commands
+from discord_slash import SlashCommand, SlashContext
+from analytics import log_command
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-class DiscordBotClient(discord.Client):
-    """
-    A general discord bot client that supports 'Command's and includes some other helper functions.
-    """
+def get_prefix(bot: Bot, message: Message):
+    preferences_cog = bot.get_cog('Preferences')
+    return preferences_cog.scoped_property_manager.get('prefix', message.channel)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
-        # Initialize properties
-        self._properties = Properties()
+class DiscordBotClient(Bot):
 
-        self._slash_command_decorator = SlashCommand(self)
+    def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
+        super().__init__(get_prefix, help_command=None, **kwargs)
+        slash = SlashCommand(self, sync_commands=True)
+        self.add_cog(Help())
+        self.add_cog(Dictionary(self, dictionary_api, ffmpeg_path))
+        self.add_cog(Preferences())
+        self.add_cog(Statistics(self))
 
-        # List of commands this bot supports. All bots support the 'Help' and 'Property' commands by default. Subclasses can add more by calling 'add_command()'.
-        from .commands import HelpCommand, PropertyCommand
-        self._commands = [HelpCommand(self), PropertyCommand(self, self._properties)]
+        @self.before_invoke
+        async def before_command_invoked(context: commands.Context):
+            log_command(context.command.name, False, context)
 
-    @property
-    def slash_command_decorator(self):
-        return self._slash_command_decorator
+        @self.event
+        async def on_slash_command(context: SlashContext):
+            log_command(context.command, True, context)
 
-    @property
-    def commands(self):
-        return self._commands
-
-    @property
-    def properties(self):
-        return self._properties
-
-    def add_command(self, command: 'commands.Command') -> None:
-        """
-        Add a command to this discord bot client.
-        :param command: The command to add.
-        """
-        self._commands.append(command)
-
-    def get_prefix(self, channel: discord.TextChannel) -> str:
-        """
-        Get this bot's summon prefix for the specified text channel. It will usually be the same for all channels in a server but may vary between servers.
-        :param channel: The text channel.
-        :return: The summon prefix.
-        """
-        return self._properties.get(channel, 'prefix')
-
-    async def join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceProtocol:
-        """
-        Connect to the specified voice channel if we are not already connected.
-        :param voice_channel: The voice channel to connect to.
-        :return: A 'discord.VoiceClient' representing our voice connection.
-        """
-
-        # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
-        permissions = voice_channel.permissions_for(voice_channel.guild.me)
-        if not all([permissions.view_channel, permissions.connect, permissions.speak]):
-            raise InsufficientPermissionsException(['View Channel', 'Connect', 'Speak'])
-
-        # Check if we are already connected to this voice channel
-        for voice_client in self.voice_clients:
-            if voice_client.channel == voice_channel:
-                return voice_client
-
-        # Connect to the voice channel
-        return await voice_channel.connect()
-
-    async def leave_voice_channel(self, voice_channel: discord.VoiceChannel) -> None:
-        """
-        Leave the specified voice channel if we were connected to it.
-        :param voice_channel: The voice channel to leave.
-        """
-        for voice_client in self.voice_clients:
-            if voice_client.channel == voice_channel:
-                await voice_client.disconnect()
-
-    def sync(self, coroutine):
-        """
-        Submit a coroutine to the client's event loop.
-        :param coroutine: A coroutine to run on this client's event loop.
-        """
-        return asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+    async def on_command_error(self, context: commands.Context, exception):
+        if isinstance(exception, commands.errors.MissingRequiredArgument):
+            await context.send('Invalid command usage!')
+        elif isinstance(exception, commands.errors.ArgumentParsingError):
+            await context.send('Invalid arguments!')
+        else:
+            logger.error('Error on command!', exc_info=exception)
+            await super().on_command_error(context, exception)
 
     async def on_ready(self):
-        print(f'Logged on as {self.user}!')
-
-    async def on_message(self, message: discord.Message):
-
-        # Ignore our own messages
-        if message.author == self.user:
-            return
-
-        # Check what prefix we have in this channel
-        prefix = self.get_prefix(message.channel)
-
-        # Check if the message starts with our prefix
-        if not message.content.startswith(prefix):
-            return
-
-        # Ignore messages with only the prefix
-        if message.content == prefix:
-            return
-
-        # Ignore messages with mentions
-        if len(message.mentions) + len(message.channel_mentions) + len(message.role_mentions) > 0:
-            await utils.send_split('I don\'t approve of ping spamming.', message.channel)
-            return
-
-        # Parse input
-        command_input = message.content[len(prefix):].lower().split(' ')
-
-        # Execute command
-        for command in self._commands:
-            if command_input[0] in [command.name] + command.aliases:
-                from .commands import Context
-                try:
-                    await command.execute(Context(message.author, message.channel), command_input[1:])
-                except Exception as e:
-                    logger.exception(f'Error executing command "{message.content}"', exc_info=e)
-                    await utils.send_or_dm('There was an error executing that command!', message.channel, message.author)
-                return
-
-        # Send invalid command message
-        help_command = self._get_command('help')
-        if help_command is not None:
-            await utils.send_or_dm(f'Unrecognized command! Use `{prefix + help_command.name}` to see available commands.', message.channel, message.author)
-        else:
-            await utils.send_or_dm(f'Unrecognized command!', message.channel, message.author)
-
-    def _get_command(self, name: str):
-        for command in self._commands:
-            if command.name == name:
-                return command
-        return None
+        logger.info(f'Logged on as {self.user}!')
