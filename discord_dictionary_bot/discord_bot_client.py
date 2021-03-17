@@ -18,7 +18,7 @@ class DiscordBotClient(Bot):
 
     def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
         super().__init__(DiscordBotClient.gp, **kwargs)
-        slash = SlashCommand(self, override_type=True)
+        slash = SlashCommand(self, sync_commands=True)
         self.add_cog(dictionary.Dictionary(self, dictionary_api, ffmpeg_path))
         self.add_cog(preferences.Preferences())
         self.add_cog(misc.Miscellaneous(self))

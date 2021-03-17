@@ -1,25 +1,27 @@
 import argparse
 import io
 import subprocess
-
-from discord.ext import commands
-from google.cloud import texttospeech
-
-from dictionary_api import DictionaryAPI
-from typing import Union, Optional
-from pathlib import Path
-import collections
-import requests
-from bs4 import BeautifulSoup
-import sqlite3 as sql
-import re
-import discord
-from discord_slash import SlashContext, cog_ext
 import asyncio
 import logging
 import contextlib
-from exceptions import InsufficientPermissionsException
+import sqlite3 as sql
+import re
+from typing import Union, Optional
+from pathlib import Path
+import threading
+import datetime
+import json
+
+from discord.ext import commands
+from google.cloud import texttospeech, bigquery
+import requests
+from bs4 import BeautifulSoup
+import discord
+from discord_slash import SlashContext, cog_ext
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
+
+from dictionary_api import DictionaryAPI
+from exceptions import InsufficientPermissionsException
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -76,20 +78,105 @@ async def send_maybe_hidden(context: Union[commands.Context, SlashContext], text
     return await context.send(text, **kwargs)
 
 
+def catch_exceptions(function):
+    """
+    This decorator will catch and log all exceptions thrown in the decorated function.
+    :param function:
+    :return:
+    """
+
+    def f(*args, **kwargs):
+        try:
+            function(*args, *kwargs)
+        except Exception as e:
+            logger.exception(f'Exception: {e}')
+
+    return f
+
+
+def run_on_another_thread(function):
+    """
+    This decorator will run the decorated function in another thread, starting it immediately.
+    :param function:
+    :return:
+    """
+
+    def f(*args, **kargs):
+        threading.Thread(target=function, args=[*args, *kargs]).start()
+
+    return f
+
+
+@run_on_another_thread
+@catch_exceptions
+def send_analytics(word, reverse, text_to_speech, language, text_channel) -> None:
+    # Ignore dev server
+    #if isinstance(text_channel, discord.TextChannel) and text_channel.guild.id in [454852632528420876, 799455809297842177]:
+    #    logger.info(f'Ignoring analytics submission for development server.')
+    #    return
+
+    client = bigquery.Client()
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
+            bigquery.SchemaField("text_to_speech", "BOOLEAN", mode="REQUIRED"),
+            bigquery.SchemaField("language", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("guild_id", "INTEGER"),
+            bigquery.SchemaField("channel_id", "INTEGER"),
+            bigquery.SchemaField("time", "TIMESTAMP"),
+        ],
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        autodetect=True
+    )
+
+    data = {
+        'word': word,
+        'reverse': reverse,
+        'text_to_speech': text_to_speech,
+        'language': language,
+        'guild_id': None,
+        'channel_id': None,
+        'time': datetime.datetime.now().isoformat()
+    }
+
+    if isinstance(text_channel, discord.TextChannel):
+        data['guild_id'] = text_channel.guild.id
+        data['channel_id'] = text_channel.id
+    elif isinstance(text_channel, discord.DMChannel):
+        data['channel_id'] = text_channel.id
+
+    data_as_file = io.StringIO(json.dumps(data))
+    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.definition_requests', job_config=job_config)
+
+    try:
+        job.result()  # Waits for the job to complete.
+    except Exception as e:
+        raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+
+
 class Dictionary(commands.Cog):
+
+    DEFINE_COMMAND_DESCRIPTION = 'Gets the definition of a word and optionally reads it out to you.'
+    STOP_COMMAND_DESCRIPTION = 'Makes the bot stop talking.'
+    LANGUAGES_COMMAND_DESCRIPTION = 'Shows a list of supported voices for text to speech.'
 
     def __init__(self, bot: commands.Bot, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path]):
         self._bot = bot
         self._dictionary_api = dictionary_api
         self._ffmpeg_path = ffmpeg_path
 
-        # Create and populate table of supported text-to-speech voices
+        # Create and populate a table of supported text-to-speech voices
         self._create_voices_table()
 
+        # Each guild will have a lock to ensure that we only join 1 voice channel at a time
         self._guild_locks = {}
+
+        # This dict keeps track of how many definition requests need the corresponding voice channel. This way we can leave the channel only when we have finished all requests
+        # for that channel.
         self._voice_channels = {}
 
-    @commands.command(name='define', aliases=['d'])
+    @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION)
     async def define(self, context: commands.Context, *args):
         async with context.typing():
             word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
@@ -97,7 +184,7 @@ class Dictionary(commands.Cog):
 
     @cog_ext.cog_slash(
         name='define',
-        description='Gets the definition of a word and optionally reads it out to you.',
+        description=DEFINE_COMMAND_DESCRIPTION,
         options=[
             {
                 'name': 'word',
@@ -117,18 +204,23 @@ class Dictionary(commands.Cog):
             }
         ]
     )
-    async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: str = 'English'):
-        await context.respond(False)
+    async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: Optional[str] = None):
+        # Get default language
+        if language is None:
+            preferences_cog = self._bot.get_cog('Preferences')
+            language = preferences_cog.scoped_property_manager.get('language', context.channel)
+
         await self._define_or_befine(context, word, False, text_to_speech, language)
 
     @commands.command(name='befine', aliases=['b'], hidden=True)
     async def befine(self, context: commands.Context, *args):
-        word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-        await self._define_or_befine(context, word, True, text_to_speech, language)
+        async with context.typing():
+            word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
+            await self._define_or_befine(context, word, True, text_to_speech, language)
 
     async def _parse_define_or_befine(self, context: commands.Context, *args) -> (str, bool, str):
         # Get default language
-        preferences_cog = self._bot.get_cog('preferences')
+        preferences_cog = self._bot.get_cog('Preferences')
         default_language = preferences_cog.scoped_property_manager.get('language', context.channel)
 
         # Parse arguments
@@ -166,7 +258,7 @@ class Dictionary(commands.Cog):
             return
 
         # Check for text-to-speech override
-        preferences_cog = self._bot.get_cog('preferences')
+        preferences_cog = self._bot.get_cog('Preferences')
         text_to_speech_property = preferences_cog.scoped_property_manager.get('text_to_speech', context.channel)
         if text_to_speech_property == 'force' and voice_channel is not None:
             text_to_speech = True
@@ -191,7 +283,11 @@ class Dictionary(commands.Cog):
             if context.guild not in self._guild_locks:
                 self._guild_locks[context.guild] = asyncio.Lock()
 
+        if isinstance(context, SlashContext):
+            await context.respond()
+
         logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
+        send_analytics(word, reverse, text_to_speech, language, context.channel)
 
         # Get definition
         definitions = await self._dictionary_api.define(word)
@@ -320,29 +416,37 @@ class Dictionary(commands.Cog):
 
         return result
 
-    @commands.command(name='stop', aliases=['s'])
+    @commands.command(name='stop', aliases=['s'], help=STOP_COMMAND_DESCRIPTION)
     async def stop(self, context: commands.Context):
-        # Make sure user is in the same voice channel as the bot
         for voice_client in self._bot.voice_clients:
             if voice_client == context.voice_client:
-                voice_client.stop()
-                await context.send('Okay, I\'ll be quiet.')
+                await self._stop(context, voice_client)
+                return
 
-    @cog_ext.cog_slash(name='stop')
+    @cog_ext.cog_slash(name='stop', description=STOP_COMMAND_DESCRIPTION)
     async def slash_stop(self, context: SlashContext):
         await context.respond(True)
-        await self._stop(context)
 
-    async def _stop(self, context: Union[commands.Context, SlashContext]):
-        pass
+        # Get voice channel of current user
+        voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
 
-    @commands.command(name='voices', aliases=['voice', 'v'], help='Shows the list of supported voices for text to speech.')
+        # Get voice client
+        for voice_client in self._bot.voice_clients:
+            if voice_client.channel == voice_channel:
+                await self._stop(context, voice_client)
+                return
+
+    async def _stop(self, context: Union[commands.Context, SlashContext], voice_client: discord.VoiceClient):
+        voice_client.stop()
+        await context.send('Okay, I\'ll be quiet.')
+
+    @commands.command(name='voices', aliases=['voice', 'v'], help=LANGUAGES_COMMAND_DESCRIPTION)
     async def voices(self, context: commands.Context):
         await self._voices(context)
 
-    @cog_ext.cog_slash(name='voices')
+    @cog_ext.cog_slash(name='voices', description=LANGUAGES_COMMAND_DESCRIPTION)
     async def slash_voices(self, context: SlashContext):
-        await context.respond(True)
+        await context.respond()
         await self._voices(context)
 
     async def _voices(self, context: Union[commands.Context, SlashContext]):

@@ -1,10 +1,13 @@
 import discord
+from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
 from properties import FirestorePropertyManager, Property
 from typing import Any, Union
 
 
-class Preferences(commands.Cog, name='preferences'):
+class Preferences(commands.Cog):
+
+    PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
 
     def __init__(self):
 
@@ -21,11 +24,43 @@ class Preferences(commands.Cog, name='preferences'):
     @commands.group(
         name='property',
         aliases=['p'],
-        help='Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
+        help=PROPERTY_COMMAND_DESCRIPTION
     )
     async def property(self, context):
         if context.invoked_subcommand is None:
             raise commands.errors.ArgumentParsingError()
+
+    # @cog_ext.cog_slash(
+    #     name='property',
+    #     options=[
+    #         {
+    #             'name': 'list',
+    #             'description': 'List guild properties.',
+    #             'type': 1
+    #         },
+    #         {
+    #             'name': 'set',
+    #             'description': 'Set guild properties.',
+    #             'type': 1,
+    #             'options': [
+    #                 {
+    #                     'name': 'name',
+    #                     'description': 'Property name.',
+    #                     'type': 3,
+    #                     'required': True
+    #                 },
+    #                 {
+    #                     'name': 'value',
+    #                     'description': 'Property value.',
+    #                     'type': 3,
+    #                     'required': True
+    #                 }
+    #             ]
+    #         }
+    #     ]
+    # )
+    # async def slash_property(self, context: SlashContext):
+    #     await context.respond(False)
 
     @property.command(name='set')
     async def set(self, context, scope_name: str, key: str, value: str):

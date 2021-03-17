@@ -1,12 +1,8 @@
 import argparse
 import os
 import logging.config
-import sys
-import threading
-
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
-
 from discord_bot_client import DiscordBotClient
 from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI, BackupDictionaryAPI
 
@@ -23,40 +19,6 @@ def logging_filter(record):
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S')
 #logging.getLogger().handlers[0].addFilter(logging_filter)
-
-
-def install_thread_excepthook():
-    """
-    Workaround for bug (https://bugs.python.org/issue1230540).
-    Install thread excepthook.
-    By default, all exceptions raised in thread run() method are caught internally
-    by the threading module (see _bootstrap_inner method). Current implementation
-    simply dumps the traceback to stderr and did not exit the process.
-    This change explicitly catches exceptions and invokes sys.excepthook handler.
-    """
-    _init = threading.Thread.__init__
-
-    def init(self, *args, **kwargs):
-        _init(self, *args, **kwargs)
-        _run = self.run
-
-        def run(*args, **kwargs):
-            try:
-                _run(*args, **kwargs)
-            except:
-                sys.excepthook(*sys.exc_info())
-
-        self.run = run
-
-    threading.Thread.__init__ = init
-
-
-def on_uncaught_exception(etype, value, trace):
-    logging.getLogger().critical(f'Uncaught Exception!', exc_info=(etype, value, trace))
-
-
-install_thread_excepthook()
-sys.excepthook = on_uncaught_exception
 
 
 def try_read_token(token_or_path: str) -> str:
