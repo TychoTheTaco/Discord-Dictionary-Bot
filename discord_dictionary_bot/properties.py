@@ -91,7 +91,12 @@ class FirestorePropertyManager(ScopedPropertyManager):
         super().__init__(properties)
         self._firestore_client = firestore.Client()
 
-    # TODO: Cache values if they are unchanged to limit firestore reads?
+        # Maintain a cache so that we don't need to make too many requests to Firestore.
+        self._cache = {}
+
+        # This dictionary keeps track of which scope's are dirty and need to be fetched from Firestore next time
+        self._dirty = {}
+
     def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
         if isinstance(scope, (discord.Guild, discord.DMChannel)):
             d = self.get_all(scope)
@@ -125,22 +130,37 @@ class FirestorePropertyManager(ScopedPropertyManager):
         logger.info(f'Set property "{key}" to "{value}" for scope "{scope}"')
         self._get_snapshot(scope).reference.set(
             dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
+        self._dirty[scope] = True
 
     def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
         dictionary = self.get_all(scope)
         if key in dictionary:
             del dictionary[key]
             self._get_snapshot(scope).reference.set(dictionary)
+            self._dirty[scope] = True
 
     def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
         """
-                Get a dictionary of properties associated with the given scope. If the scope has no properties, an empty dictionary will be returned.
-                :param scope: Either a 'discord.Guild' or a 'discord.TextChannel'.
-                :return: A dictionary containing the properties of the scope.
-                """
+        Get a dictionary of properties associated with the given scope. If the scope has no properties, an empty dictionary will be returned.
+        :param scope: Either a 'discord.Guild' or a 'discord.TextChannel'.
+        :return: A dictionary containing the properties of the scope.
+        """
+        # Check the cache
+        if scope in self._cache and not self._dirty[scope]:
+            return self._cache[scope]
+
+        # The data was either not in the cache, or was in the cache but it's dirty so we need to fetch it again
         snapshot = self._get_snapshot(scope)
         if snapshot.exists:
-            return snapshot.to_dict()
+            results = snapshot.to_dict()
+
+            # Add to cache
+            self._cache[scope] = results
+            self._dirty[scope] = False
+
+            return results
+
+        # The document did not exist
         return {}
 
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
@@ -173,39 +193,3 @@ class FirestorePropertyManager(ScopedPropertyManager):
             return snapshot
         else:
             logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
-
-
-# class Properties:
-#
-#     PROPERTIES = [
-#         Property('prefix', default='.'),
-#         Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
-#         Property('language', default='en-us-wavenet-c')
-#     ]
-#
-#     def __init__(self):
-#         """
-#         Properties:
-#             prefix:
-#                 command prefix.
-#             textToSpeech:
-#                 force: Force text to speech enabled even without the flag set on individual commands
-#                 flag: Only use text to speech when the flag is set on individual commands.
-#                 disable: Disable all text-to-speech even if the flag is enabled on individual commands.
-#             language:
-#                 sets the default language to be used for text-to-speech when no language flag is given.
-#         """
-#         self._firestore_client = firestore.Client()
-#
-#     def get_channel_property(self, channel: discord.TextChannel, key: str) -> Union[str, None]:
-#         """
-#         Get a channel-specific property. This will return 'None' if the property does not exist.
-#         :param channel:
-#         :param key:
-#         :return:
-#         """
-#         dictionary = self._get_dict(channel)
-#         if key in dictionary:
-#             return dictionary[key]
-#         return None
-#
