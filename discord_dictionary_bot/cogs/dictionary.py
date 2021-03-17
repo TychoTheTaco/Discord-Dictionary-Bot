@@ -171,7 +171,7 @@ class Dictionary(commands.Cog):
         # for that channel.
         self._voice_channels = {}
 
-    @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION)
+    @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION, usage='[-v] [-lang <language>] <word>')
     async def define(self, context: commands.Context, *args):
         async with context.typing():
             word, text_to_speech, language = await self._parse_define_or_befine(context, *args)

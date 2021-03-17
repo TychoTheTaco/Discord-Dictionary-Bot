@@ -31,7 +31,6 @@ class Preferences(commands.Cog):
     }
 
     def __init__(self):
-
         self._scoped_property_manager = FirestorePropertyManager([
             Property('prefix', default='.'),
             Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
@@ -45,7 +44,8 @@ class Preferences(commands.Cog):
     @commands.group(
         name='property',
         aliases=['p'],
-        help=PROPERTY_COMMAND_DESCRIPTION
+        help=PROPERTY_COMMAND_DESCRIPTION,
+        usage='(list <scope> | set <key> <value> | remove <scope> <key>)'
     )
     async def property(self, context):
         if context.invoked_subcommand is None:

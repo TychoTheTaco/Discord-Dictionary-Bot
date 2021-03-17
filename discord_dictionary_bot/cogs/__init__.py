@@ -1,3 +1,4 @@
+from .help import Help
 from .dictionary import Dictionary
-from .misc import Miscellaneous
+from .statistics import Statistics
 from .preferences import Preferences

@@ -9,7 +9,7 @@ from analytics import log_command
 logger = logging.getLogger(__name__)
 
 
-class Miscellaneous(commands.Cog):
+class Statistics(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self._bot = bot

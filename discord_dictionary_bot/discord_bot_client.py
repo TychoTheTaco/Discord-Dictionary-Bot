@@ -5,7 +5,7 @@ from typing import Union
 from discord import Message
 from discord.ext.commands.bot import Bot
 
-from cogs import dictionary, preferences, misc
+from cogs import Help, Preferences, Dictionary, Statistics
 from dictionary_api import DictionaryAPI
 from discord.ext import commands
 from discord_slash import SlashCommand
@@ -14,14 +14,20 @@ from discord_slash import SlashCommand
 logger = logging.getLogger(__name__)
 
 
+def get_prefix(bot: Bot, message: Message):
+    preferences_cog = bot.get_cog('Preferences')
+    return preferences_cog.scoped_property_manager.get('prefix', message.channel)
+
+
 class DiscordBotClient(Bot):
 
     def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
-        super().__init__(DiscordBotClient.gp, **kwargs)
+        super().__init__(get_prefix, help_command=None, **kwargs)
         slash = SlashCommand(self, sync_commands=True)
-        self.add_cog(dictionary.Dictionary(self, dictionary_api, ffmpeg_path))
-        self.add_cog(preferences.Preferences())
-        self.add_cog(misc.Miscellaneous(self))
+        self.add_cog(Help())
+        self.add_cog(Dictionary(self, dictionary_api, ffmpeg_path))
+        self.add_cog(Preferences())
+        self.add_cog(Statistics(self))
 
     async def on_command_error(self, context: commands.Context, exception):
         if isinstance(exception, commands.errors.MissingRequiredArgument):
@@ -32,17 +38,5 @@ class DiscordBotClient(Bot):
             logger.error('Error on command!', exc_info=exception)
             await super().on_command_error(context, exception)
 
-    @staticmethod
-    def gp(bot: Bot, message: Message) -> str:
-        """
-        Get this bot's summon prefix for the specified text channel. It will usually be the same for all channels in a server but may vary between servers.
-        :param channel: The text channel.
-        :return: The summon prefix.
-        """
-        #return self._properties.get(channel, 'prefix')
-        return '.'
-
-
-
-    #async def on_ready(self):
-    #    logger.info(f'Logged on as {self.user}!')
+    async def on_ready(self):
+        logger.info(f'Logged on as {self.user}!')
