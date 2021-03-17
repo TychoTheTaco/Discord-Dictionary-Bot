@@ -3,8 +3,8 @@ import os
 import logging.config
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
-from discord_bot_client import DiscordBotClient
-from discord_dictionary_bot.dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI, BackupDictionaryAPI
+from .discord_bot_client import DiscordBotClient
+from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterAPI, RapidWordsAPI, BackupDictionaryAPI
 
 
 def logging_filter(record):

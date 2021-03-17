@@ -6,10 +6,10 @@ from discord import Message
 from discord.ext.commands.bot import Bot
 
 from cogs import Help, Preferences, Dictionary, Statistics
-from dictionary_api import DictionaryAPI
+from .dictionary_api import DictionaryAPI
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext
-from analytics import log_command
+from .analytics import log_command
 
 # Set up logging
 logger = logging.getLogger(__name__)
