@@ -20,9 +20,9 @@ import discord
 from discord_slash import SlashContext, cog_ext
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 
-from dictionary_api import DictionaryAPI
-from exceptions import InsufficientPermissionsException
-from utils import send_maybe_hidden
+from ..dictionary_api import DictionaryAPI
+from ..exceptions import InsufficientPermissionsException
+from ..utils import send_maybe_hidden
 
 # Set up logging
 logger = logging.getLogger(__name__)

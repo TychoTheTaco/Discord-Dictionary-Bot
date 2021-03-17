@@ -1,7 +1,7 @@
 from discord.ext import commands
 import logging
 
-from utils import send_maybe_hidden
+from ..utils import send_maybe_hidden
 
 # Set up logging
 logger = logging.getLogger(__name__)

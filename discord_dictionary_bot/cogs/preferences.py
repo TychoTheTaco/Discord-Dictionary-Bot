@@ -1,9 +1,9 @@
 import discord
 from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
-from properties import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError
+from ..properties import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError
 from typing import Any, Union, Optional
-from utils import send_maybe_hidden
+from ..utils import send_maybe_hidden
 
 
 class Preferences(commands.Cog):
