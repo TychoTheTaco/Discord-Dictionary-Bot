@@ -159,7 +159,7 @@ def send_analytics(definition_request: DefinitionRequest) -> None:
         data['channel_id'] = definition_request.text_channel.id
 
     data_as_file = io.StringIO(json.dumps(data))
-    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.definition_requests.definition_requests', job_config=job_config)
+    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.definition_requests', job_config=job_config)
 
     try:
         job.result()  # Waits for the job to complete.
