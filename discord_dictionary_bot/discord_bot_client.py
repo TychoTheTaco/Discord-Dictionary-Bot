@@ -39,6 +39,8 @@ class DiscordBotClient(Bot):
             log_command(context.command, True, context)
 
     async def on_command_error(self, context: commands.Context, exception):
+        if isinstance(exception, commands.errors.CommandNotFound):
+            pass  # Ignore command not found
         if isinstance(exception, commands.errors.MissingRequiredArgument):
             await context.send('Invalid command usage!')
         elif isinstance(exception, commands.errors.ArgumentParsingError):

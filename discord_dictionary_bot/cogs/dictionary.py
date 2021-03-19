@@ -1,6 +1,5 @@
 import argparse
 import io
-import subprocess
 import asyncio
 import logging
 import contextlib
@@ -8,12 +7,9 @@ import sqlite3 as sql
 import re
 from typing import Union, Optional
 from pathlib import Path
-import threading
-import datetime
-import json
 
 from discord.ext import commands
-from google.cloud import texttospeech, bigquery
+from google.cloud import texttospeech
 import requests
 from bs4 import BeautifulSoup
 import discord
@@ -23,27 +19,30 @@ from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import
 from ..dictionary_api import DictionaryAPI
 from ..exceptions import InsufficientPermissionsException
 from ..utils import send_maybe_hidden
+from ..analytics import log_definition_request
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-def convert(source: bytes, ffmpeg_path='ffmpeg'):
+async def convert(source: bytes, ffmpeg_path='ffmpeg'):
     # Start ffmpeg process
-    process = subprocess.Popen(
-        [ffmpeg_path, '-i', 'pipe:0', '-ac', '2', '-f', 's16le', 'pipe:1', '-loglevel', 'panic'],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE
+    process = await asyncio.create_subprocess_shell(
+        f'"{ffmpeg_path}" -i pipe:0 -ac 2 -f s16le pipe:1 -loglevel panic',
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
     )
 
     # Pipe input and wait for output
-    output = process.communicate(source)
+    output = await process.communicate(source)
 
     return output[0]
 
 
 def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL) -> bytes:
-    # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified because the default of 4MB is not enough for some definitions.
+    # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified because the default of 4MB is not
+    # enough for some definitions.
     channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
     transport = TextToSpeechGrpcTransport(channel=channel)
     client = texttospeech.TextToSpeechClient(transport=transport)
@@ -73,85 +72,7 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
     return response.audio_content
 
 
-def catch_exceptions(function):
-    """
-    This decorator will catch and log all exceptions thrown in the decorated function.
-    :param function:
-    :return:
-    """
-
-    def f(*args, **kwargs):
-        try:
-            function(*args, *kwargs)
-        except Exception as e:
-            logger.exception(f'Exception: {e}')
-
-    return f
-
-
-def run_on_another_thread(function):
-    """
-    This decorator will run the decorated function in another thread, starting it immediately.
-    :param function:
-    :return:
-    """
-
-    def f(*args, **kargs):
-        threading.Thread(target=function, args=[*args, *kargs]).start()
-
-    return f
-
-
-@run_on_another_thread
-@catch_exceptions
-def send_analytics(word, reverse, text_to_speech, language, text_channel) -> None:
-    # Ignore dev server
-    if isinstance(text_channel, discord.TextChannel) and text_channel.guild.id in [454852632528420876, 799455809297842177]:
-       logger.info(f'Ignoring analytics submission for development server.')
-       return
-
-    client = bigquery.Client()
-    job_config = bigquery.LoadJobConfig(
-        schema=[
-            bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("text_to_speech", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("language", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("guild_id", "INTEGER"),
-            bigquery.SchemaField("channel_id", "INTEGER"),
-            bigquery.SchemaField("time", "TIMESTAMP"),
-        ],
-        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-        autodetect=True
-    )
-
-    data = {
-        'word': word,
-        'reverse': reverse,
-        'text_to_speech': text_to_speech,
-        'language': language,
-        'guild_id': None,
-        'channel_id': None,
-        'time': datetime.datetime.now().isoformat()
-    }
-
-    if isinstance(text_channel, discord.TextChannel):
-        data['guild_id'] = text_channel.guild.id
-        data['channel_id'] = text_channel.id
-    elif isinstance(text_channel, discord.DMChannel):
-        data['channel_id'] = text_channel.id
-
-    data_as_file = io.StringIO(json.dumps(data))
-    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.definition_requests', job_config=job_config)
-
-    try:
-        job.result()  # Waits for the job to complete.
-    except Exception as e:
-        raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
-
-
 class Dictionary(commands.Cog):
-
     DEFINE_COMMAND_DESCRIPTION = 'Gets the definition of a word and optionally reads it out to you.'
     STOP_COMMAND_DESCRIPTION = 'Makes the bot stop talking.'
     LANGUAGES_COMMAND_DESCRIPTION = 'Shows a list of supported voices for text to speech.'
@@ -159,7 +80,7 @@ class Dictionary(commands.Cog):
     def __init__(self, bot: commands.Bot, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path]):
         self._bot = bot
         self._dictionary_api = dictionary_api
-        self._ffmpeg_path = ffmpeg_path
+        self._ffmpeg_path = Path(ffmpeg_path)
 
         # Create and populate a table of supported text-to-speech voices
         self._create_voices_table()
@@ -282,7 +203,6 @@ class Dictionary(commands.Cog):
             await context.respond()
 
         logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
-        send_analytics(word, reverse, text_to_speech, language, context.channel)
 
         # Get definition
         definitions = await self._dictionary_api.define(word)
@@ -295,6 +215,9 @@ class Dictionary(commands.Cog):
                 await context.send(reply)
             return
 
+        # Record analytics only for valid words
+        log_definition_request(word, reverse, text_to_speech, language, context)
+
         # Prepare response text and text-to-speech input
         reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse)
 
@@ -306,7 +229,7 @@ class Dictionary(commands.Cog):
     async def _say(self, text: str, context: Union[commands.Context, SlashContext], voice_channel, language, text_to_speech_input=None):
 
         # Get text-to-speech data
-        text_to_speech_bytes = self._get_text_to_speech(text_to_speech_input, language=language)
+        text_to_speech_bytes = await self._get_text_to_speech(text_to_speech_input, language=language)
 
         # Check if we got valid text-to-speech data
         if text_to_speech_bytes.getbuffer().nbytes <= 0:
@@ -354,6 +277,11 @@ class Dictionary(commands.Cog):
 
     @staticmethod
     def _is_valid_word(word) -> bool:
+
+        # Arbitrary maximum word size to hopefully prevent the bot from generating responses that are above Discord's message limit of 2000.
+        if len(word) > 100:
+            return False
+
         pattern = re.compile(r'^[a-zA-Z-\' ]+$')
         return pattern.search(word) is not None
 
@@ -395,7 +323,7 @@ class Dictionary(commands.Cog):
 
         return reply, tts_input
 
-    def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
+    async def _get_text_to_speech(self, tts_input: str, language: str) -> io.BytesIO:
         result = io.BytesIO()
 
         try:
@@ -405,7 +333,7 @@ class Dictionary(commands.Cog):
             return result
 
         # Convert to proper format
-        text_to_speech_bytes = convert(text_to_speech_bytes, ffmpeg_path=self._ffmpeg_path)
+        text_to_speech_bytes = await convert(text_to_speech_bytes, ffmpeg_path=self._ffmpeg_path)
         result.write(text_to_speech_bytes)
         result.seek(0)
 
