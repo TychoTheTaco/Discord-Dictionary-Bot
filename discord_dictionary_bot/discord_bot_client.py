@@ -24,7 +24,7 @@ class DiscordBotClient(Bot):
 
     def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
         super().__init__(get_prefix, help_command=None, **kwargs)
-        slash = SlashCommand(self, sync_commands=True)
+        slash = SlashCommand(self, sync_commands=True)  # This needs to be here for slash commands to work!
         self.add_cog(Help())
         self.add_cog(Dictionary(self, dictionary_api, ffmpeg_path))
         self.add_cog(Preferences())
@@ -41,7 +41,7 @@ class DiscordBotClient(Bot):
     async def on_command_error(self, context: commands.Context, exception):
         if isinstance(exception, commands.errors.CommandNotFound):
             pass  # Ignore command not found
-        if isinstance(exception, commands.errors.MissingRequiredArgument):
+        elif isinstance(exception, commands.errors.MissingRequiredArgument):
             await context.send('Invalid command usage!')
         elif isinstance(exception, commands.errors.ArgumentParsingError):
             await context.send('Invalid arguments!')
