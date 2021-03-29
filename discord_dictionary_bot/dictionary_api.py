@@ -28,6 +28,21 @@ class DictionaryAPI(ABC):
         return f'[{type(self).__name__}]'
 
 
+def handle_default_status(api, word, response):
+    if response.status == 401:
+        logger.error(f'{api} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
+        return False
+    elif response.status == 404:
+        logger.info(f'{api} Could not find a definition for "{word}"')
+        return False
+
+    if response.status != 200:
+        logger.error(f'{api} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+        return False
+
+    return True
+
+
 class OwlBotDictionaryAPI(DictionaryAPI):
 
     def __init__(self, token: str):
@@ -38,12 +53,7 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         headers = {'Authorization': f'Token {self._token}'}
         async with self._aio_client_session.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
-            if response.status == 401:
-                logger.error(f'{self} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
-                return []
-
-            if response.status != 200:
-                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+            if not handle_default_status(self, word, response):
                 return []
 
             logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
@@ -68,12 +78,7 @@ class UnofficialGoogleAPI(DictionaryAPI):
     async def define(self, word: str) -> {}:
         async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
-            if response.status != 404:
-                logger.info(f'{self} Could not find a definition for "{word}"')
-                return []
-
-            if response.status != 200:
-                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+            if not handle_default_status(self, word, response):
                 return []
 
             logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
