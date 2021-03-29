@@ -32,10 +32,12 @@ class DiscordBotClient(Bot):
 
         @self.before_invoke
         async def before_command_invoked(context: commands.Context):
+            logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "{context.message.content}"')
             log_command(context.command.name, False, context)
 
         @self.event
         async def on_slash_command(context: SlashContext):
+            logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}"')
             log_command(context.command, True, context)
 
     async def on_command_error(self, context: commands.Context, exception):

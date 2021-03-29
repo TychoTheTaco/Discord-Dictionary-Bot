@@ -92,22 +92,22 @@ class Preferences(commands.Cog):
         scope = self._get_scope_from_name(scope_name, context)
         if scope is None:
             if isinstance(context, SlashContext):
-                await context.respond(True)
+                await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.')
             return
 
         try:
             self._scoped_property_manager.set(key, value, scope)
             if isinstance(context, SlashContext):
-                await context.respond(False)
+                await context.defer()
             await context.send(f'Successfully set `{key}` to `{value}` in `{scope_name}`.')
         except InvalidKeyError as e:
             if isinstance(context, SlashContext):
-                await context.respond(True)
+                await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid key `{e.key}`')
         except InvalidValueError as e:
             if isinstance(context, SlashContext):
-                await context.respond(True)
+                await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid value `{e.value}` for key `{e.key}`.')
 
     @property.command(name='list')
@@ -141,7 +141,7 @@ class Preferences(commands.Cog):
         ]
     )
     async def slash_list(self, context: SlashContext, scope_name: Optional[str] = 'all'):
-        await context.respond(True)
+        await context.defer(hidden=True)
         await self._list(context, scope_name)
 
     async def _list(self, context: Union[commands.Context, SlashContext], scope_name: str = 'all'):
@@ -186,19 +186,19 @@ class Preferences(commands.Cog):
         scope = self._get_scope_from_name(scope_name, context)
         if scope is None:
             if isinstance(context, SlashContext):
-                await context.respond(True)
+                await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.')
             return
         elif scope_name == 'guild':
             if isinstance(context, SlashContext):
-                await context.respond(True)
+                await context.defer(hidden=True)
             await send_maybe_hidden(context, 'Guild properties cannot be removed!')
             return
 
         self._scoped_property_manager.remove(key, scope)
 
         if isinstance(context, SlashContext):
-            await context.respond(False)
+            await context.defer()
         await context.send(f'Successfully removed `{key}` from `{scope_name}`.')
 
     @staticmethod

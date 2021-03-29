@@ -200,7 +200,7 @@ class Dictionary(commands.Cog):
                 self._guild_locks[context.guild] = asyncio.Lock()
 
         if isinstance(context, SlashContext):
-            await context.respond()
+            await context.defer()
 
         logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
 
@@ -348,7 +348,7 @@ class Dictionary(commands.Cog):
 
     @cog_ext.cog_slash(name='stop', description=STOP_COMMAND_DESCRIPTION)
     async def slash_stop(self, context: SlashContext):
-        await context.respond(True)
+        await context.defer()
 
         # Get voice channel of current user
         voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
@@ -369,7 +369,7 @@ class Dictionary(commands.Cog):
 
     @cog_ext.cog_slash(name='voices', description=LANGUAGES_COMMAND_DESCRIPTION)
     async def slash_voices(self, context: SlashContext):
-        await context.respond()
+        await context.defer()
         await self._voices(context)
 
     async def _voices(self, context: Union[commands.Context, SlashContext]):

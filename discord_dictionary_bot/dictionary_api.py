@@ -46,6 +46,8 @@ class OwlBotDictionaryAPI(DictionaryAPI):
                 logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
                 return []
 
+            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+
             response_json = await response.json()
 
             result = []
@@ -65,6 +67,10 @@ class UnofficialGoogleAPI(DictionaryAPI):
 
     async def define(self, word: str) -> {}:
         async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
+
+            if response.status != 404:
+                logger.info(f'{self} Could not find a definition for "{word}"')
+                return []
 
             if response.status != 200:
                 logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
@@ -260,14 +266,11 @@ class BackupDictionaryAPI(DictionaryAPI):
     async def define(self, word: str) -> {}:
         for api in self._apis:
             try:
-                start_time = time.time()
                 definitions = await asyncio.wait_for(api.define(word), 2)
-                logger.debug(f'{api} responded in {time.time() - start_time:.03f} seconds')
                 if len(definitions) > 0:
                     return definitions
             except aiohttp.ClientError as e:
                 logger.error(f'Client error for API "{api}"', exc_info=e)
-            except asyncio.TimeoutError as e:
+            except asyncio.TimeoutError:
                 logger.warning(f'{api} Took too long to respond!')
-            logger.info(f'{api} did not return any definitions for {word}.')
         return []
