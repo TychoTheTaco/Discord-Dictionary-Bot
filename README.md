@@ -27,11 +27,6 @@ Usage: `languages [-v]`<br>
 `-v`: Verbose mode. Prints out all the languages in chat instead of posting a link.<br>
 Aliases: `l`, `lang`<br>
 
-**next**<br>
-If the bot is currently reading out a definition, this will make it skip to the next one.<br>
-Usage: `next`<br>
-Aliases: `n`<br>
-
 **property**<br>
 Set or remove channel or server properties.<br>
 Usage: `property <scope> (list | set <key> <value> | del <key>)`<br>
