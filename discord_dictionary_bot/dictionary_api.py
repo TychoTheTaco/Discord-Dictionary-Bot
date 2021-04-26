@@ -4,7 +4,6 @@ import aiohttp
 import logging
 import re
 from datetime import datetime, timedelta
-import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -28,7 +27,7 @@ class DictionaryAPI(ABC):
         return f'[{type(self).__name__}]'
 
 
-def handle_default_status(api, word, response):
+async def handle_default_status(api, word, response):
     if response.status == 401:
         logger.error(f'{api} Permission denied! You are probably using an invalid API key. {{Status code: {response.status}, Word: "{word}"}}')
         return False
@@ -37,7 +36,7 @@ def handle_default_status(api, word, response):
         return False
 
     if response.status != 200:
-        logger.error(f'{api} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+        logger.error(f'{api} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{await response.text()}"}}')
         return False
 
     return True
@@ -53,7 +52,7 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         headers = {'Authorization': f'Token {self._token}'}
         async with self._aio_client_session.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
-            if not handle_default_status(self, word, response):
+            if not await handle_default_status(self, word, response):
                 return []
 
             logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
@@ -78,7 +77,7 @@ class UnofficialGoogleAPI(DictionaryAPI):
     async def define(self, word: str) -> {}:
         async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
-            if not handle_default_status(self, word, response):
+            if not await handle_default_status(self, word, response):
                 return []
 
             logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
@@ -236,11 +235,10 @@ class RapidWordsAPI(DictionaryAPI):
         }
         async with self._aio_client_session.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
 
-            if response.status == 200:
-                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
-            else:
-                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
+            if not await handle_default_status(self, word, response):
                 return []
+
+            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
             results = []
 
@@ -274,8 +272,9 @@ class BackupDictionaryAPI(DictionaryAPI):
                 definitions = await asyncio.wait_for(api.define(word), 2)
                 if len(definitions) > 0:
                     return definitions
+                logger.warning(f'{api} did not return any definitions!')
             except aiohttp.ClientError as e:
                 logger.error(f'Client error for API "{api}"', exc_info=e)
-            except asyncio.TimeoutError:
-                logger.warning(f'{api} Took too long to respond!')
+            except asyncio.TimeoutError as e:
+                logger.warning(f'{api} Took too long to respond!', exc_info=e)
         return []

@@ -54,11 +54,13 @@ def main():
                         help='Path to Google application credentials JSON file.',
                         dest='google_credentials_path',
                         default='google_credentials.json')
+    dictionary_api_options = ('google', 'owlbot', 'webster', 'rapid-words')
     parser.add_argument('--dictionary-api',
-                        help='A list of dictionary API\'s to use for fetching definitions. These should be in order of priority and separated by comma\'s. Available API\'s are'
-                             '\'google\', \'owlbot\', \'webster\', and \'rapid-words\'. Some API\'s require tokens that must be provided with the appropriate arguments.',
+                        help='A list of dictionary API\'s to use for fetching definitions. These should be in order of priority and separated by comma\'s. Available API\'s are '
+                             + ', '.join(['\'' + x + '\'' for x in dictionary_api_options])
+                             + '. Some API\'s require tokens that must be provided with the appropriate arguments.',
                         dest='dictionary_api',
-                        default='google')
+                        default=dictionary_api_options[0])
     parser.add_argument('--owlbot-api-token',
                         help='The token to use for the Owlbot dictionary API. You can use either the raw token string or a path to a text file containing the token.',
                         dest='owlbot_api_token',

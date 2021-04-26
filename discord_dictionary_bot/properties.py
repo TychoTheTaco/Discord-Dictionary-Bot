@@ -94,7 +94,7 @@ class FirestorePropertyManager(ScopedPropertyManager):
         # Maintain a cache so that we don't need to make too many requests to Firestore.
         self._cache = {}
 
-        # This dictionary keeps track of which scope's are dirty and need to be fetched from Firestore next time
+        # This dictionary keeps track of which scopes are dirty and need to be fetched from Firestore next time
         self._dirty = {}
 
     def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
