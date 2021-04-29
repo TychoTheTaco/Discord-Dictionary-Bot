@@ -60,7 +60,7 @@ To install, simply run `pip install .` in the project's root directory. You can 
 ### Dictionary API's
 This bot supports the following dictionary API's.
 
-| Name      | Description |
+| Name | Description |
 | --- | --- |
 |`google`|[Unofficial Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI)|
 |`owlbot`| [Owlbot](https://owlbot.info/)|
@@ -69,16 +69,16 @@ This bot supports the following dictionary API's.
 |`rapid-words`| [RapidAPI WordsAPI](https://www.wordsapi.com/)|
 
 ### Program Arguments
-|Argument            | Description |
+|Argument| Description |
 | --- | --- |
-|`--discord-token <token>`|Your discord bot token.|
-|`--google-credentials-path <path>`| Path to the Google application credentials file.|
-|`--ffmpeg-path <token>`| Path to the FFmpeg executable.|
-|`--dictionary-api <apis>`| Determines which dictionary API's to use. Multiple API's can be specified by separating each API name with a comma. The bot will use them in the order provided. This is useful for when the preferred API fails.|
-|`--owlbot-api-token <token>`| Your Owlbot API token. Only required if using the `owlbot` API.|
-|`--webster-collegiate-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster-collegiate` API.|
-|`--webster-medical-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster-medical` API.|
-|`--rapid-words-api-token <token>`| Your RapidAPI WordsAPI token. Only required if using the `rapid-words` API.|
+|<code>&#8209;&#8209;discord&#8209;token&nbsp;\<token\></code>|Your discord bot token.|
+|<code>&#8209;&#8209;google&#8209;credentials&#8209;path&nbsp;\<path\></code>| Path to the Google application credentials file.|
+|<code>&#8209;&#8209;ffmpeg&#8209;path&nbsp;\<token\></code>| Path to the FFmpeg executable.|
+|<code>&#8209;&#8209;dictionary&#8209;api&nbsp;\<apis\></code>| Determines which dictionary API's to use. Multiple API's can be specified by separating each API name with a comma. The bot will use them in the order provided. This is useful for when the preferred API fails.|
+|<code>&#8209;&#8209;owlbot&#8209;api&#8209;token&nbsp;\<token\></code>| Your Owlbot API token. Only required if using the `owlbot` API.|
+|<code>&#8209;&#8209;webster&#8209;collegiate&#8209;api&#8209;token&nbsp;\<token\></code>| Your Merriam Webster API token. Only required if using the `webster-collegiate` API.|
+|<code>&#8209;&#8209;webster&#8209;medical&#8209;api&#8209;token&nbsp;\<token\></code>| Your Merriam Webster API token. Only required if using the `webster-medical` API.|
+|<code>&#8209;&#8209;rapid&#8209;words&#8209;api&#8209;token&nbsp;\<token\></code>| Your RapidAPI WordsAPI token. Only required if using the `rapid-words` API.|
 
 ## Credits
 #### Dictionary icon
