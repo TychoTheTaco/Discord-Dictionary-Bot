@@ -136,12 +136,21 @@ class MerriamWebsterAPI(DictionaryAPI, ABC):
         self._request_limiter = RequestLimiter(1000, timedelta(days=1))
 
     def _get_short_definitions(self, response_json) -> []:
-        response_json = response_json[0]
+
+        # The response returns a list for some reason, the first item is supposed
+        # to have the definition.
+        response_definition = response_json[0]
+
+        # Sometimes it doesn't return the definition
+        if isinstance(response_definition, str):
+            logger.error(f'{self} Bad response format: {response_json}')
+            return []
+
         results = []
 
-        word_type = response_json['fl']
+        word_type = response_definition['fl']
 
-        for definition in response_json['shortdef']:
+        for definition in response_definition['shortdef']:
             results.append({
                 'word_type': word_type,
                 'definition': definition
