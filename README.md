@@ -21,11 +21,10 @@ Shows available commands.<br>
 Usage: `help`<br>
 Aliases: `h`<br>
 
-**languages**<br>
-Shows the list of supported languages for text to speech.<br>
-Usage: `languages [-v]`<br>
-`-v`: Verbose mode. Prints out all the languages in chat instead of posting a link.<br>
-Aliases: `l`, `lang`<br>
+**voices**<br>
+Shows the list of supported voices for text to speech.<br>
+Usage: `voices`<br>
+Aliases: `v`<br>
 
 **property**<br>
 Set or remove channel or server properties.<br>
@@ -65,7 +64,8 @@ This bot supports the following dictionary API's.
 | --- | --- |
 |`google`|[Unofficial Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI)|
 |`owlbot`| [Owlbot](https://owlbot.info/)|
-|`webster`| [Merriam Webster](https://dictionaryapi.com/)|
+|`webster-collegiate`| [Merriam Webster Collegiate](https://dictionaryapi.com/products/api-collegiate-dictionary)|
+|`webster-medical`| [Merriam Webster Medical](https://dictionaryapi.com/products/api-medical-dictionary)|
 |`rapid-words`| [RapidAPI WordsAPI](https://www.wordsapi.com/)|
 
 ### Program Arguments
@@ -76,7 +76,8 @@ This bot supports the following dictionary API's.
 |`--ffmpeg-path <token>`| Path to the FFmpeg executable.|
 |`--dictionary-api <apis>`| Determines which dictionary API's to use. Multiple API's can be specified by separating each API name with a comma. The bot will use them in the order provided. This is useful for when the preferred API fails.|
 |`--owlbot-api-token <token>`| Your Owlbot API token. Only required if using the `owlbot` API.|
-|`--webster-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster` API.|
+|`--webster-collegiate-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster-collegiate` API.|
+|`--webster-medical-api-token <token>`| Your Merriam Webster API token. Only required if using the `webster-medical` API.|
 |`--rapid-words-api-token <token>`| Your RapidAPI WordsAPI token. Only required if using the `rapid-words` API.|
 
 ## Credits
