@@ -2,8 +2,8 @@ import asyncio
 from abc import ABC, abstractmethod
 import aiohttp
 import logging
-import re
 from datetime import datetime, timedelta
+from typing import List, Dict
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 class DictionaryAPI(ABC):
 
     @abstractmethod
-    async def define(self, word: str) -> {}:
+    async def define(self, word: str) -> List[Dict[str, str]]:
         """
         Get the definitions for the specified word. The returned format should be as follows:
         [
-        {word_type: 'str', definition: 'str'}
+        {word_type: 'str', definition: 'str'},
+        ...
         ]
         :param word: The word to define.
         :return: A list of definitions for the specified word.
@@ -42,13 +43,45 @@ async def handle_default_status(api, word, response):
     return True
 
 
+class RequestLimiter:
+
+    def __init__(self, request_limit: int, request_period: timedelta):
+        self._request_limit = request_limit
+        self._request_period = request_period
+        self._request_period_start = datetime.now()
+
+        # Number of requests made in the current time period
+        self._request_count = 0
+
+    @property
+    def request_limit(self):
+        return self._request_limit
+
+    @property
+    def request_count(self):
+        return self._request_count
+
+    def can_request(self):
+        return self._request_count < self._request_limit
+
+    def request(self):
+        # Reset request count
+        if datetime.now() > self._request_period_start + self._request_period:
+            self._request_count = 0
+            self._request_period_start = datetime.now()
+            logger.info(f'{self} Reset request count.')
+
+        # Increment request count
+        self._request_count += 1
+
+
 class OwlBotDictionaryAPI(DictionaryAPI):
 
     def __init__(self, token: str):
         self._token = token
         self._aio_client_session = aiohttp.ClientSession()
 
-    async def define(self, word: str) -> []:
+    async def define(self, word: str) -> List[Dict[str, str]]:
         headers = {'Authorization': f'Token {self._token}'}
         async with self._aio_client_session.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
@@ -74,7 +107,7 @@ class UnofficialGoogleAPI(DictionaryAPI):
     def __init__(self):
         self._aio_client_session = aiohttp.ClientSession()
 
-    async def define(self, word: str) -> {}:
+    async def define(self, word: str) -> List[Dict[str, str]]:
         async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
             if not await handle_default_status(self, word, response):
@@ -95,29 +128,15 @@ class UnofficialGoogleAPI(DictionaryAPI):
         return result
 
 
-class MerriamWebsterAPI(DictionaryAPI):
+class MerriamWebsterAPI(DictionaryAPI, ABC):
 
     def __init__(self, api_key):
         self._api_key = api_key
         self._aio_client_session = aiohttp.ClientSession()
-
-    async def define(self, word: str) -> {}:
-        word = word.lower()
-
-        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
-
-            if response.status != 200:
-                logger.error(f'{self} Error getting definition! {{status_code: {response.status}, word: "{word}", content: "{response.content}"}}')
-                return []
-
-            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
-
-            # TODO: Improve response parsing, sometimes it crashes
-            result = self._get_first_definition_of_each_entry(word, await response.json())
-
-        return result
+        self._request_limiter = RequestLimiter(1000, timedelta(days=1))
 
     def _get_short_definitions(self, response_json) -> []:
+        response_json = response_json[0]
         results = []
 
         word_type = response_json['fl']
@@ -130,75 +149,53 @@ class MerriamWebsterAPI(DictionaryAPI):
 
         return results
 
-    def _get_first_definition_of_each_entry(self, word: str, response_json) -> []:
-        results = []
 
-        for entry_json in response_json:
+class MerriamWebsterCollegiateAPI(MerriamWebsterAPI):
 
-            # Ignore words that don't exactly match the requested word
-            entry_id = entry_json['meta']['id'].lower()
-            if ':' in entry_id:
-                if entry_id.split(':')[0] != word:
-                    continue
-            elif entry_id != word:
-                continue
+    async def define(self, word: str) -> List[Dict[str, str]]:
 
-            # Get word type
-            word_type = entry_json['fl']
+        # Limit requests
+        if self._request_limiter.can_request():
+            self._request_limiter.request()
+            logger.info(f'{self} Request {self._request_limiter.request_count} / {self._request_limiter.request_limit}')
+        else:
+            logger.critical(f'{self} Request limit reached!')
+            return []
 
-            # Get first "sense"
-            sense = self._find_first_sense(entry_json['def'][0]['sseq'][0])
+        word = word.lower()
 
-            # Get definition text from sense
-            definition_text = self._get_text_from_dt(sense['dt'])
+        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-            # Clean up definition text (https://dictionaryapi.com/products/json#sec-2.tokens)
-            definition_text = definition_text.replace('{bc}', '')
-            definition_text = definition_text.replace('{ldquo}', '"')
-            definition_text = definition_text.replace('{rdquo}', '"')
-            definition_text = definition_text.replace('{p_br}', '\n')
+            if not await handle_default_status(self, word, response):
+                return []
 
-            def replace(text, token):
-                return re.sub(r'{' + token + r'}(.*){\\/' + token + r'}', r'\1', text)
+            result = self._get_short_definitions(await response.json())
 
-            for token in ('b', 'inf', 'it', 'sc', 'sup', 'gloss', 'parahw', 'phrase', 'qword', 'wi'):
-                definition_text = replace(definition_text, token)
+        return result
 
-            definition_text = re.sub(r'{\w*_link\|(.*?)\|*}', r'\1', definition_text)
-            definition_text = re.sub(r'{mat\|(.*?)\|*}', r'\1', definition_text)
-            definition_text = re.sub(r'{sx\|(.*?)\|*}', r'\1', definition_text)
-            definition_text = re.sub(r'{dxt\|(.*?)\|*}', r'\1', definition_text)
 
-            results.append({
-                'word_type': word_type,
-                'definition': definition_text
-            })
+class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
-        return results
+    async def define(self, word: str) -> List[Dict[str, str]]:
 
-    def _find_first_sense(self, sense_sequence):
-        if sense_sequence[0] == 'sense':
-            return sense_sequence[1]
+        # Limit requests
+        if self._request_limiter.can_request():
+            self._request_limiter.request()
+            logger.info(f'{self} Request {self._request_limiter.request_count} / {self._request_limiter.request_limit}')
+        else:
+            logger.critical(f'{self} Request limit reached!')
+            return []
 
-        for sense in sense_sequence:
-            if isinstance(sense, list):
-                r = self._find_first_sense(sense)
-                if r is not None:
-                    return r
+        word = word.lower()
 
-        return None
+        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/medical/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-    def _get_text_from_dt(self, dt):
-        if dt[0] == 'text':
-            return dt[1]
+            if not await handle_default_status(self, word, response):
+                return []
 
-        for item in dt:
-            if isinstance(item, list):
-                r = self._get_text_from_dt(item)
-                if r is not None:
-                    return r
+            result = self._get_short_definitions(await response.json())
 
-        return None
+        return result
 
 
 class RapidWordsAPI(DictionaryAPI):
@@ -206,26 +203,14 @@ class RapidWordsAPI(DictionaryAPI):
     def __init__(self, api_key):
         self._api_key = api_key
         self._aio_client_session = aiohttp.ClientSession()
+        self._request_limiter = RequestLimiter(2000, timedelta(days=1))
 
-        # Maximum number of request we can make in a 24hr period. If we exceed this, all future definition requests will return an empty response until the next time period
-        self._request_limit = 2000
+    async def define(self, word: str) -> List[Dict[str, str]]:
 
-        self._request_period_start = datetime.now()
-
-        # Number of requests made in the current time period
-        self._request_count = 0
-
-    async def define(self, word: str) -> {}:
-
-        # Reset request count
-        if datetime.now() > self._request_period_start + timedelta(days=1):
-            self._request_count = 0
-            self._request_period_start = datetime.now()
-            logger.info(f'{self} Reset request count.')
-
-        # Increment request count
-        self._request_count += 1
-        if self._request_count > self._request_limit:
+        if self._request_limiter.can_request():
+            self._request_limiter.request()
+            logger.info(f'{self} Request {self._request_limiter.request_count} / {self._request_limiter.request_limit}')
+        else:
             logger.critical(f'{self} Request limit reached!')
             return []
 
@@ -263,14 +248,34 @@ class BackupDictionaryAPI(DictionaryAPI):
     This class is a wrapper for other 'DictionaryAPI's. The API's will be called sequentially until one succeeds.
     """
 
-    def __init__(self, apis: [DictionaryAPI]):
-        self._apis = apis
+    def __init__(self, apis: List[DictionaryAPI], timeout: int = 2):
+        """
 
-    async def define(self, word: str) -> {}:
+        :param apis: A list of dictionary API's that will be called sequentially
+        until one of them successfully returns.
+        :param timeout: The maximum number of seconds to wait for a response
+        from a DictionaryAPI. If a request times out, then the next available
+        API will be called.
+        """
+        self._apis = apis
+        self._timeout = timeout
+
+        # Keep track of usage statistics for each API
+        self._usage_stats = {
+            api: {
+                'request_count': 0,
+                'success_count': 0
+            } for api in self._apis
+        }
+
+    async def define(self, word: str) -> List[Dict[str, str]]:
         for api in self._apis:
             try:
-                definitions = await asyncio.wait_for(api.define(word), 2)
+                self._usage_stats[api]['request_count'] += 1
+                definitions = await asyncio.wait_for(api.define(word), self._timeout)
                 if len(definitions) > 0:
+                    self._usage_stats[api]['success_count'] += 1
+                    logger.info(f'{self} Usage: {self._usage_stats}')
                     return definitions
                 logger.warning(f'{api} did not return any definitions!')
             except aiohttp.ClientError as e:
