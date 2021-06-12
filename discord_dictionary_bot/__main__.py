@@ -23,6 +23,7 @@ def gcp_logging_filter(record):
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S')
 logging.getLogger().handlers[0].addFilter(gcp_logging_filter)
+logging.getLogger().handlers[0].addFilter(logging_filter)
 
 
 def try_read_token(token_or_path: str) -> str:

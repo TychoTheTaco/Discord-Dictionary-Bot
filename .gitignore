@@ -4,21 +4,8 @@ venv
 # FFmpeg installation
 ffmpeg-20200831-4a11a6f-win64-static
 
-# This file contains the bot token
-token.txt
-
-# GCP Credentials
-credentials.json
-
-# Merriam Webster dictionary API tokens
-webster_collegiate_api_token.txt
-webster_medical_api_token.txt
-
-# RapidAPI WordsAPI dictionary API token
-rapid_words_api_token.txt
-
-# Owlbot dictionary API token
-owlbot_api_token.txt
+# Credentials and API tokens
+api_tokens
 
 # Database
 database.db
