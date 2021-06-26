@@ -118,3 +118,32 @@ def log_definition_request(word: str, reverse: bool, text_to_speech: bool, langu
         job.result()  # Waits for the job to complete.
     except Exception as e:
         raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+
+
+@run_on_another_thread
+def log_dictionary_api_request(dictionary_api_name: str, success: bool):
+
+    client = bigquery.Client()
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("api_name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("success", "BOOLEAN", mode="REQUIRED"),
+            bigquery.SchemaField("time", "TIMESTAMP", mode="REQUIRED")
+        ],
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        autodetect=True
+    )
+
+    data = {
+        'api_name': dictionary_api_name,
+        'success': success,
+        'time': datetime.datetime.now().isoformat()
+    }
+
+    data_as_file = io.StringIO(json.dumps(data))
+    job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.dictionary_api_requests', job_config=job_config)
+
+    try:
+        job.result()  # Waits for the job to complete.
+    except Exception as e:
+        raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')

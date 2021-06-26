@@ -5,6 +5,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict
 
+from . import analytics
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,10 @@ class DictionaryAPI(ABC):
 
     def __repr__(self):
         return f'[{type(self).__name__}]'
+
+    @abstractmethod
+    def id(self) -> str:
+        raise NotImplementedError
 
 
 async def handle_default_status(api, word, response):
@@ -101,6 +107,9 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
         return result
 
+    def id(self) -> str:
+        return 'owl_bot'
+
 
 class UnofficialGoogleAPI(DictionaryAPI):
 
@@ -127,6 +136,9 @@ class UnofficialGoogleAPI(DictionaryAPI):
 
         return result
 
+    def id(self) -> str:
+        return 'unofficial_google'
+
 
 class MerriamWebsterAPI(DictionaryAPI, ABC):
 
@@ -136,6 +148,10 @@ class MerriamWebsterAPI(DictionaryAPI, ABC):
         self._request_limiter = RequestLimiter(1000, timedelta(days=1))
 
     def _get_short_definitions(self, response_json) -> []:
+
+        # Sometimes the response is an empty list
+        if len(response_json) == 0:
+            return []
 
         # The response returns a list for some reason, the first item is supposed
         # to have the definition.
@@ -182,6 +198,9 @@ class MerriamWebsterCollegiateAPI(MerriamWebsterAPI):
 
         return result
 
+    def id(self) -> str:
+        return 'merriam_webster_collegiate'
+
 
 class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
@@ -205,6 +224,9 @@ class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
             result = self._get_short_definitions(await response.json())
 
         return result
+
+    def id(self) -> str:
+        return 'merriam_webster_medical'
 
 
 class RapidWordsAPI(DictionaryAPI):
@@ -251,6 +273,9 @@ class RapidWordsAPI(DictionaryAPI):
 
         return results
 
+    def id(self) -> str:
+        return 'rapid_words'
+
 
 class BackupDictionaryAPI(DictionaryAPI):
     """
@@ -269,26 +294,20 @@ class BackupDictionaryAPI(DictionaryAPI):
         self._apis = apis
         self._timeout = timeout
 
-        # Keep track of usage statistics for each API
-        self._usage_stats = {
-            api: {
-                'request_count': 0,
-                'success_count': 0
-            } for api in self._apis
-        }
-
     async def define(self, word: str) -> List[Dict[str, str]]:
         for api in self._apis:
             try:
-                self._usage_stats[api]['request_count'] += 1
                 definitions = await asyncio.wait_for(api.define(word), self._timeout)
                 if len(definitions) > 0:
-                    self._usage_stats[api]['success_count'] += 1
-                    logger.info(f'{self} Usage: {self._usage_stats}')
+                    analytics.log_dictionary_api_request(api.id(), True)
                     return definitions
                 logger.warning(f'{api} did not return any definitions!')
             except aiohttp.ClientError as e:
                 logger.error(f'Client error for API "{api}"', exc_info=e)
-            except asyncio.TimeoutError as e:
-                logger.warning(f'{api} Took too long to respond!', exc_info=e)
+            except asyncio.TimeoutError:
+                logger.warning(f'{api} Took too long to respond!')
+            analytics.log_dictionary_api_request(api.id(), False)
         return []
+
+    def id(self) -> str:
+        return 'backup'

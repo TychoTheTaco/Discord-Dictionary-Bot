@@ -41,8 +41,8 @@ async def convert(source: bytes, ffmpeg_path='ffmpeg'):
 
 
 def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL) -> bytes:
-    # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified because the default of 4MB is not
-    # enough for some definitions.
+    # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified
+    # because the default of 4MB is not enough for some definitions.
     channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
     transport = TextToSpeechGrpcTransport(channel=channel)
     client = texttospeech.TextToSpeechClient(transport=transport)
@@ -88,8 +88,8 @@ class Dictionary(commands.Cog):
         # Each guild will have a lock to ensure that we only join 1 voice channel at a time
         self._guild_locks = {}
 
-        # This dict keeps track of how many definition requests need the corresponding voice channel. This way we can leave the channel only when we have finished all requests
-        # for that channel.
+        # This dict keeps track of how many definition requests need the corresponding voice channel. This way we can leave the channel
+        # only when we have finished all requests for that channel.
         self._voice_channels = {}
 
     @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION, usage='[-v] [-lang <language>] <word>')
