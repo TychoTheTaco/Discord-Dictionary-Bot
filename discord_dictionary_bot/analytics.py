@@ -173,7 +173,7 @@ def log_dictionary_api_request(dictionary_api_name: str, success: bool):
         }
 
         log_dictionary_api_request_buffer.append(data)
-        logger.debug(f'log_definition_request_buffer: {len(log_dictionary_api_request_buffer)}')
+        logger.debug(f'log_dictionary_api_request_buffer: {len(log_dictionary_api_request_buffer)}')
 
         if len(log_dictionary_api_request_buffer) >= 10:
             logger.info('Uploading analytics!')
