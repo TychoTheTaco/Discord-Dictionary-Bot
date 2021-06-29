@@ -92,7 +92,7 @@ def log_command(command_name: str, is_slash: bool, context: Union[commands.Conte
                 job.result()  # Waits for the job to complete.
                 log_command_queue.clear()
             except Exception as e:
-                raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
 
 
 log_definition_request_buffer = []
@@ -144,7 +144,7 @@ def log_definition_request(word: str, reverse: bool, text_to_speech: bool, langu
                 job.result()  # Waits for the job to complete.
                 log_definition_request_buffer.clear()
             except Exception as e:
-                raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
 
 
 log_dictionary_api_request_buffer = []
@@ -185,4 +185,4 @@ def log_dictionary_api_request(dictionary_api_name: str, success: bool):
                 job.result()  # Waits for the job to complete.
                 log_dictionary_api_request_buffer.clear()
             except Exception as e:
-                raise Exception(f'Failed BigQuery upload job. Exception: {e} Errors: {job.errors}')
+                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
