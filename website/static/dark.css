@@ -1,0 +1,14 @@
+:root {
+    --dark-gray: #303030;
+}
+
+* {
+    color: whitesmoke;
+    font-family: Calibri, sans-serif;
+    user-select: none;
+}
+
+body {
+    background-color: #424242;
+    margin: 0;
+}
