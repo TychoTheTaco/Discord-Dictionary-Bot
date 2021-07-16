@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import aiohttp
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from . import analytics
 
@@ -31,6 +31,11 @@ class DictionaryAPI(ABC):
 
     @abstractmethod
     def id(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    @property
+    def name(self) -> str:
         raise NotImplementedError
 
 
@@ -110,6 +115,10 @@ class OwlBotDictionaryAPI(DictionaryAPI):
     def id(self) -> str:
         return 'owl_bot'
 
+    @property
+    def name(self) -> str:
+        return 'Owlbot'
+
 
 class UnofficialGoogleAPI(DictionaryAPI):
 
@@ -138,6 +147,10 @@ class UnofficialGoogleAPI(DictionaryAPI):
 
     def id(self) -> str:
         return 'unofficial_google'
+
+    @property
+    def name(self) -> str:
+        return 'Unofficial Google API'
 
 
 class MerriamWebsterAPI(DictionaryAPI, ABC):
@@ -201,6 +214,10 @@ class MerriamWebsterCollegiateAPI(MerriamWebsterAPI):
     def id(self) -> str:
         return 'merriam_webster_collegiate'
 
+    @property
+    def name(self) -> str:
+        return 'Merriam Webster Collegiate'
+
 
 class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
@@ -227,6 +244,10 @@ class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
     def id(self) -> str:
         return 'merriam_webster_medical'
+
+    @property
+    def name(self) -> str:
+        return 'Merriam Webster Medical'
 
 
 class RapidWordsAPI(DictionaryAPI):
@@ -276,8 +297,12 @@ class RapidWordsAPI(DictionaryAPI):
     def id(self) -> str:
         return 'rapid_words'
 
+    @property
+    def name(self) -> str:
+        return 'Rapid Words'
 
-class BackupDictionaryAPI(DictionaryAPI):
+
+class SequentialDictionaryAPI(DictionaryAPI):
     """
     This class is a wrapper for other 'DictionaryAPI's. The API's will be called sequentially until one succeeds.
     """
@@ -295,19 +320,26 @@ class BackupDictionaryAPI(DictionaryAPI):
         self._timeout = timeout
 
     async def define(self, word: str) -> List[Dict[str, str]]:
+        return (await self.define_with_source(word))[0]
+
+    async def define_with_source(self, word: str) -> ([{str: str}], Optional[DictionaryAPI]):
         for api in self._apis:
             try:
                 definitions = await asyncio.wait_for(api.define(word), self._timeout)
                 if len(definitions) > 0:
                     analytics.log_dictionary_api_request(api.id(), True)
-                    return definitions
+                    return definitions, api
                 logger.warning(f'{api} did not return any definitions!')
             except aiohttp.ClientError as e:
-                logger.error(f'Client error for API "{api}"', exc_info=e)
+                logger.warning(f'Client error for API "{api}"', exc_info=e)
             except asyncio.TimeoutError:
                 logger.warning(f'{api} Took too long to respond!')
             analytics.log_dictionary_api_request(api.id(), False)
-        return []
+        return [], None
 
     def id(self) -> str:
-        return 'backup'
+        return 'sequential'
+
+    @property
+    def name(self) -> str:
+        return 'Sequential'

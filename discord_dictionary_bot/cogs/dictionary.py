@@ -16,7 +16,7 @@ import discord
 from discord_slash import SlashContext, cog_ext
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 
-from ..dictionary_api import DictionaryAPI
+from ..dictionary_api import DictionaryAPI, SequentialDictionaryAPI
 from ..exceptions import InsufficientPermissionsException
 from ..utils import send_maybe_hidden
 from ..analytics import log_definition_request
@@ -77,9 +77,9 @@ class Dictionary(commands.Cog):
     STOP_COMMAND_DESCRIPTION = 'Makes the bot stop talking.'
     LANGUAGES_COMMAND_DESCRIPTION = 'Shows a list of supported voices for text to speech.'
 
-    def __init__(self, bot: commands.Bot, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path]):
+    def __init__(self, bot: commands.Bot, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path]):
         self._bot = bot
-        self._dictionary_api = dictionary_api
+        self._dictionary_apis = {api.id(): api for api in dictionary_apis}
         self._ffmpeg_path = Path(ffmpeg_path)
 
         # Create and populate a table of supported text-to-speech voices
@@ -204,8 +204,13 @@ class Dictionary(commands.Cog):
 
         logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language}"}}')
 
+        # Get dictionary api
+        dictionary_api_property = preferences_cog.scoped_property_manager.get('dictionary_apis', context.channel)
+        dictionary_api_preferences = dictionary_api_property.split(',')
+        dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_preferences if api_id in self._dictionary_apis])
+
         # Get definition
-        definitions = await self._dictionary_api.define(word)
+        definitions, definition_source = await dictionary_api.define_with_source(word)
 
         if len(definitions) == 0:
             reply = f'__**{word}**__\nI couldn\'t find any definitions for that word.'
@@ -219,7 +224,8 @@ class Dictionary(commands.Cog):
         log_definition_request(word, reverse, text_to_speech, language, context)
 
         # Prepare response text and text-to-speech input
-        reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse)
+        show_definition_source = preferences_cog.scoped_property_manager.get('show_definition_source', context.channel)
+        reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse, definition_source=definition_source.name if show_definition_source else None)
 
         if text_to_speech:
             await self._say(reply, context, voice_channel, language, text_to_speech_input)
@@ -233,47 +239,60 @@ class Dictionary(commands.Cog):
 
         # Check if we got valid text-to-speech data
         if text_to_speech_bytes.getbuffer().nbytes <= 0:
+
+            logger.error('There was a problem generating the text-to-speech!')
             await context.send('There was a problem generating the text-to-speech!')
-            return
 
-        # Join the voice channel
-        try:
-            await self._guild_locks[context.guild].acquire()
-            voice_client = await self._join_voice_channel(voice_channel)
-        except InsufficientPermissionsException as e:
-            self._guild_locks[context.guild].release()
-            await context.send(
-                f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
-            return
+            # Send text chat reply
+            await context.send(text)
 
-        # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
-        await asyncio.sleep(2.5)
+            # Update voice channel map
+            self._voice_channels[voice_channel] -= 1
 
-        # Send text chat reply
-        await context.send(text)
+            # Disconnect from the voice channel if we don't need it anymore
+            if self._voice_channels[voice_channel] <= 0:
+                await self._leave_voice_channel(voice_channel)
 
-        # Create a callback to be invoked when the bot is finished playing audio
-        def after(error):
+        else:
 
-            # A nested async function is used here to ensure that the bot leaves the voice channel before releasing the associated locks
-            async def after_coroutine(error):
-
-                if error is not None:
-                    logger.error(f'An error occurred while playing audio: {error}')
-
-                # Update voice channel map
-                self._voice_channels[voice_channel] -= 1
-
-                # Disconnect from the voice channel if we don't need it anymore
-                if self._voice_channels[voice_channel] <= 0:
-                    await self._leave_voice_channel(voice_channel)
-
+            # Join the voice channel
+            try:
+                await self._guild_locks[context.guild].acquire()
+                voice_client = await self._join_voice_channel(voice_channel)
+            except InsufficientPermissionsException as e:
                 self._guild_locks[context.guild].release()
+                await context.send(
+                    f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
+                return
 
-            asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
+            # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
+            await asyncio.sleep(2.5)
 
-        # Speak
-        voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
+            # Send text chat reply
+            await context.send(text)
+
+            # Create a callback to be invoked when the bot is finished playing audio
+            def after(error):
+
+                # A nested async function is used here to ensure that the bot leaves the voice channel before releasing the associated locks
+                async def after_coroutine(error):
+
+                    if error is not None:
+                        logger.error(f'An error occurred while playing audio: {error}')
+
+                    # Update voice channel map
+                    self._voice_channels[voice_channel] -= 1
+
+                    # Disconnect from the voice channel if we don't need it anymore
+                    if self._voice_channels[voice_channel] <= 0:
+                        await self._leave_voice_channel(voice_channel)
+
+                    self._guild_locks[context.guild].release()
+
+                asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
+
+            # Speak
+            voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
 
     @staticmethod
     def _is_valid_word(word) -> bool:
@@ -305,11 +324,21 @@ class Dictionary(commands.Cog):
                 await voice_client.disconnect()
 
     @staticmethod
-    def create_reply(word, definitions, reverse=False) -> (str, str):
+    def create_reply(word, definitions, reverse=False, definition_source: Optional[str] = None) -> (str, str):
+        """
+        Create a reply.
+        :param word:
+        :param definitions:
+        :param reverse:
+        :param definition_source:
+        :return:
+        """
         if reverse:
             word = word[::-1]
+
         reply = f'__**{word}**__\n'
         tts_input = f'{word}, '
+
         for i, definition in enumerate(definitions):
             word_type = definition['word_type']
             definition_text = definition['definition']
@@ -320,6 +349,9 @@ class Dictionary(commands.Cog):
 
             reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
             tts_input += f' {i + 1}, {word_type}, {definition_text}'
+
+        if definition_source is not None:
+            reply += f'Definitions provided by {definition_source}.'
 
         return reply, tts_input
 

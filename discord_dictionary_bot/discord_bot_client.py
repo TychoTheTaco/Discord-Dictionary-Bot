@@ -22,11 +22,17 @@ def get_prefix(bot: Bot, message: Message):
 
 class DiscordBotClient(Bot):
 
-    def __init__(self, dictionary_api: DictionaryAPI, ffmpeg_path: Union[str, Path], **kwargs):
+    def __init__(self, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path], **kwargs):
+        """
+        Creates a new Discord bot client.
+        :param dictionary_apis: A list of 'DictionaryAPI's that are available for the bot to use.
+        :param ffmpeg_path:
+        :param kwargs:
+        """
         super().__init__(get_prefix, help_command=None, **kwargs)
         slash = SlashCommand(self, sync_commands=True)  # This needs to be here for slash commands to work!
         self.add_cog(Help())
-        self.add_cog(Dictionary(self, dictionary_api, ffmpeg_path))
+        self.add_cog(Dictionary(self, dictionary_apis, ffmpeg_path))
         self.add_cog(Preferences())
         self.add_cog(Statistics(self))
 
@@ -37,7 +43,7 @@ class DiscordBotClient(Bot):
 
         @self.event
         async def on_slash_command(context: SlashContext):
-            logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}"')
+            logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}" {context.kwargs}')
             log_command(context.command, True, context)
 
     async def on_command_error(self, context: commands.Context, exception):

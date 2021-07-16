@@ -33,7 +33,7 @@ class InvalidValueError(BaseException):
         return self._value
 
 
-class Property:
+class Preference:
 
     def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str):
         self._key = key
@@ -61,7 +61,7 @@ class Property:
 
 class ScopedPropertyManager(ABC):
 
-    def __init__(self, properties: Iterable[Property]):
+    def __init__(self, properties: Iterable[Preference]):
         self._properties = properties
 
     @property
@@ -87,7 +87,7 @@ class ScopedPropertyManager(ABC):
 
 class FirestorePropertyManager(ScopedPropertyManager):
 
-    def __init__(self, properties: Iterable[Property]):
+    def __init__(self, properties: Iterable[Preference]):
         super().__init__(properties)
         self._firestore_client = firestore.Client()
 

@@ -4,7 +4,7 @@ import logging.config
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 from .discord_bot_client import DiscordBotClient
-from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterCollegiateAPI, RapidWordsAPI, BackupDictionaryAPI, MerriamWebsterMedicalAPI
+from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterCollegiateAPI, RapidWordsAPI, SequentialDictionaryAPI, MerriamWebsterMedicalAPI
 
 
 def logging_filter(record):
@@ -135,7 +135,7 @@ def main():
             dictionary_apis.append(api_info["class"]())
 
     # Start client
-    bot = DiscordBotClient(BackupDictionaryAPI(dictionary_apis), args.ffmpeg_path)
+    bot = DiscordBotClient(SequentialDictionaryAPI(dictionary_apis), args.ffmpeg_path)
     bot.run(try_read_token(args.discord_bot_token))
 
 

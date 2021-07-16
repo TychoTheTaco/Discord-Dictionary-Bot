@@ -1,7 +1,7 @@
 import discord
 from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
-from ..properties import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError
+from ..preferences import FirestorePropertyManager, Preference, InvalidKeyError, InvalidValueError
 from typing import Any, Union, Optional
 from ..utils import send_maybe_hidden
 
@@ -32,9 +32,11 @@ class Preferences(commands.Cog):
 
     def __init__(self):
         self._scoped_property_manager = FirestorePropertyManager([
-            Property('prefix', default='.'),
-            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
-            Property('language', default='en-us-wavenet-c')
+            Preference('prefix', default='.'),
+            Preference('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
+            Preference('language', default='en-us-wavenet-c'),
+            Preference('show_definition_source', default=False),
+            Preference('dictionary_apis', default='owlbot,google,webster-medical,webster-collegiate,rapid-words')
         ])
 
     @property
