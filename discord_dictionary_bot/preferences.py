@@ -33,13 +33,14 @@ class InvalidValueError(BaseException):
         return self._value
 
 
-class Preference:
+class Property:
 
-    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str):
+    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str, from_string=lambda x: x):
         self._key = key
         self._choices = choices
         self._default = default
         self._dtype = dtype
+        self._from_string = from_string
 
     @property
     def key(self):
@@ -58,10 +59,39 @@ class Preference:
             return value in self._choices
         return type(value) is self._dtype
 
+    def parse(self, string: str):
+        return self._from_string(string)
+
+
+class BooleanProperty(Property):
+
+    def __init__(self, key, default: bool = False):
+        super().__init__(key, [True, False], default, bool)
+
+    def parse(self, string: str):
+        if string.lower() in ('true', 'false'):
+            return string.lower() == 'true'
+        raise InvalidValueError(self.key, string)
+
+
+class ListProperty(Property):
+
+    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None):
+        super().__init__(key, choices, default, list)
+
+    def parse(self, string: str):
+        return string.split(',')
+
+    def is_valid(self, value):
+        for item in value:
+            if item not in self.choices:
+                return False
+        return True
+
 
 class ScopedPropertyManager(ABC):
 
-    def __init__(self, properties: Iterable[Preference]):
+    def __init__(self, properties: Iterable[Property]):
         self._properties = properties
 
     @property
@@ -87,8 +117,9 @@ class ScopedPropertyManager(ABC):
 
 class FirestorePropertyManager(ScopedPropertyManager):
 
-    def __init__(self, properties: Iterable[Preference]):
+    def __init__(self, properties: Iterable[Property]):
         super().__init__(properties)
+        self._default_properties = {p.key: p.default for p in self.properties}
         self._firestore_client = firestore.Client()
 
         # Maintain a cache so that we don't need to make too many requests to Firestore.
@@ -100,9 +131,17 @@ class FirestorePropertyManager(ScopedPropertyManager):
     def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
         if isinstance(scope, (discord.Guild, discord.DMChannel)):
             d = self.get_all(scope)
-            if key not in d:
-                logger.error(f'Key "{key}" not in dict "{d}" for scope {scope}')
-            return self.get_all(scope)[key]
+            if key in d:
+                return d[key]
+
+            # The guild did not have the requested property, maybe the default properties has it
+            if key in self._default_properties:
+                value = self._default_properties[key]
+                # set guild property
+                self.set(key, value, scope)
+                return value
+
+            return None
         elif type(scope) is discord.TextChannel:
             d = self.get_all(scope)
             if key in d:
@@ -114,16 +153,25 @@ class FirestorePropertyManager(ScopedPropertyManager):
             logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
             return None
 
-    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
-        # Make sure the key and value are valid
+    def get_property(self, key):
         for p in self.properties:
             if p.key == key:
-                if p.is_valid(value):
-                    break
-                else:
-                    raise InvalidValueError(key, value)
-        else:
+                return p
+        return None
+
+    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+
+        prop = self.get_property(key)
+        if prop is None:
             raise InvalidKeyError(key)
+
+        # Convert value to correct type
+        if isinstance(value, str):
+            value = prop.parse(value)
+
+        # Make sure the key and value are valid
+        if not prop.is_valid(value):
+            raise InvalidValueError(key, value)
 
         dictionary = self.get_all(scope)
         dictionary[key] = value
@@ -147,7 +195,14 @@ class FirestorePropertyManager(ScopedPropertyManager):
         """
         # Check the cache
         if scope in self._cache and not self._dirty[scope]:
-            return self._cache[scope]
+            results = self._cache[scope]
+
+            # Make sure all properties are there
+            for key, value in self._default_properties.items():
+                if key not in results:
+                    results[key] = value
+
+            return results
 
         # The data was either not in the cache, or was in the cache but it's dirty so we need to fetch it again
         snapshot = self._get_snapshot(scope)
@@ -166,22 +221,25 @@ class FirestorePropertyManager(ScopedPropertyManager):
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
+            logger.warning('FIRESTORE READ')
             snapshot = guild_document.get()
 
             # Write default preferences
             if not snapshot.exists:
                 logger.info(f'Preferences for "{scope.name}" did not exist. Setting defaults.')
-                guild_document.set({p.key: p.default for p in self.properties})
+                guild_document.set(self._default_properties)
                 snapshot = guild_document.get()
 
             return snapshot
         elif isinstance(scope, discord.TextChannel):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.guild.id))
+            logger.warning('FIRESTORE READ')
             channel_document = guild_document.collection('channels').document(str(scope.id))
             channel_snapshot = channel_document.get()
             return channel_snapshot
         elif isinstance(scope, discord.DMChannel):
             guild_document = self._firestore_client.collection('dms').document(str(scope.id))
+            logger.warning('FIRESTORE READ')
             snapshot = guild_document.get()
 
             # Write default preferences
@@ -192,4 +250,4 @@ class FirestorePropertyManager(ScopedPropertyManager):
 
             return snapshot
         else:
-            logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+            raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')

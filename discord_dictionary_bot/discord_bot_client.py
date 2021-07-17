@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Union
 
+import discord.ext.commands
 from discord import Message
 from discord.ext.commands.bot import Bot
 
@@ -38,6 +39,8 @@ class DiscordBotClient(Bot):
 
         @self.before_invoke
         async def before_command_invoked(context: commands.Context):
+            if isinstance(context.command, discord.ext.commands.Group):
+                return
             logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "{context.message.content}"')
             log_command(context.command.name, False, context)
 
@@ -52,7 +55,7 @@ class DiscordBotClient(Bot):
         elif isinstance(exception, commands.errors.MissingRequiredArgument):
             await context.send('Invalid command usage!')
         elif isinstance(exception, commands.errors.ArgumentParsingError):
-            await context.send('Invalid arguments!')
+            await context.send('Invalid arguments! Usage: `' + context.command.usage + '`')
         else:
             logger.error('Error on command!', exc_info=exception)
             await super().on_command_error(context, exception)

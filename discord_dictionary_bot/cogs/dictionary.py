@@ -18,7 +18,7 @@ from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import
 
 from ..dictionary_api import DictionaryAPI, SequentialDictionaryAPI
 from ..exceptions import InsufficientPermissionsException
-from ..utils import send_maybe_hidden
+from .. import utils
 from ..analytics import log_definition_request
 
 # Set up logging
@@ -94,9 +94,12 @@ class Dictionary(commands.Cog):
 
     @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION, usage='[-v] [-lang <language>] <word>')
     async def define(self, context: commands.Context, *args):
-        async with context.typing():
-            word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-            await self._define_or_befine(context, word, False, text_to_speech, language)
+        try:
+            async with context.typing():
+                word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
+                await self._define_or_befine(context, word, False, text_to_speech, language)
+        except discord.errors.Forbidden:
+            logger.warning(f'Failed to start typing! Missing permissions. We have {utils.get_bot_permissions(context)}')
 
     @cog_ext.cog_slash(
         name='define',
@@ -130,9 +133,13 @@ class Dictionary(commands.Cog):
 
     @commands.command(name='befine', aliases=['b'], hidden=True)
     async def befine(self, context: commands.Context, *args):
-        async with context.typing():
-            word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-            await self._define_or_befine(context, word, True, text_to_speech, language)
+        try:
+            async with context.typing():
+                word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
+                await self._define_or_befine(context, word, True, text_to_speech, language)
+        except discord.errors.Forbidden:
+            logger.warning(f'Failed to start typing! Missing permissions. We have {utils.get_bot_permissions(context)}')
+
 
     async def _parse_define_or_befine(self, context: commands.Context, *args) -> (str, bool, str):
         # Get default language
@@ -162,7 +169,7 @@ class Dictionary(commands.Cog):
 
         # Make sure this could be a word
         if not self._is_valid_word(word):
-            await send_maybe_hidden(context, 'That\'s not a word.')
+            await utils.send_maybe_hidden(context, 'That\'s not a word.')
             return
 
         # Get current voice channel
@@ -170,7 +177,7 @@ class Dictionary(commands.Cog):
 
         # Make sure that the user that requested this definition is in a voice channel if text-to-speech is enabled
         if text_to_speech and voice_channel is None:
-            await send_maybe_hidden(context, 'You must be in a voice channel to use text-to-speech!')
+            await utils.send_maybe_hidden(context, 'You must be in a voice channel to use text-to-speech!')
             return
 
         # Check for text-to-speech override
@@ -186,7 +193,7 @@ class Dictionary(commands.Cog):
             # Get voice code from language argument
             voice_code = self._get_voice_code(language)
             if voice_code is None:
-                await send_maybe_hidden(context, f'Could not find a language matching `{language}`!')
+                await utils.send_maybe_hidden(context, f'Could not find a language matching `{language}`!')
                 return
             language = voice_code
 
@@ -206,8 +213,7 @@ class Dictionary(commands.Cog):
 
         # Get dictionary api
         dictionary_api_property = preferences_cog.scoped_property_manager.get('dictionary_apis', context.channel)
-        dictionary_api_preferences = dictionary_api_property.split(',')
-        dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_preferences if api_id in self._dictionary_apis])
+        dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_property if api_id in self._dictionary_apis])
 
         # Get definition
         definitions, definition_source = await dictionary_api.define_with_source(word)
@@ -351,7 +357,7 @@ class Dictionary(commands.Cog):
             tts_input += f' {i + 1}, {word_type}, {definition_text}'
 
         if definition_source is not None:
-            reply += f'Definitions provided by {definition_source}.'
+            reply += f'\n*Definitions provided by {definition_source}.*'
 
         return reply, tts_input
 
@@ -431,7 +437,7 @@ class Dictionary(commands.Cog):
 
             connection.close()
 
-            await send_maybe_hidden(context, reply)
+            await utils.send_maybe_hidden(context, reply)
 
     @staticmethod
     def _create_voices_table():

@@ -24,7 +24,7 @@ class DictionaryAPI(ABC):
         :param word: The word to define.
         :return: A list of definitions for the specified word.
         """
-        pass
+        return []
 
     def __repr__(self):
         return f'[{type(self).__name__}]'
@@ -33,8 +33,8 @@ class DictionaryAPI(ABC):
     def id(self) -> str:
         raise NotImplementedError
 
-    @abstractmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         raise NotImplementedError
 
@@ -113,7 +113,7 @@ class OwlBotDictionaryAPI(DictionaryAPI):
         return result
 
     def id(self) -> str:
-        return 'owl_bot'
+        return 'owlbot'
 
     @property
     def name(self) -> str:

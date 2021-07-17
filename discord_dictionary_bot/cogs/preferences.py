@@ -1,13 +1,12 @@
 import discord
 from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
-from ..preferences import FirestorePropertyManager, Preference, InvalidKeyError, InvalidValueError
+from ..preferences import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError, BooleanProperty, ListProperty
 from typing import Any, Union, Optional
 from ..utils import send_maybe_hidden
 
 
 class Preferences(commands.Cog):
-
     PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
     PROPERTY_NAME_OPTION = {
         'name': 'name',
@@ -32,11 +31,11 @@ class Preferences(commands.Cog):
 
     def __init__(self):
         self._scoped_property_manager = FirestorePropertyManager([
-            Preference('prefix', default='.'),
-            Preference('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
-            Preference('language', default='en-us-wavenet-c'),
-            Preference('show_definition_source', default=False),
-            Preference('dictionary_apis', default='owlbot,google,webster-medical,webster-collegiate,rapid-words')
+            Property('prefix', default='.'),
+            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
+            Property('language', default='en-us-wavenet-c'),
+            BooleanProperty('show_definition_source', default=False),
+            ListProperty('dictionary_apis', default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'], choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'])
         ])
 
     @property
@@ -227,8 +226,8 @@ class Preferences(commands.Cog):
             reply += f'Scope'
         reply += ' properties**__\n'
 
-        for k, v in properties.items():
-            reply += f'{k}: `{v}`\n'
+        for key, value in sorted(properties.items()):
+            reply += f'{key}: `{value}`\n'
 
         if len(properties) == 0:
             reply += 'No properties set'
