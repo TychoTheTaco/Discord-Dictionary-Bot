@@ -195,33 +195,22 @@ class FirestorePropertyManager(ScopedPropertyManager):
         """
         # Check the cache
         if scope in self._cache and not self._dirty[scope]:
-            results = self._cache[scope]
-
-            # Make sure all properties are there
-            for key, value in self._default_properties.items():
-                if key not in results:
-                    results[key] = value
-
-            return results
+            return self._cache[scope]
 
         # The data was either not in the cache, or was in the cache but it's dirty so we need to fetch it again
         snapshot = self._get_snapshot(scope)
-        if snapshot.exists:
-            results = snapshot.to_dict()
+        results = snapshot.to_dict() if snapshot.exists else {}
 
-            # Add to cache
-            self._cache[scope] = results
-            self._dirty[scope] = False
+        # Add to cache
+        self._cache[scope] = results
+        self._dirty[scope] = False
 
-            return results
-
-        # The document did not exist
-        return {}
+        return results
 
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
-            logger.warning('FIRESTORE READ')
+            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             snapshot = guild_document.get()
 
             # Write default preferences
@@ -233,13 +222,13 @@ class FirestorePropertyManager(ScopedPropertyManager):
             return snapshot
         elif isinstance(scope, discord.TextChannel):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.guild.id))
-            logger.warning('FIRESTORE READ')
+            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             channel_document = guild_document.collection('channels').document(str(scope.id))
             channel_snapshot = channel_document.get()
             return channel_snapshot
         elif isinstance(scope, discord.DMChannel):
             guild_document = self._firestore_client.collection('dms').document(str(scope.id))
-            logger.warning('FIRESTORE READ')
+            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             snapshot = guild_document.get()
 
             # Write default preferences
