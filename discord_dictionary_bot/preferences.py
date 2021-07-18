@@ -210,7 +210,6 @@ class FirestorePropertyManager(ScopedPropertyManager):
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
-            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             snapshot = guild_document.get()
 
             # Write default preferences
@@ -222,13 +221,11 @@ class FirestorePropertyManager(ScopedPropertyManager):
             return snapshot
         elif isinstance(scope, discord.TextChannel):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.guild.id))
-            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             channel_document = guild_document.collection('channels').document(str(scope.id))
             channel_snapshot = channel_document.get()
             return channel_snapshot
         elif isinstance(scope, discord.DMChannel):
             guild_document = self._firestore_client.collection('dms').document(str(scope.id))
-            logger.warning('FIRESTORE READ: ' + str(len(self._cache)))
             snapshot = guild_document.get()
 
             # Write default preferences
