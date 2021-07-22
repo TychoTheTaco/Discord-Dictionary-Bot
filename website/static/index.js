@@ -10,6 +10,11 @@ Chart.defaults.animation = false;
 
 class Graph {
 
+    constructor(container) {
+        this.container = container;
+        this.canvas = this.container.shadowRoot.querySelector('canvas');
+    }
+
     async load() {
         throw Error('Abstract method not implemented!');
     }
@@ -47,10 +52,10 @@ class RequestsPerDayGraph extends Graph {
             yValues.push(item['cnt']);
         }
 
-        const daily_requests_container = document.getElementById('daily_requests_container');
+        const daily_requests_container = this.container;
         daily_requests_container.innerHTML += `Maximum: ${Math.max(...yValues)}<br>Average: ${Math.round(yValues.reduce((a, b) => a + b) / yValues.length)}`
 
-        const ctx = document.getElementById('requests_per_day_canvas').getContext('2d');
+        const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -80,7 +85,7 @@ class RequestsPerDayGraph extends Graph {
                     },
                     plugins: {
                         title: {
-                            text: 'Daily Requests'
+                            text: 'Daily Definition Requests'
                         }
                     }
                 }
@@ -123,10 +128,10 @@ class TotalRequestsPerDayGraph extends Graph {
             yValues.push(sum);
         }
 
-        const daily_requests_container = document.getElementById('total_requests_container');
+        const daily_requests_container = this.container;
         daily_requests_container.innerHTML += `<br>Maximum: ${Math.max(...yValues)}`
 
-        const ctx = document.getElementById('total_requests_canvas').getContext('2d');
+        const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -156,7 +161,84 @@ class TotalRequestsPerDayGraph extends Graph {
                     },
                     plugins: {
                         title: {
-                            text: 'Total Requests'
+                            text: 'Total Definition Requests'
+                        }
+                    }
+                }
+            }
+        );
+    }
+}
+
+class CommandsPerDay extends Graph {
+
+    async load() {
+        const response = await (await fetch(API_ROOT + 'commands_per_day')).json();
+
+        let xValues = [];
+
+        const colorMap = {
+            'define': '#B71C1C',
+            'befine': '#880E4F',
+            'help': '#F57F17',
+            'stop': '#FF6F00',
+            'voices': '#827717',
+            'property': '#03A9F4',
+            'stats': '#8BC34A',
+            'languages': '#006064',
+        }
+
+        const datasets = []
+        let first = true;
+        for (const commandName in response) {
+            const items = response[commandName];
+
+            let yValues = [];
+
+            let text_count_sum = 0;
+            let slash_count_sum = 0;
+            for (const item of items) {
+                if (first) xValues.push(new Date(item['date']));
+                text_count_sum += item['text_count'];
+                slash_count_sum += item['slash_count'];
+                yValues.push(text_count_sum + slash_count_sum);
+            }
+            datasets.push({
+                label: commandName,
+                data: yValues,
+                borderColor: colorMap[commandName],
+                tension: 0.1,
+                pointRadius: 0
+            })
+            first = false;
+        }
+
+        const ctx = this.canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                callback: function (value, index, values) {
+                                    if (xValues[index].getDate() !== 1) {
+                                        return null;
+                                    }
+                                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                                    return monthNames[xValues[index].getMonth()];
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            text: 'Commands'
                         }
                     }
                 }
@@ -166,7 +248,102 @@ class TotalRequestsPerDayGraph extends Graph {
 
 }
 
-const graphs = [new RequestsPerDayGraph(), new TotalRequestsPerDayGraph()];
+class TextVsSlashCommands extends Graph {
+
+    async load() {
+        const response = await (await fetch(API_ROOT + 'text_vs_slash_commands')).json();
+
+        let xValues = [];
+        let yValues = [];
+        let yValuesSlash = [];
+
+        let text_count_sum = 0;
+        let slash_count_sum = 0;
+        for (const item of response) {
+            xValues.push(new Date(item['date']));
+            text_count_sum += item['text_count'];
+            slash_count_sum += item['slash_count'];
+            yValues.push(text_count_sum);
+            yValuesSlash.push(slash_count_sum);
+        }
+
+        const ctx = this.canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: [
+                        {
+                            label: 'Text',
+                            data: yValues,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Slash',
+                            data: yValuesSlash,
+                            borderColor: 'rgb(230, 120, 12)',
+                            tension: 0.1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                callback: function (value, index, values) {
+                                    if (xValues[index].getDate() !== 1) {
+                                        return null;
+                                    }
+                                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                                    return monthNames[xValues[index].getMonth()];
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            text: 'Text vs Slash Commands'
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+}
+
+customElements.define('chart-container', class extends HTMLElement {
+
+    constructor() {
+        super();
+        const template = document.getElementById('chart_container_template');
+        this.attachShadow({mode: 'open'}).appendChild(template.content.cloneNode(true));
+    }
+
+    connectedCallback() {
+
+    }
+
+});
+
+function createNewChartContainer() {
+    const main_container = document.getElementById('main_content');
+    const child = document.createElement('chart-container');
+    main_container.appendChild(child);
+    return child;
+}
+
+const graphs = [
+    new RequestsPerDayGraph(createNewChartContainer()),
+    new TotalRequestsPerDayGraph(createNewChartContainer()),
+    new CommandsPerDay(createNewChartContainer()),
+    new TextVsSlashCommands(createNewChartContainer())
+];
 
 (async () => {
     const promises = [];

@@ -9,30 +9,19 @@
 
     <body>
 
+        <template id="chart_container_template">
+            <div style="background-color: #303030; border-radius: 16px; margin: 16px; padding: 8px;">
+                <canvas width="500" height="300" style="display: block; margin-bottom: 24px;"></canvas>
+            </div>
+        </template>
+
         <div style="text-align: center">
             <h1>Discord Dictionary Bot</h1>
             <h2>Usage Statistics</h2>
         </div>
 
-        <template>
-            <div id="card_template">
+        <div id="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap;">
 
-            </div>
-        </template>
-
-        <div style="display: flex; flex-direction: row; justify-content: center; ">
-
-            <div id="daily_requests_container" style="background-color: #303030; border-radius: 16px; margin: 16px; padding: 8px;">
-                <canvas id="requests_per_day_canvas" width="500" height="300" style="display: block; margin-bottom: 24px;"></canvas>
-            </div>
-
-            <div id="total_requests_container" style="background-color: #303030; border-radius: 16px; margin: 16px; padding: 8px;">
-                <canvas id="total_requests_canvas" width="500" height="300" style="display: inline-block"></canvas>
-            </div>
-
-            <div id="active_guilds_container" style="background-color: #303030; border-radius: 16px; margin: 16px; padding: 8px;">
-                <canvas id="active_guilds_canvas" width="500" height="300" style="display: inline-block"></canvas>
-            </div>
         </div>
 
     </body>
