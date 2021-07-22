@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 import discord
 from discord_slash import SlashContext, cog_ext
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
+from google.cloud import translate_v2 as translate
 
 from ..dictionary_api import DictionaryAPI, SequentialDictionaryAPI
 from ..exceptions import InsufficientPermissionsException
@@ -91,6 +92,12 @@ class Dictionary(commands.Cog):
         # This dict keeps track of how many definition requests need the corresponding voice channel. This way we can leave the channel
         # only when we have finished all requests for that channel.
         self._voice_channels = {}
+
+        self._translate_client = translate.Client()
+
+    def _translate(self, text: str, target_language: str):
+        result = self._translate_client.translate(text, target_language=target_language)
+        return result['translatedText'], result['detectedSourceLanguage']
 
     @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION, usage='[-v] [-lang <language>] <word>')
     async def define(self, context: commands.Context, *args):
@@ -214,6 +221,9 @@ class Dictionary(commands.Cog):
         dictionary_api_property = preferences_cog.scoped_property_manager.get('dictionary_apis', context.channel)
         dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_property if api_id in self._dictionary_apis])
 
+        # Translate the word to english
+        word, detected_source_language = self._translate(word, 'en')
+
         # Get definition
         definitions, definition_source = await dictionary_api.define_with_source(word)
 
@@ -227,6 +237,12 @@ class Dictionary(commands.Cog):
 
         # Record analytics only for valid words
         log_definition_request(word, reverse, text_to_speech, language, context)
+
+        # Translate definitions to target language
+        word, _ = self._translate(word, language)
+        for i in range(len(definitions)):
+            definitions[i]['word_type'], _ = self._translate(definitions[i]['word_type'], language)
+            definitions[i]['definition'], _ = self._translate(definitions[i]['definition'], language)
 
         # Prepare response text and text-to-speech input
         show_definition_source = preferences_cog.scoped_property_manager.get('show_definition_source', context.channel)
