@@ -74,6 +74,10 @@ class Settings(commands.Cog):
                 description='A comma-separated list of dictionary APIs to use in order of preference.\n'
                             'Choices:\n'
                             '`unofficial_google`, `owlbot`, `merriam_webster_collegiate`, `merriam_webster_medical`, `rapid_words`'
+            ),
+            BooleanProperty(
+                'auto_translate',
+                default=True
             )
         ])
 
