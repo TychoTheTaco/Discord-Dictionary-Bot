@@ -35,12 +35,13 @@ class InvalidValueError(BaseException):
 
 class Property:
 
-    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str, from_string=lambda x: x):
+    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, dtype: Any = str, from_string=lambda x: x, description: str = ''):
         self._key = key
         self._choices = choices
         self._default = default
         self._dtype = dtype
         self._from_string = from_string
+        self._description = description
 
     @property
     def key(self):
@@ -54,6 +55,10 @@ class Property:
     def default(self):
         return self._default
 
+    @property
+    def description(self):
+        return self._description
+
     def is_valid(self, value):
         if self._choices is not None:
             return value in self._choices
@@ -65,8 +70,8 @@ class Property:
 
 class BooleanProperty(Property):
 
-    def __init__(self, key, default: bool = False):
-        super().__init__(key, [True, False], default, bool)
+    def __init__(self, key, default: bool = False, description: str = ''):
+        super().__init__(key, [True, False], default, bool, description=description)
 
     def parse(self, string: str):
         if string.lower() in ('true', 'false'):
@@ -76,8 +81,8 @@ class BooleanProperty(Property):
 
 class ListProperty(Property):
 
-    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None):
-        super().__init__(key, choices, default, list)
+    def __init__(self, key, choices: Optional[Iterable[Any]] = None, default: Optional[Any] = None, description: str = ''):
+        super().__init__(key, choices, default, list, description=description)
 
     def parse(self, string: str):
         return string.split(',')
@@ -110,10 +115,6 @@ class ScopedPropertyManager(ABC):
     def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
         raise NotImplementedError
 
-    @abstractmethod
-    def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> {str: Any}:
-        raise NotImplementedError
-
 
 class FirestorePropertyManager(ScopedPropertyManager):
 
@@ -129,29 +130,36 @@ class FirestorePropertyManager(ScopedPropertyManager):
         self._dirty = {}
 
     def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
+
+        # Check the cache
+        if scope in self._cache and not self._dirty[scope]:
+            data = self._cache[scope]
+        else:
+            # The data was either not in the cache, or was in the cache but it's dirty so we need to fetch it again
+            snapshot = self._get_snapshot(scope)
+            data = snapshot.to_dict() if snapshot.exists else {}
+
+            # Add data to cache
+            self._cache[scope] = data
+            self._dirty[scope] = False
+
+        if key in data:
+            return data[key]
+
         if isinstance(scope, (discord.Guild, discord.DMChannel)):
-            d = self.get_all(scope)
-            if key in d:
-                return d[key]
 
             # The guild did not have the requested property, maybe the default properties has it
             if key in self._default_properties:
                 value = self._default_properties[key]
-                # set guild property
-                self.set(key, value, scope)
                 return value
 
             return None
-        elif type(scope) is discord.TextChannel:
-            d = self.get_all(scope)
-            if key in d:
-                return d[key]
+        elif isinstance(scope, discord.TextChannel):
 
             # The text-channel did not have the requested property, maybe the guild has it
             return self.get(key, scope.guild)
         else:
-            logger.error(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
-            return None
+            raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
 
     def get_property(self, key):
         for p in self.properties:
@@ -173,50 +181,25 @@ class FirestorePropertyManager(ScopedPropertyManager):
         if not prop.is_valid(value):
             raise InvalidValueError(key, value)
 
-        dictionary = self.get_all(scope)
-        dictionary[key] = value
-        logger.info(f'Set property "{key}" to "{value}" for scope "{scope}"')
-        self._get_snapshot(scope).reference.set(
-            dictionary)  # This could be replaced with an 'update' operation but idk what option to provide to create the document if it didn't exist
+        self._get_snapshot(scope).reference.set({key: value}, merge=True)
         self._dirty[scope] = True
 
     def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
-        dictionary = self.get_all(scope)
-        if key in dictionary:
-            del dictionary[key]
-            self._get_snapshot(scope).reference.set(dictionary)
-            self._dirty[scope] = True
 
-    def get_all(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
-        """
-        Get a dictionary of properties associated with the given scope. If the scope has no properties, an empty dictionary will be returned.
-        :param scope: Either a 'discord.Guild' or a 'discord.TextChannel'.
-        :return: A dictionary containing the properties of the scope.
-        """
-        # Check the cache
-        if scope in self._cache and not self._dirty[scope]:
-            return self._cache[scope]
-
-        # The data was either not in the cache, or was in the cache but it's dirty so we need to fetch it again
-        snapshot = self._get_snapshot(scope)
-        results = snapshot.to_dict() if snapshot.exists else {}
-
-        # Add to cache
-        self._cache[scope] = results
-        self._dirty[scope] = False
-
-        return results
+        # Remove the key from the document
+        self._get_snapshot(scope).reference.update({
+            key: firestore.DELETE_FIELD
+        })
+        self._dirty[scope] = True
 
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
             snapshot = guild_document.get()
 
-            # Write default preferences
+            # Create the document if it does not exist
             if not snapshot.exists:
-                logger.info(f'Preferences for "{scope.name}" did not exist. Setting defaults.')
-                guild_document.set(self._default_properties)
-                snapshot = guild_document.get()
+                guild_document.set({})
 
             return snapshot
         elif isinstance(scope, discord.TextChannel):

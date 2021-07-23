@@ -6,7 +6,7 @@ import discord.ext.commands
 from discord import Message
 from discord.ext.commands.bot import Bot
 
-from .cogs import Help, Preferences, Dictionary, Statistics
+from .cogs import Help, Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_prefix(bot: Bot, message: Message):
-    preferences_cog = bot.get_cog('Preferences')
+    preferences_cog = bot.get_cog('Settings')
     return preferences_cog.scoped_property_manager.get('prefix', message.channel)
 
 
@@ -34,7 +34,7 @@ class DiscordBotClient(Bot):
         slash = SlashCommand(self, sync_commands=True)  # This needs to be here for slash commands to work!
         self.add_cog(Help())
         self.add_cog(Dictionary(self, dictionary_apis, ffmpeg_path))
-        self.add_cog(Preferences())
+        self.add_cog(Settings())
         self.add_cog(Statistics(self))
 
         @self.before_invoke

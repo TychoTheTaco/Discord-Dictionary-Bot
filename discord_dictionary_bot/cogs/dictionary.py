@@ -140,10 +140,9 @@ class Dictionary(commands.Cog):
         except discord.errors.Forbidden:
             logger.warning(f'Failed to start typing! Missing permissions. We have {utils.get_bot_permissions(context)}')
 
-
     async def _parse_define_or_befine(self, context: commands.Context, *args) -> (str, bool, str):
         # Get default language
-        preferences_cog = self._bot.get_cog('Preferences')
+        preferences_cog = self._bot.get_cog('Settings')
         default_language = preferences_cog.scoped_property_manager.get('language', context.channel)
 
         # Parse arguments
@@ -181,7 +180,7 @@ class Dictionary(commands.Cog):
             return
 
         # Check for text-to-speech override
-        preferences_cog = self._bot.get_cog('Preferences')
+        preferences_cog = self._bot.get_cog('Settings')
         text_to_speech_property = preferences_cog.scoped_property_manager.get('text_to_speech', context.channel)
         if text_to_speech_property == 'force' and voice_channel is not None:
             text_to_speech = True

@@ -1,12 +1,12 @@
 import discord
 from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
-from ..preferences import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError, BooleanProperty, ListProperty
+from ..property_manager import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError, BooleanProperty, ListProperty
 from typing import Any, Union, Optional
 from ..utils import send_maybe_hidden
 
 
-class Preferences(commands.Cog):
+class Settings(commands.Cog):
     PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
     PROPERTY_NAME_OPTION = {
         'name': 'name',
@@ -31,11 +31,11 @@ class Preferences(commands.Cog):
 
     def __init__(self):
         self._scoped_property_manager = FirestorePropertyManager([
-            Property('prefix', default='.'),
-            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag'),
-            Property('language', default='en-us-wavenet-c'),
-            BooleanProperty('show_definition_source', default=False),
-            ListProperty('dictionary_apis', default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'], choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'])
+            Property('prefix', default='.', description='The bot\'s prefix.'),
+            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag', description='force: All definition requests will use text-to-speech. flag: You must use the flag to use text-to-speech. disable: Text-to-speech is disabled.'),
+            Property('language', default='en-us-wavenet-c', description='The language to use when displaying definitions and speaking.'),
+            BooleanProperty('show_definition_source', default=False, description='Wether to show the definition source.'),
+            ListProperty('dictionary_apis', default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'], choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'], description='A list of dictionary APIs to use in order of preference.')
         ])
 
     @property
@@ -43,7 +43,7 @@ class Preferences(commands.Cog):
         return self._scoped_property_manager
 
     @commands.group(
-        name='property',
+        name='settings',
         aliases=['p'],
         help=PROPERTY_COMMAND_DESCRIPTION,
         usage='(list <scope> | set <key> <value> | remove <scope> <key>)'
@@ -57,7 +57,7 @@ class Preferences(commands.Cog):
         await self._set(context, scope_name, key, value)
 
     @cog_ext.cog_subcommand(
-        base='property',
+        base='settings',
         name='set',
         description='Set a property.',
         options=[
@@ -116,9 +116,9 @@ class Preferences(commands.Cog):
         await self._list(context, scope_name)
 
     @cog_ext.cog_subcommand(
-        base='property',
+        base='settings',
         name='list',
-        description='Shows a list of guild or server properties.',
+        description='Shows a list of guild or server settings.',
         options=[
             {
                 'name': 'scope',
@@ -145,6 +145,17 @@ class Preferences(commands.Cog):
         await context.defer(hidden=True)
         await self._list(context, scope_name)
 
+    def get_all(self, scope):
+        properties = {}
+        for p in self._scoped_property_manager.properties:
+            value = self._scoped_property_manager.get(p.key, scope)
+            if isinstance(scope, (discord.Guild, discord.DMChannel)):
+                properties[p] = value
+            elif isinstance(scope, discord.TextChannel):
+                if value != p.default:
+                    properties[p] = value
+        return properties
+
     async def _list(self, context: Union[commands.Context, SlashContext], scope_name: str = 'all'):
         if scope_name == 'all':
 
@@ -152,7 +163,7 @@ class Preferences(commands.Cog):
             for scope_name in ('guild', 'channel'):
                 scope = self._get_scope_from_name(scope_name, context)
                 if scope is not None:
-                    properties = self._scoped_property_manager.get_all(scope)
+                    properties = self.get_all(scope)
                     if len(properties) > 0:
                         reply += '\n' + self._print_properties(properties, scope)
 
@@ -165,7 +176,7 @@ class Preferences(commands.Cog):
                 await send_maybe_hidden(context, f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.')
                 return
 
-            properties = self._scoped_property_manager.get_all(scope)
+            properties = self.get_all(scope)
             await send_maybe_hidden(context, self._print_properties(properties, scope))
 
     @property.command(name='remove')
@@ -173,7 +184,7 @@ class Preferences(commands.Cog):
         await self._remove(context, scope_name, key)
 
     @cog_ext.cog_subcommand(
-        base='property',
+        base='settings',
         name='remove',
         description='Remove a channel property.',
         options=[
@@ -189,11 +200,6 @@ class Preferences(commands.Cog):
             if isinstance(context, SlashContext):
                 await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.')
-            return
-        elif scope_name == 'guild':
-            if isinstance(context, SlashContext):
-                await context.defer(hidden=True)
-            await send_maybe_hidden(context, 'Guild properties cannot be removed!')
             return
 
         self._scoped_property_manager.remove(key, scope)
@@ -214,20 +220,19 @@ class Preferences(commands.Cog):
         return None
 
     @staticmethod
-    def _print_properties(properties: {str, Any}, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> str:
-        reply = '__**'
+    def _print_properties(properties: {Property: Any}, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> str:
+        reply = ''
         if isinstance(scope, discord.Guild):
-            reply += 'Server'
+            reply += '__**Server Settings**__\n'
+            reply += 'These settings affect every channel in your server, unless they are overridden with a channel-specific setting.\n\n'
         elif isinstance(scope, discord.TextChannel):
-            reply += 'Channel'
+            reply += '__**Channel Settings**__\n'
+            reply += 'These settings only affect this channel and take priority over server settings.\n\n'
         elif isinstance(scope, discord.DMChannel):
-            reply += 'DM Channel'
-        else:
-            reply += f'Scope'
-        reply += ' properties**__\n'
+            reply += '__**DM Settings**__\n'
 
-        for key, value in sorted(properties.items()):
-            reply += f'{key}: `{value}`\n'
+        for p in sorted(properties, key=lambda x: x.key):
+            reply += f'**{p.key}**: `{properties[p]}`\n'
 
         if len(properties) == 0:
             reply += 'No properties set'
