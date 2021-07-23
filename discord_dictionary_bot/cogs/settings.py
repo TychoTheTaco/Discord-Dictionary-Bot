@@ -34,7 +34,7 @@ class Settings(commands.Cog):
             Property('prefix', default='.', description='The bot\'s prefix.'),
             Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag', description='force: All definition requests will use text-to-speech. flag: You must use the flag to use text-to-speech. disable: Text-to-speech is disabled.'),
             Property('language', default='en-us-wavenet-c', description='The language to use when displaying definitions and speaking.'),
-            BooleanProperty('show_definition_source', default=False, description='Wether to show the definition source.'),
+            BooleanProperty('show_definition_source', default=False, description='If enabled, the bot will show the definition source at the end of each definition.'),
             ListProperty('dictionary_apis', default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'], choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'], description='A list of dictionary APIs to use in order of preference.')
         ])
 
@@ -46,7 +46,7 @@ class Settings(commands.Cog):
         name='settings',
         aliases=['p'],
         help=PROPERTY_COMMAND_DESCRIPTION,
-        usage='(list <scope> | set <key> <value> | remove <scope> <key>)'
+        usage='(list <scope> | set <scope> <name> <value> | remove <scope> <name>)'
     )
     async def property(self, context):
         if context.invoked_subcommand is None:

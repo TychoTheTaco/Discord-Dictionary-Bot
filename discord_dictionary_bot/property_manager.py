@@ -1,8 +1,10 @@
-import discord
 from typing import Union, Any, Iterable, Optional
-from google.cloud import firestore
 import logging
 from abc import ABC, abstractmethod
+import datetime
+
+import discord
+from google.cloud import firestore
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -199,7 +201,9 @@ class FirestorePropertyManager(ScopedPropertyManager):
 
             # Create the document if it does not exist
             if not snapshot.exists:
-                guild_document.set({})
+                guild_document.set({
+                    'created': datetime.datetime.now()
+                })
 
             return snapshot
         elif isinstance(scope, discord.TextChannel):

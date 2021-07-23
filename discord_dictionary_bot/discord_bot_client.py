@@ -62,3 +62,12 @@ class DiscordBotClient(Bot):
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
+
+    async def on_message(self, message: discord.Message):
+
+        # If we are mentioned, show our prefix and help
+        if self.user in message.mentions:
+            prefix = get_prefix(self, message)
+            await message.channel.send(f'My prefix here is `{prefix}`\nUse `{prefix}help` to view available commands.')
+
+        await super().on_message(message)
