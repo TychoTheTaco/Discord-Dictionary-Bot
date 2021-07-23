@@ -69,6 +69,9 @@ class Property:
     def parse(self, string: str):
         return self._from_string(string)
 
+    def to_string(self, value) -> str:
+        return str(value)
+
 
 class BooleanProperty(Property):
 
@@ -79,6 +82,11 @@ class BooleanProperty(Property):
         if string.lower() in ('true', 'false'):
             return string.lower() == 'true'
         raise InvalidValueError(self.key, string)
+
+    def to_string(self, value) -> str:
+        if value:
+            return 'true'
+        return 'false'
 
 
 class ListProperty(Property):
@@ -95,6 +103,14 @@ class ListProperty(Property):
                 return False
         return True
 
+    def to_string(self, value) -> str:
+        result = ''
+        for i, x in enumerate(value):
+            result += f'{x}'
+            if i + 1 < len(value):
+                result += ','
+        return result + ''
+
 
 class ScopedPropertyManager(ABC):
 
@@ -106,7 +122,7 @@ class ScopedPropertyManager(ABC):
         return self._properties
 
     @abstractmethod
-    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
+    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], recursive: bool = True) -> Optional[Any]:
         raise NotImplementedError
 
     @abstractmethod
@@ -131,7 +147,7 @@ class FirestorePropertyManager(ScopedPropertyManager):
         # This dictionary keeps track of which scopes are dirty and need to be fetched from Firestore next time
         self._dirty = {}
 
-    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> Optional[Any]:
+    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], recursive: bool = True) -> Optional[Any]:
 
         # Check the cache
         if scope in self._cache and not self._dirty[scope]:
@@ -148,20 +164,21 @@ class FirestorePropertyManager(ScopedPropertyManager):
         if key in data:
             return data[key]
 
-        if isinstance(scope, (discord.Guild, discord.DMChannel)):
+        if recursive:
+            if isinstance(scope, (discord.Guild, discord.DMChannel)):
 
-            # The guild did not have the requested property, maybe the default properties has it
-            if key in self._default_properties:
-                value = self._default_properties[key]
-                return value
+                # The guild did not have the requested property, maybe the default properties has it
+                if key in self._default_properties:
+                    value = self._default_properties[key]
+                    return value
 
-            return None
-        elif isinstance(scope, discord.TextChannel):
+            elif isinstance(scope, discord.TextChannel):
 
-            # The text-channel did not have the requested property, maybe the guild has it
-            return self.get(key, scope.guild)
-        else:
-            raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+                # The text-channel did not have the requested property, maybe the guild has it
+                return self.get(key, scope.guild)
+            else:
+                raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+        return None
 
     def get_property(self, key):
         for p in self.properties:
@@ -187,6 +204,11 @@ class FirestorePropertyManager(ScopedPropertyManager):
         self._dirty[scope] = True
 
     def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+
+        # Make sure this is a valid property
+        prop = self.get_property(key)
+        if prop is None:
+            raise InvalidKeyError(key)
 
         # Remove the key from the document
         self._get_snapshot(scope).reference.update({

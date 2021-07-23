@@ -31,11 +31,33 @@ class Settings(commands.Cog):
 
     def __init__(self):
         self._scoped_property_manager = FirestorePropertyManager([
-            Property('prefix', default='.', description='The bot\'s prefix.'),
-            Property('text_to_speech', choices=['force', 'flag', 'disable'], default='flag', description='force: All definition requests will use text-to-speech. flag: You must use the flag to use text-to-speech. disable: Text-to-speech is disabled.'),
-            Property('language', default='en-us-wavenet-c', description='The language to use when displaying definitions and speaking.'),
-            BooleanProperty('show_definition_source', default=False, description='If enabled, the bot will show the definition source at the end of each definition.'),
-            ListProperty('dictionary_apis', default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'], choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'], description='A list of dictionary APIs to use in order of preference.')
+            Property(
+                'prefix',
+                default='.',
+                description='The bot\'s prefix.'
+            ),
+            Property(
+                'text_to_speech',
+                choices=['force', 'flag', 'disable'],
+                default='flag',
+                description='force: All definition requests will use text-to-speech. flag: You must use the flag to use text-to-speech. disable: Text-to-speech is disabled.'
+            ),
+            Property(
+                'language',
+                default='en-us-wavenet-c',
+                description='The language to use when displaying definitions and speaking.'
+            ),
+            BooleanProperty(
+                'show_definition_source',
+                default=False,
+                description='If enabled, the bot will show the definition source at the end of each definition.'
+            ),
+            ListProperty(
+                'dictionary_apis',
+                default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'],
+                choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'],
+                description='A list of dictionary APIs to use in order of preference.'
+            )
         ])
 
     @property
@@ -148,11 +170,11 @@ class Settings(commands.Cog):
     def get_all(self, scope):
         properties = {}
         for p in self._scoped_property_manager.properties:
-            value = self._scoped_property_manager.get(p.key, scope)
             if isinstance(scope, (discord.Guild, discord.DMChannel)):
-                properties[p] = value
+                properties[p] = self._scoped_property_manager.get(p.key, scope)
             elif isinstance(scope, discord.TextChannel):
-                if value != p.default:
+                value = self._scoped_property_manager.get(p.key, scope, recursive=False)
+                if value is not None:
                     properties[p] = value
         return properties
 
@@ -202,10 +224,12 @@ class Settings(commands.Cog):
             await send_maybe_hidden(context, f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.')
             return
 
-        self._scoped_property_manager.remove(key, scope)
+        try:
+            self._scoped_property_manager.remove(key, scope)
+        except InvalidKeyError:
+            await send_maybe_hidden(context, 'Invalid property name!')
+            return
 
-        if isinstance(context, SlashContext):
-            await context.defer()
         await context.send(f'Successfully removed `{key}` from `{scope_name}`.')
 
     @staticmethod
@@ -232,7 +256,7 @@ class Settings(commands.Cog):
             reply += '__**DM Settings**__\n'
 
         for p in sorted(properties, key=lambda x: x.key):
-            reply += f'**{p.key}**: `{properties[p]}`\n'
+            reply += f'**{p.key}**: `{p.to_string(properties[p])}`\n'
 
         if len(properties) == 0:
             reply += 'No properties set'
