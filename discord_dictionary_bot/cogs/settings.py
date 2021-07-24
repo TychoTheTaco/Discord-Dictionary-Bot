@@ -57,7 +57,7 @@ class Settings(commands.Cog):
             ),
             Property(
                 'language',
-                default='en-us-wavenet-c',
+                default='en',
                 description='The language to use when displaying definitions and speaking. This can be a two-letter language code or a language name.'
             ),
             BooleanProperty(

@@ -211,23 +211,17 @@ class FirestorePropertyManager(ScopedPropertyManager):
             raise InvalidKeyError(key)
 
         # Remove the key from the document
-        self._get_snapshot(scope).reference.update({
-            key: firestore.DELETE_FIELD
-        })
-        self._dirty[scope] = True
+        snapshot = self._get_snapshot(scope)
+        if snapshot.exists:
+            snapshot.reference.update({
+                key: firestore.DELETE_FIELD
+            })
+            self._dirty[scope] = True
 
     def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
-            snapshot = guild_document.get()
-
-            # Create the document if it does not exist
-            if not snapshot.exists:
-                guild_document.set({
-                    'created': datetime.datetime.now()
-                })
-
-            return snapshot
+            return guild_document.get()
         elif isinstance(scope, discord.TextChannel):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.guild.id))
             channel_document = guild_document.collection('channels').document(str(scope.id))

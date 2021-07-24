@@ -1,10 +1,12 @@
 import logging
 from pathlib import Path
 from typing import Union
+import datetime
 
 import discord.ext.commands
 from discord import Message
 from discord.ext.commands.bot import Bot
+from google.cloud import firestore
 
 from .cogs import Help, Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
@@ -63,6 +65,14 @@ class DiscordBotClient(Bot):
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
 
+        # Check for new guilds
+        firestore_client = firestore.Client()
+        for guild in self.guilds:
+            document = firestore_client.collection('guilds').document(str(guild.id))
+            snapshot = document.get()
+            if not snapshot.exists:
+                await self.on_guild_join(guild)
+
     async def on_message(self, message: discord.Message):
 
         # If we are mentioned, show our prefix and help
@@ -71,3 +81,15 @@ class DiscordBotClient(Bot):
             await message.reply(f'My prefix here is `{prefix}`\nUse `{prefix}help` to view available commands.', mention_author=False)
 
         await super().on_message(message)
+
+    async def on_guild_join(self, guild: discord.Guild):
+        logger.info('Joined guild: ' + guild.name)
+
+        firestore_client = firestore.Client()
+        guild_document = firestore_client.collection('guilds').document(str(guild.id))
+        snapshot = guild_document.get()
+
+        if not snapshot.exists:
+            guild_document.set({
+                'joined': datetime.datetime.now()
+            })
