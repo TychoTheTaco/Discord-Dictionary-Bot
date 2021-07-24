@@ -1,6 +1,6 @@
 # Discord Dictionary Bot
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
-A simple bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot will also read out the definition to you. [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands)
+A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands)
 
 
 
@@ -12,33 +12,35 @@ Default command prefix: `.`<br>This bot also supports [Slash Commands](https://d
 Prints the definition of a word in the current text channel and optionally reads it out for you.<br>
 Usage: `define [-v] [-lang <language_code>] <word>`<br>
 `-v`: Read out the definition to the voice channel you are connected to, if any.<br>
-`-lang <language_code>`: Specify the language to use for text-to-speech.<br>
+`-lang <language_code>`: The language to translate the definitions to.<br>
 `<word>`: The word to define.<br>
 Aliases: `d`<br>
 
 **help**<br>
-Shows available commands.<br>
-Usage: `help`<br>
+Shows available commands and detailed information for each command.<br>
+Usage: `help [<command>]`<br>
 Aliases: `h`<br>
 
-**voices**<br>
-Shows the list of supported voices for text to speech.<br>
-Usage: `voices`<br>
-Aliases: `v`<br>
-
-**property**<br>
-Set or remove channel or server properties.<br>
-Usage: `property <scope> (list | set <key> <value> | del <key>)`<br>
-`<scope>`: The scope of the property. Either `global` for guild-specific properties or `channel` for channel-specific properties. Channel-specific properties will override guild-specific properties.<br>
-`list`: List all properties in the specified scope.<br>
-`set <key> <value>`: Set the value of the property named `key` to `value`.<br>
-`del <key>`: Removes the specified property.<br>
+**settings**<br>
+Change the bot's settings. Settings can be set for the entire server, or for individual channels.<br>
+Usage: `settings (list <scope> | set <scope> <key> <value> | remove <scope> <key>)`<br>
+`<scope>`: The scope of the property. Either `guild` for server-specific properties or `channel` for channel-specific properties. Channel-specific properties will override server-specific properties.<br>
+`list <scope>`: List all settings in the specified scope.<br>
+`set <scope> <key> <value>`: Set the value of the property named `key` to `value`.<br>
+`remove <scope> <key>`: Removes/Resets the specified setting.<br>
 Aliases: `p`<br>
 
 **stop**<br>
-Makes this bot stop talking and removes any queued definition requests.<br>
+Makes this bot stop talking.<br>
 Usage: `stop`<br>
 Aliases: `s`<br>
+
+**translate**<br>
+Translate a message to another language.<br>
+Usage: `translate <target_language> <message>`<br>
+`target_language`: Either a 2-letter language code or the name of a language.<br>
+`message`: The word or phrase that you want to translate.<br>
+Aliases: `t`<br>
 
 ## Screenshots
 ![taco](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
