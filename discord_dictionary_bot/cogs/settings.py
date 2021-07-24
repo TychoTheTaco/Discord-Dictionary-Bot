@@ -77,11 +77,11 @@ class Settings(commands.Cog):
         help=PROPERTY_COMMAND_DESCRIPTION,
         usage='(list <scope> | set <scope> <name> <value> | remove <scope> <name>)'
     )
-    async def property(self, context):
+    async def settings(self, context):
         if context.invoked_subcommand is None:
             raise commands.errors.ArgumentParsingError()
 
-    @property.command(name='set')
+    @settings.command(name='set')
     async def set(self, context, scope_name: str, key: str, value: str):
         await self._set(context, scope_name, key, value)
 
@@ -140,7 +140,7 @@ class Settings(commands.Cog):
                 await context.defer(hidden=True)
             await send_maybe_hidden(context, f'Invalid value `{e.value}` for key `{e.key}`.')
 
-    @property.command(name='list')
+    @settings.command(name='list')
     async def list(self, context: commands.Context, scope_name: Optional[str] = 'all'):
         await self._list(context, scope_name)
 
@@ -208,7 +208,7 @@ class Settings(commands.Cog):
             properties = self.get_all(scope)
             await send_maybe_hidden(context, self._print_properties(properties, scope))
 
-    @property.command(name='remove')
+    @settings.command(name='remove')
     async def remove(self, context: commands.Context, scope_name: str, key: str):
         await self._remove(context, scope_name, key)
 
