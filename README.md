@@ -43,7 +43,10 @@ Usage: `translate <target_language> <message>`<br>
 Aliases: `t`<br>
 
 ## Screenshots
-![taco](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/taco.jpg)
+![](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/define_sunflower.jpg)<br>
+![](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/define_hola.jpg)<br>
+![](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/translate_dutch_english.jpg)<br>
+![](https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/translate_spanish.jpg)<br>
 
 ## Installation
 
