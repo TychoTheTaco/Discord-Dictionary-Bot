@@ -272,9 +272,9 @@ class Dictionary(commands.Cog):
             # Record analytics only for valid words
             log_definition_request(word, reverse, text_to_speech, language, context)
 
-            # Translate definitions to target language
-            word, _ = self._translate(word, language_code)
+            # Translate word and definitions to target language
             if language_code != 'en':
+                word, _ = self._translate(word, language_code)
                 for i in range(len(definitions)):
                     definitions[i]['word_type'], _ = self._translate(definitions[i]['word_type'], language_code)
                     definitions[i]['definition'], _ = self._translate(definitions[i]['definition'], language_code)

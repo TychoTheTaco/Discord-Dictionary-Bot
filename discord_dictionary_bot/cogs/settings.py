@@ -77,7 +77,10 @@ class Settings(commands.Cog):
             ),
             BooleanProperty(
                 'auto_translate',
-                default=True
+                default=True,
+                description='Choices:\n'
+                            '`true`: Automatically translate words before looking up their definition.\n'
+                            '`false`: Don\'t translate words before looking up their definition.'
             )
         ])
 
@@ -291,6 +294,8 @@ class Settings(commands.Cog):
             reply += 'These settings only affect this channel and take priority over server settings.\n\n'
         elif isinstance(scope, discord.DMChannel):
             reply += '__**DM Settings**__\n'
+
+        reply += 'Use `help settings` to see more info about settings.\n\n'
 
         for p in sorted(properties, key=lambda x: x.key):
             reply += f'**{p.key}**: `{p.to_string(properties[p])}`\n'
