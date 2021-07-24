@@ -510,6 +510,8 @@ class Dictionary(commands.Cog):
                 await self._stop(context, voice_client)
                 return
 
+        await context.send('Okay, I\'ll be quiet.')
+
     async def _stop(self, context: Union[commands.Context, SlashContext], voice_client: discord.VoiceClient):
         voice_client.stop()
         await context.send('Okay, I\'ll be quiet.')

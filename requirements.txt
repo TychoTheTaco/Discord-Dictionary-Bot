@@ -7,6 +7,7 @@ google-cloud-firestore
 google-cloud-texttospeech
 google-cloud-logging
 google-cloud-bigquery
+google-cloud-translate
 beautifulsoup4
 lxml
 requests
