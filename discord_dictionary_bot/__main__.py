@@ -16,13 +16,8 @@ def logging_filter(record):
     return 'discord_dictionary_bot' in record.name or 'discord_dictionary_bot' in record.pathname
 
 
-def gcp_logging_filter(record):
-    return 'google.cloud.logging_v2.handlers.transports.background_thread' not in record.name
-
-
 # Set up logging
-logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S')
-logging.getLogger().handlers[0].addFilter(gcp_logging_filter)
+logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.INFO, datefmt='%m/%d/%Y %H:%M:%S')
 logging.getLogger().handlers[0].addFilter(logging_filter)
 
 
@@ -110,7 +105,6 @@ def main():
     # Set up GCP logging
     gcp_logging_client = google.cloud.logging.Client()
     gcp_logging_handler = CloudLoggingHandler(gcp_logging_client, name='discord-dictionary-bot')
-    gcp_logging_handler.addFilter(gcp_logging_filter)
     logging.getLogger().addHandler(gcp_logging_handler)
 
     # Check which dictionary API we should use
