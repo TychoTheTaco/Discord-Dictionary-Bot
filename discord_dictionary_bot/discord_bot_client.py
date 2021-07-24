@@ -68,6 +68,6 @@ class DiscordBotClient(Bot):
         # If we are mentioned, show our prefix and help
         if self.user in message.mentions:
             prefix = get_prefix(self, message)
-            await message.channel.send(f'My prefix here is `{prefix}`\nUse `{prefix}help` to view available commands.')
+            await message.reply(f'My prefix here is `{prefix}`\nUse `{prefix}help` to view available commands.', mention_author=False)
 
         await super().on_message(message)
