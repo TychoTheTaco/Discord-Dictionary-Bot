@@ -1,8 +1,10 @@
+from typing import Any, Union, Optional
+
 import discord
 from discord_slash import SlashContext, cog_ext
 from discord.ext import commands
+
 from ..property_manager import FirestorePropertyManager, Property, InvalidKeyError, InvalidValueError, BooleanProperty, ListProperty
-from typing import Any, Union, Optional
 from ..utils import send_maybe_hidden
 
 
@@ -25,6 +27,14 @@ class Settings(commands.Cog):
             {
                 'name': 'prefix',
                 'value': 'prefix'
+            },
+            {
+                'name': 'show_definition_source',
+                'value': 'show_definition_source'
+            },
+            {
+                'name': 'dictionary_apis',
+                'value': 'dictionary_apis'
             }
         ]
     }
@@ -115,8 +125,8 @@ class Settings(commands.Cog):
             }
         ]
     )
-    async def slash_set(self, context: SlashContext, scope_name: str, key: str, value: str):
-        await self._set(context, scope_name, key, value)
+    async def slash_set(self, context: SlashContext, scope: str, name: str, value: str):
+        await self._set(context, scope, name, value)
 
     async def _set(self, context: Union[commands.Context, SlashContext], scope_name: str, key: str, value: str):
         scope = self._get_scope_from_name(scope_name, context)
@@ -170,9 +180,9 @@ class Settings(commands.Cog):
             }
         ]
     )
-    async def slash_list(self, context: SlashContext, scope_name: Optional[str] = 'all'):
+    async def slash_list(self, context: SlashContext, scope: Optional[str] = 'all'):
         await context.defer(hidden=True)
-        await self._list(context, scope_name)
+        await self._list(context, scope)
 
     def get_all(self, scope):
         properties = {}
@@ -215,13 +225,29 @@ class Settings(commands.Cog):
     @cog_ext.cog_subcommand(
         base='settings',
         name='remove',
-        description='Remove a channel property.',
+        description='Remove a property.',
         options=[
+            {
+                'name': 'scope',
+                'description': 'Property scope.',
+                'type': 3,
+                'required': True,
+                'choices': [
+                    {
+                        'name': 'guild',
+                        'value': 'guild'
+                    },
+                    {
+                        'name': 'channel',
+                        'value': 'channel'
+                    }
+                ]
+            },
             PROPERTY_NAME_OPTION
         ]
     )
-    async def slash_remove(self, context: SlashContext, key: str):
-        await self._remove(context, 'channel', key)
+    async def slash_remove(self, context: SlashContext, scope: str, name: str):
+        await self._remove(context, scope, name)
 
     async def _remove(self, context: Union[commands.Context, SlashContext], scope_name: str, key: str):
         scope = self._get_scope_from_name(scope_name, context)

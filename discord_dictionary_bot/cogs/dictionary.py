@@ -126,7 +126,7 @@ class Dictionary(commands.Cog):
     async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: Optional[str] = None):
         # Get default language
         if language is None:
-            preferences_cog = self._bot.get_cog('Preferences')
+            preferences_cog = self._bot.get_cog('Settings')
             language = preferences_cog.scoped_property_manager.get('language', context.channel)
 
         await self._define_or_befine(context, word, False, text_to_speech, language)
