@@ -34,29 +34,36 @@ class Settings(commands.Cog):
             Property(
                 'prefix',
                 default='.',
-                description='The bot\'s prefix.'
+                description='The bot\'s prefix. This can be one or more characters. If you forget the prefix, just mention the bot and it will show you the current prefix.'
             ),
             Property(
                 'text_to_speech',
                 choices=['force', 'flag', 'disable'],
                 default='flag',
-                description='force: All definition requests will use text-to-speech. flag: You must use the flag to use text-to-speech. disable: Text-to-speech is disabled.'
+                description='Choices:\n'
+                            '`force`: All definition requests will use text-to-speech.\n'
+                            '`flag`: You must use the flag to use text-to-speech.\n'
+                            '`disable`: Text-to-speech is disabled.'
             ),
             Property(
                 'language',
                 default='en-us-wavenet-c',
-                description='The language to use when displaying definitions and speaking.'
+                description='The language to use when displaying definitions and speaking. This can be a two-letter language code or a language name.'
             ),
             BooleanProperty(
                 'show_definition_source',
                 default=False,
-                description='If enabled, the bot will show the definition source at the end of each definition.'
+                description='Choices:\n'
+                            '`true`: The bot will show the definition source at the end of each definition.\n'
+                            '`false`: The bot will not show the definition source.'
             ),
             ListProperty(
                 'dictionary_apis',
                 default=['unofficial_google', 'owlbot', 'merriam_webster_collegiate', 'merriam_webster_medical', 'rapid_words'],
                 choices=['owlbot', 'unofficial_google', 'merriam_webster_medical', 'merriam_webster_collegiate', 'rapid_words'],
-                description='A list of dictionary APIs to use in order of preference.'
+                description='A comma-separated list of dictionary APIs to use in order of preference.\n'
+                            'Choices:\n'
+                            '`unofficial_google`, `owlbot`, `merriam_webster_collegiate`, `merriam_webster_medical`, `rapid_words`'
             )
         ])
 
