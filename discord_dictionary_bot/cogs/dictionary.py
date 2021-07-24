@@ -155,7 +155,7 @@ class Dictionary(commands.Cog):
     async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: Optional[str] = None):
         # Get default language
         if language is None:
-            preferences_cog = self._bot.get_cog('Settings')
+            preferences_cog = context.bot.get_cog('Settings')
             language = preferences_cog.scoped_property_manager.get('language', context.channel)
 
         await self._define_or_befine(context, word, False, text_to_speech, language)
@@ -167,7 +167,7 @@ class Dictionary(commands.Cog):
 
     async def _parse_define_or_befine(self, context: commands.Context, *args) -> (str, bool, str):
         # Get default language
-        preferences_cog = self._bot.get_cog('Settings')
+        preferences_cog = context.bot.get_cog('Settings')
         default_language = preferences_cog.scoped_property_manager.get('language', context.channel)
 
         # Parse arguments
@@ -205,7 +205,7 @@ class Dictionary(commands.Cog):
             return
 
         # Check for text-to-speech override
-        preferences_cog = self._bot.get_cog('Settings')
+        preferences_cog = context.bot.get_cog('Settings')
         text_to_speech_property = preferences_cog.scoped_property_manager.get('text_to_speech', context.channel)
         if text_to_speech_property == 'force' and voice_channel is not None:
             text_to_speech = True
@@ -344,7 +344,7 @@ class Dictionary(commands.Cog):
 
                     self._guild_locks[context.guild].release()
 
-                asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
+                asyncio.run_coroutine_threadsafe(after_coroutine(error), context.bot.loop)
 
             # Speak
             voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
@@ -491,20 +491,18 @@ class Dictionary(commands.Cog):
 
     @commands.command(name='stop', aliases=['s'], help=STOP_COMMAND_DESCRIPTION)
     async def stop(self, context: commands.Context):
-        for voice_client in self._bot.voice_clients:
+        for voice_client in context.bot.voice_clients:
             if voice_client == context.voice_client:
                 await self._stop(context, voice_client)
                 return
 
     @cog_ext.cog_slash(name='stop', description=STOP_COMMAND_DESCRIPTION)
     async def slash_stop(self, context: SlashContext):
-        await context.defer()
-
         # Get voice channel of current user
         voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
 
         # Get voice client
-        for voice_client in self._bot.voice_clients:
+        for voice_client in context.bot.voice_clients:
             if voice_client.channel == voice_channel:
                 await self._stop(context, voice_client)
                 return
