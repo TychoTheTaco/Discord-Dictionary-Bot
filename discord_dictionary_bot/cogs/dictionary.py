@@ -317,8 +317,7 @@ class Dictionary(commands.Cog):
                 voice_client = await self._join_voice_channel(voice_channel)
             except InsufficientPermissionsException as e:
                 self._guild_locks[context.guild].release()
-                await context.send(
-                    f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
+                await utils.reply_maybe_hidden(context, f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
                 return
 
             # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)

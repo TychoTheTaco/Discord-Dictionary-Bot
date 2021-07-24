@@ -3,7 +3,7 @@ from typing import Optional
 
 from discord.ext import commands
 
-from ..utils import send_maybe_hidden
+from ..utils import reply_maybe_hidden
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class Help(commands.Cog):
                         reply += f' `{command.usage}`'
                     reply += '\n'
                     reply += f'{command.help}\n'
-            await send_maybe_hidden(context, reply)
+            await reply_maybe_hidden(context, reply)
         elif command_name == 'settings':
             reply = f'**__{command_name}__**\n'
             reply += 'There are 2 groups of settings: **Server settings** and **Channel settings**. Server settings affect all channels in the server, unless they are overridden with channel settings. Channel settings only affect a specific channel and take priority over server settings.\n\n'
@@ -47,7 +47,7 @@ class Help(commands.Cog):
                 reply += f'**{p.key}**\n'
                 reply += p.description + '\n\n'
 
-            await send_maybe_hidden(context, reply)
+            await reply_maybe_hidden(context, reply)
         else:
             reply = ''
             for command in context.bot.commands:
@@ -57,4 +57,7 @@ class Help(commands.Cog):
                         reply += f' `{command.usage}`'
                     reply += '\n'
                     reply += f'{command.help}\n'
-            await send_maybe_hidden(context, reply)
+            if len(reply) == 0:
+                await reply_maybe_hidden(context, 'That\'s not a command name!')
+            else:
+                await reply_maybe_hidden(context, reply)
