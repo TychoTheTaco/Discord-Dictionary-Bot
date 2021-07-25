@@ -35,6 +35,10 @@ class Settings(commands.Cog):
             {
                 'name': 'dictionary_apis',
                 'value': 'dictionary_apis'
+            },
+            {
+                'name': 'auto_translate',
+                'value': 'auto_translate'
             }
         ]
     }
