@@ -77,7 +77,7 @@ class Settings(commands.Cog):
             ),
             BooleanProperty(
                 'auto_translate',
-                default=True,
+                default=False,
                 description='Choices:\n'
                             '`true`: Automatically translate words before looking up their definition.\n'
                             '`false`: Don\'t translate words before looking up their definition.'
