@@ -96,5 +96,18 @@ def text_vs_slash_commands():
     return response
 
 
+@app.route('/dictionary_api_usage')
+def dictionary_api_usage():
+    result = {}
+    for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` WHERE time >= TIMESTAMP_SUB(current_timestamp(), INTERVAL 1 DAY) GROUP BY api_name').result():
+        d = row_to_dict(row)
+        print(d)
+        result[d['api_name']] = d['cnt']
+
+    response = jsonify(result)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
 if __name__ == '__main__':
     app.run('localhost')

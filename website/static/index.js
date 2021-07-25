@@ -188,54 +188,36 @@ class CommandsPerDay extends Graph {
             'languages': '#006064',
         }
 
-        const datasets = []
-        let first = true;
+        const labels = []
+        const datas = []
+
         for (const commandName in response) {
             const items = response[commandName];
-
-            let yValues = [];
 
             let text_count_sum = 0;
             let slash_count_sum = 0;
             for (const item of items) {
-                if (first) xValues.push(new Date(item['date']));
                 text_count_sum += item['text_count'];
                 slash_count_sum += item['slash_count'];
-                yValues.push(text_count_sum + slash_count_sum);
             }
-            datasets.push({
-                label: commandName,
-                data: yValues,
-                borderColor: colorMap[commandName],
-                tension: 0.1,
-                pointRadius: 0
-            })
-            first = false;
+            datas.push(text_count_sum + slash_count_sum);
+            labels.push(commandName);
         }
 
         const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
-                type: 'line',
+                type: 'bar',
                 data: {
-                    labels: xValues,
-                    datasets: datasets
+                    labels: labels,
+                    datasets: [
+                        {
+                            data: datas,
+                            backgroundColor: 'white'
+                        }
+                    ]
                 },
                 options: {
-                    scales: {
-                        x: {
-                            ticks: {
-                                autoSkip: false,
-                                maxRotation: 0,
-                                callback: function (value, index, values) {
-                                    if (xValues[index].getDate() !== 1) {
-                                        return null;
-                                    }
-                                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                                    return monthNames[xValues[index].getMonth()];
-                                }
-                            }
-                        }
-                    },
+                    indexAxis: 'y',
                     plugins: {
                         title: {
                             text: 'Commands'
@@ -253,61 +235,65 @@ class TextVsSlashCommands extends Graph {
     async load() {
         const response = await (await fetch(API_ROOT + 'text_vs_slash_commands')).json();
 
-        let xValues = [];
-        let yValues = [];
-        let yValuesSlash = [];
-
         let text_count_sum = 0;
         let slash_count_sum = 0;
         for (const item of response) {
-            xValues.push(new Date(item['date']));
             text_count_sum += item['text_count'];
             slash_count_sum += item['slash_count'];
-            yValues.push(text_count_sum);
-            yValuesSlash.push(slash_count_sum);
         }
 
         const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
-                type: 'line',
+                type: 'pie',
                 data: {
-                    labels: xValues,
+                    labels: ['Text', 'Slash'],
                     datasets: [
                         {
-                            label: 'Text',
-                            data: yValues,
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1,
-                            pointRadius: 0
-                        },
-                        {
-                            label: 'Slash',
-                            data: yValuesSlash,
-                            borderColor: 'rgb(230, 120, 12)',
-                            tension: 0.1,
-                            pointRadius: 0
+                            data: [text_count_sum, slash_count_sum]
                         }
                     ]
                 },
                 options: {
-                    scales: {
-                        x: {
-                            ticks: {
-                                autoSkip: false,
-                                maxRotation: 0,
-                                callback: function (value, index, values) {
-                                    if (xValues[index].getDate() !== 1) {
-                                        return null;
-                                    }
-                                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                                    return monthNames[xValues[index].getMonth()];
-                                }
-                            }
-                        }
-                    },
                     plugins: {
                         title: {
                             text: 'Text vs Slash Commands'
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+}
+
+class DictionaryApiUsage extends Graph {
+
+    async load() {
+        const response = await (await fetch(API_ROOT + 'dictionary_api_usage')).json();
+
+        const labels = [];
+        const counts = []
+        for (const item in response) {
+            console.log(item)
+            labels.push(item)
+            counts.push(response[item])
+        }
+
+        const ctx = this.canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            data: counts
+                        }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            text: 'Dictionary API Usage'
                         }
                     }
                 }
@@ -342,7 +328,8 @@ const graphs = [
     new RequestsPerDayGraph(createNewChartContainer()),
     new TotalRequestsPerDayGraph(createNewChartContainer()),
     new CommandsPerDay(createNewChartContainer()),
-    new TextVsSlashCommands(createNewChartContainer())
+    new TextVsSlashCommands(createNewChartContainer()),
+    new DictionaryApiUsage(createNewChartContainer())
 ];
 
 (async () => {
