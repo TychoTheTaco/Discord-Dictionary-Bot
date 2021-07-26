@@ -11,5 +11,6 @@
     <orderEntry type="library" name="chart.js" level="application" />
     <orderEntry type="library" name="chartjs-plugin-datalabels" level="application" />
     <orderEntry type="library" name="vue" level="application" />
+    <orderEntry type="library" name="material-components-web" level="application" />
   </component>
 </module>
