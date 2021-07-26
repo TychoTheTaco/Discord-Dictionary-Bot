@@ -4,11 +4,20 @@
 
 * {
     color: whitesmoke;
-    font-family: Calibri, sans-serif;
+    font-family: "Segoe UI", sans-serif;
     user-select: none;
 }
 
 body {
     background-color: #424242;
     margin: 0;
+}
+
+.nav-link {
+    text-decoration: none;
+    margin: 1rem;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
 }

@@ -15,10 +15,27 @@
             </div>
         </template>
 
-        <div style="text-align: center">
-            <h1>Discord Dictionary Bot</h1>
-            <h2>Usage Statistics</h2>
-        </div>
+        <!-- Navigation Bar -->
+        <nav style="background-color: #303030">
+
+            <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; max-width: 1280px; margin: auto;">
+
+                <!-- Left -->
+                <a href="/" style="display: flex; flex-direction: row; align-items: center; margin: 0.8rem; text-decoration: none;">
+                    <img src="../static/dictionary.png" alt="" width="64px" height="64px">
+                    <span style="font-size: 1.3em; font-weight: bold; margin-left: 1.6rem;">Discord Dictionary Bot</span>
+                </a>
+
+                <!-- Right -->
+                <div style="display: inline-block; font-size: 1.2em">
+                    <a href="https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands" class="nav-link">Invite</a>
+                    <a href="https://github.com/TychoTheTaco/Discord-Dictionary-Bot" class="nav-link">GitHub</a>
+                    <a href="/statistics" class="nav-link">Statistics</a>
+                </div>
+
+            </div>
+
+        </nav>
 
         <div id="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap;">
 
@@ -27,5 +44,6 @@
     </body>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.3.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="../static/index.js"></script>
 </html>

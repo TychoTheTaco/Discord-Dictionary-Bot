@@ -8,6 +8,25 @@ Chart.defaults.plugins.title.display = true;
 Chart.defaults.color = 'whitesmoke';
 Chart.defaults.animation = false;
 
+const COMMAND_COLORS = {
+    'define': '#C62828',
+    'befine': '#880E4F',
+    'help': '#F57F17',
+    'stop': '#FF6F00',
+    'voices': '#827717',
+    'property': '#03A9F4',
+    'stats': '#8BC34A',
+    'languages': '#006064',
+}
+
+const DICTIONARY_API_COLORS = {
+    'unofficial_google': '#D32F2F',
+    'owlbot': '#1976D2',
+    'merriam_webster_collegiate': '#388E3C',
+    'merriam_webster_medical': '#FBC02D',
+    'rapid_words': '#F57C00'
+}
+
 class Graph {
 
     constructor(container) {
@@ -175,19 +194,6 @@ class CommandsPerDay extends Graph {
     async load() {
         const response = await (await fetch(API_ROOT + 'commands_per_day')).json();
 
-        let xValues = [];
-
-        const colorMap = {
-            'define': '#B71C1C',
-            'befine': '#880E4F',
-            'help': '#F57F17',
-            'stop': '#FF6F00',
-            'voices': '#827717',
-            'property': '#03A9F4',
-            'stats': '#8BC34A',
-            'languages': '#006064',
-        }
-
         const labels = []
         const datas = []
 
@@ -244,12 +250,14 @@ class TextVsSlashCommands extends Graph {
 
         const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
+                plugins: [ChartDataLabels],
                 type: 'pie',
                 data: {
                     labels: ['Text', 'Slash'],
                     datasets: [
                         {
-                            data: [text_count_sum, slash_count_sum]
+                            data: [text_count_sum, slash_count_sum],
+                            backgroundColor: ['#BA2944', '#354CBA']
                         }
                     ]
                 },
@@ -257,6 +265,11 @@ class TextVsSlashCommands extends Graph {
                     plugins: {
                         title: {
                             text: 'Text vs Slash Commands'
+                        },
+                        datalabels: {
+                            formatter: function (value, context) {
+                                return context.chart.data.labels[context.dataIndex];
+                            }
                         }
                     }
                 }
@@ -273,32 +286,39 @@ class DictionaryApiUsage extends Graph {
 
         const labels = [];
         const counts = []
+        const colors = [];
         for (const item in response) {
-            console.log(item)
             labels.push(item)
             counts.push(response[item])
+            colors.push(DICTIONARY_API_COLORS[item])
         }
 
         const ctx = this.canvas.getContext('2d');
         const chart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            data: counts
-                        }
-                    ]
-                },
-                options: {
-                    plugins: {
-                        title: {
-                            text: 'Dictionary API Usage'
+            type: 'pie',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        data: counts,
+                        backgroundColor: colors
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        text: 'Dictionary API Usage'
+                    },
+                    datalabels: {
+                        formatter: function (value, context) {
+                            return context.chart.data.labels[context.dataIndex];
                         }
                     }
                 }
             }
-        );
+        });
     }
 
 }
