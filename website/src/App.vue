@@ -1,69 +1,29 @@
 <template>
-
-  <!-- Navigation Bar -->
-  <nav style="background-color: #1E1F22">
-
-    <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; max-width: 1280px; margin: auto;">
-
-      <!-- Left -->
-      <a href="/" style="display: flex; flex-direction: row; align-items: center; margin: 0.8rem; text-decoration: none;">
-        <img src="dictionary.png" alt="" width="48px" height="48px" style="border-radius: 50%;">
-        <span style="font-size: 1.2em; font-weight: bold; margin-left: 1rem;">Discord Dictionary Bot</span>
-      </a>
-
-      <!-- Right -->
-      <div style="display: inline-block; font-size: 1.2em">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands" class="nav-link">Invite</a>
-        <a href="https://github.com/TychoTheTaco/Discord-Dictionary-Bot" class="nav-link">GitHub</a>
-        <a href="/statistics" class="nav-link">Statistics</a>
-      </div>
-
-    </div>
-
-  </nav>
-
-  <Home/>
-  <Statistics/>
-
+	<Header/>
+	<router-view/>
 </template>
-
-<script>
-import Home from './components/Home.vue'
-import Statistics from "@/components/Statistics";
-
-export default {
-  name: 'App',
-  components: {
-    Statistics,
-    Home
-  }
-}
-</script>
 
 <style>
 
-:root {
-  --dark-gray: #303030;
-}
-
 * {
-  color: whitesmoke;
-  font-family: "Segoe UI", sans-serif;
-  user-select: none;
+    color: whitesmoke;
+    font-family: "Segoe UI", sans-serif;
+    user-select: none;
 }
 
 body {
-  background-color: #424242;
-  margin: 0;
-}
-
-.nav-link {
-  text-decoration: none;
-  margin: 1rem;
-}
-
-.nav-link:hover {
-  text-decoration: underline;
+    background-color: #424242;
+    margin: 0;
 }
 
 </style>
+
+<script>
+
+import Header from "@/components/Header";
+
+export default {
+	components: {Header}
+}
+
+</script>

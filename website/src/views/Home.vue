@@ -1,5 +1,5 @@
 <template>
-  <div style="max-width: 1280px; margin: auto;">
+   <div style="max-width: 1280px; margin: auto;">
 
     <p style="font-size: 1.6em; font-weight: bold;">
       Discord Dictionary Bot
@@ -13,14 +13,7 @@
     </button>
 
   </div>
-
 </template>
-
-<script>
-export default {
-  name: 'Home'
-}
-</script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
