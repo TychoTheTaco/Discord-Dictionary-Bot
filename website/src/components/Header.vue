@@ -1,5 +1,5 @@
 <template>
-  <nav style="background-color: #1E1F22">
+  <nav style="background-color: #1B1C1F">
 
     <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; max-width: 1280px; margin: auto;">
 

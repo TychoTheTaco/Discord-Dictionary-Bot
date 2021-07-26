@@ -12,7 +12,7 @@
 }
 
 body {
-    background-color: #424242;
+    background-color: #141518;
     margin: 0;
 }
 

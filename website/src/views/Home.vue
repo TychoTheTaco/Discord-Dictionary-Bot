@@ -18,8 +18,6 @@
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 
-@import "https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css";
-
 * {
   --mdc-theme-primary: #ff6d00;
   --mdc-theme-secondary: #ff6d00;
