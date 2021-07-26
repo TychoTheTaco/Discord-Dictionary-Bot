@@ -194,8 +194,7 @@ class CommandsPerDay extends Graph {
     async load() {
         const response = await (await fetch(API_ROOT + 'commands_per_day')).json();
 
-        const labels = []
-        const datas = []
+        const datasets = [];
 
         for (const commandName in response) {
             const items = response[commandName];
@@ -206,8 +205,23 @@ class CommandsPerDay extends Graph {
                 text_count_sum += item['text_count'];
                 slash_count_sum += item['slash_count'];
             }
-            datas.push(text_count_sum + slash_count_sum);
-            labels.push(commandName);
+            datasets.push({
+                'label': commandName,
+                'data': text_count_sum + slash_count_sum
+            })
+        }
+
+        datasets.sort((a, b) => {
+            return b['data'] - a['data'];
+        })
+
+        const labels = []
+        const datas = [];
+        const colors = [];
+        for (const d of datasets) {
+            labels.push(d['label']);
+            datas.push(d['data']);
+            colors.push(COMMAND_COLORS[d['label']]);
         }
 
         const ctx = this.canvas.getContext('2d');
@@ -218,7 +232,7 @@ class CommandsPerDay extends Graph {
                     datasets: [
                         {
                             data: datas,
-                            backgroundColor: 'white'
+                            backgroundColor: colors
                         }
                     ]
                 },
@@ -227,6 +241,35 @@ class CommandsPerDay extends Graph {
                     plugins: {
                         title: {
                             text: 'Commands'
+                        },
+                        datalabels: {
+                            formatter: function (value, context) {
+                                return context.chart.data.labels[context.dataIndex];
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'logarithmic',
+                            ticks: {
+                                callback: (value, index, values) => {
+                                    console.log(value, Math.log10(value));
+                                    if (Math.log10(value) % 1 === 0){
+                                        return Math.floor(value);
+                                    }
+                                    if (index === values.length - 1){
+                                        console.log('LAST:' + Math.pow(10, Math.ceil(Math.log10(value))));
+                                        return Math.pow(10, Math.ceil(Math.log10(value)));
+                                    }
+                                    return null;
+                                }
+                            },
+                            afterBuildTicks: (axis) => {
+                                //TODO: This is to force a tick at 10,000 but this seems like a bad way of doing it. ticks.min and max arent working
+                                axis.ticks.push({
+                                    value: 10000, major: true, label: ""
+                                });
+                            }
                         }
                     }
                 }

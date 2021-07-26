@@ -5,6 +5,21 @@
         <meta charset="UTF-8">
         <title>Discord Dictionary Bot</title>
         <link rel="stylesheet" href="../static/dark.css" type="text/css">
+
+        <!-- Required styles for Material Web -->
+        <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+
+        <style>
+            :root {
+                --mdc-theme-primary: #ff6d00;
+                --mdc-theme-secondary: #ff6d00;
+                --mdc-theme-on-primary: whitesmoke;
+                --mdc-theme-on-surface: red;
+            }
+        </style>
+
+        <script src="https://unpkg.com/material-components-web/dist/material-components-web.min.js"></script>
+
     </head>
 
     <body>
@@ -16,14 +31,14 @@
         </template>
 
         <!-- Navigation Bar -->
-        <nav style="background-color: #303030">
+        <nav style="background-color: #1E1F22">
 
             <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; max-width: 1280px; margin: auto;">
 
                 <!-- Left -->
                 <a href="/" style="display: flex; flex-direction: row; align-items: center; margin: 0.8rem; text-decoration: none;">
-                    <img src="../static/dictionary.png" alt="" width="64px" height="64px">
-                    <span style="font-size: 1.3em; font-weight: bold; margin-left: 1.6rem;">Discord Dictionary Bot</span>
+                    <img src="../static/dictionary.png" alt="" width="48px" height="48px" style="border-radius: 50%;">
+                    <span style="font-size: 1.2em; font-weight: bold; margin-left: 1rem;">Discord Dictionary Bot</span>
                 </a>
 
                 <!-- Right -->
@@ -37,7 +52,27 @@
 
         </nav>
 
-        <div id="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap;">
+        <!-- Main Content -->
+        <div>
+
+            <div style="max-width: 1280px; margin: auto;">
+
+                <p style="font-size: 1.6em; font-weight: bold;">
+                    Discord Dictionary Bot
+                </p>
+                <p style="font-size: 1.2em;">
+                    A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages!
+                </p>
+
+                <button class="mdc-button mdc-button--raised" data-mdc-auto-init="MDCButton" onclick="location.href='https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands'" type="button">
+                    <span class="mdc-button__label">Invite</span>
+                </button>
+
+            </div>
+
+        </div>
+
+        <div id="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap; display: none;">
 
         </div>
 
