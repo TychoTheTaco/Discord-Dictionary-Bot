@@ -27,22 +27,30 @@ Chart.defaults.color = 'whitesmoke';
 Chart.defaults.animation = false;
 
 const COMMAND_COLORS = {
-	'define': '#C62828',
-	'befine': '#880E4F',
-	'help': '#F57F17',
-	'stop': '#FF6F00',
-	'voices': '#827717',
-	'property': '#03A9F4',
-	'stats': '#8BC34A',
-	'languages': '#006064',
+	'define': '#BA2944',
+	'help': '#1565C0',
+	'stop': '#F9A825',
+	'translate': '#2E7D32',
+	'settings': '#AD1457',
+
+	'befine': '#EF6C00',
+	'stats': '#6A1B9A'
 }
 
 const DICTIONARY_API_COLORS = {
-	'unofficial_google': '#D32F2F',
-	'owlbot': '#1976D2',
-	'merriam_webster_collegiate': '#388E3C',
-	'merriam_webster_medical': '#FBC02D',
-	'rapid_words': '#F57C00'
+	'unofficial_google': '#BA2944',
+	'owlbot': '#F9A825',
+	'merriam_webster_collegiate': '#1565C0',
+	'merriam_webster_medical': '#2E7D32',
+	'rapid_words': '#6A1B9A'
+}
+
+const DICTIONARY_API_NAMES = {
+	'unofficial_google': 'Unofficial Google',
+	'owlbot': 'Owlbot',
+	'merriam_webster_collegiate': 'Merriam Webster Collegiate',
+	'merriam_webster_medical': 'Merriam Webster Medical',
+	'rapid_words': 'Rapid Words'
 }
 
 export default {
@@ -51,13 +59,11 @@ export default {
 		Graph
 	},
 	mounted() {
-		this.$refs.a.load((async (container, canvas) => {
-			const response = await (await fetch(API_ROOT + 'definition_requests_per_day')).json();
-
-			let items = [];
+		this.$refs.a.load((async (container, canvas, stats) => {
+			const response = await (await fetch(API_ROOT + 'definition_requests')).json();
 
 			// Add missing days
-			const today = new Date();
+			/*const today = new Date();
 			let date = new Date(response[0]['d']);
 			let i = 0;
 			while (date < today) {
@@ -70,18 +76,15 @@ export default {
 					items.push({'date': new Date(date), 'cnt': 0});
 				}
 				date.setUTCDate(date.getUTCDate() + 1);
-			}
+			}*/
 
 			let xValues = [];
 			let yValues = [];
 
-			for (const item of items) {
-				xValues.push(item['date']);
+			for (const item of response) {
+				xValues.push(new Date(item['period']));
 				yValues.push(item['cnt']);
 			}
-
-			//container.innerHTML += `Maximum: ${Math.max(...yValues)}<br>Average: ${Math.round(yValues.reduce((a, b) => a + b) / yValues.length)}`
-			console.log(`Maximum: ${Math.max(...yValues)}<br>Average: ${Math.round(yValues.reduce((a, b) => a + b) / yValues.length)}`);
 
 			const ctx = canvas.getContext('2d');
 			new Chart(ctx, {
@@ -122,32 +125,14 @@ export default {
 		}));
 
 		this.$refs.b.load((async (container, canvas) => {
-			const response = await (await fetch(API_ROOT + 'definition_requests_per_day')).json();
-
-			let items = [];
-
-			// Add missing days
-			const today = new Date();
-			let date = new Date(response[0]['d']);
-			let i = 0;
-			while (date < today) {
-				if (i < response.length && new Date(response[i]['d']).getTime() === date.getTime()) {
-					const item = response[i];
-					item['date'] = new Date(date);
-					items.push(item);
-					++i;
-				} else {
-					items.push({'date': new Date(date), 'cnt': 0});
-				}
-				date.setUTCDate(date.getUTCDate() + 1);
-			}
+			const response = await (await fetch(API_ROOT + 'definition_requests')).json();
 
 			let xValues = [];
 			let yValues = [];
 
 			let sum = 0;
-			for (const item of items) {
-				xValues.push(item['date']);
+			for (const item of response) {
+				xValues.push(new Date(item['period']));
 				sum += item['cnt'];
 				yValues.push(sum);
 			}
@@ -199,6 +184,10 @@ export default {
 
 			for (const commandName in response) {
 				const items = response[commandName];
+
+				if (['property', 'voices', 'list', 'set', 'languages'].includes(commandName)) {
+					continue;
+				}
 
 				let text_count_sum = 0;
 				let slash_count_sum = 0;
@@ -293,7 +282,7 @@ export default {
 					plugins: [ChartDataLabels],
 					type: 'pie',
 					data: {
-						labels: ['Text', 'Slash'],
+						labels: ['Text Commands', 'Slash Commands'],
 						datasets: [
 							{
 								data: [text_count_sum, slash_count_sum],
@@ -304,11 +293,15 @@ export default {
 					options: {
 						plugins: {
 							title: {
-								text: 'Text vs Slash Commands'
+								text: 'Slash Command Usage'
+							},
+							legend: {
+								display: true,
+								position: 'right'
 							},
 							datalabels: {
 								formatter: function (value, context) {
-									return context.chart.data.labels[context.dataIndex];
+									return ((value / (text_count_sum + slash_count_sum)) * 100).toFixed(1) +"%";
 								}
 							}
 						}
@@ -320,13 +313,30 @@ export default {
 		this.$refs.e.load((async (container, canvas) => {
 			const response = await (await fetch(API_ROOT + 'dictionary_api_usage')).json();
 
+			const datas = [];
+
+			for (const item in response) {
+				datas.push({
+					label: DICTIONARY_API_NAMES[item],
+					count: response[item],
+					color: DICTIONARY_API_COLORS[item]
+				})
+			}
+
+			datas.sort((a, b) => {
+				return b['count'] - a['count'];
+			});
+
 			const labels = [];
 			const counts = []
 			const colors = [];
-			for (const item in response) {
-				labels.push(item)
-				counts.push(response[item])
-				colors.push(DICTIONARY_API_COLORS[item])
+
+			let total = 0;
+			for (const item of datas) {
+				labels.push(item['label'])
+				counts.push(item['count'])
+				colors.push(item['color'])
+				total += item['count'];
 			}
 
 			const ctx = canvas.getContext('2d');
@@ -345,11 +355,15 @@ export default {
 				options: {
 					plugins: {
 						title: {
-							text: 'Dictionary API Usage'
+							text: 'Daily Dictionary API Usage'
+						},
+						legend: {
+							display: true,
+							position: 'right'
 						},
 						datalabels: {
 							formatter: function (value, context) {
-								return context.chart.data.labels[context.dataIndex];
+								return ((value / total) * 100).toFixed(1) +"%";
 							}
 						}
 					}

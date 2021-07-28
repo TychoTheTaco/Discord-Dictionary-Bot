@@ -1,14 +1,27 @@
 <template>
 	<Header/>
-	<router-view/>
+	<div style="flex: 1;">
+		<router-view/>
+	</div>
+	<Footer/>
 </template>
 
 <style>
 
+:root {
+    --red: #BA2944;
+    --blue: #1565C0;
+    --yellow: #F9A825;
+    --green: #2E7D32;
+    --orange: #EF6C00;
+    --purple: #6A1B9A;
+    --pink: #AD1457;
+    --light-green: #558B2F;
+}
+
 * {
     color: whitesmoke;
     font-family: "Segoe UI", sans-serif;
-    user-select: none;
 }
 
 body {
@@ -21,9 +34,10 @@ body {
 <script>
 
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default {
-	components: {Header}
+	components: {Footer, Header}
 }
 
 </script>

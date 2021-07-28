@@ -32,10 +32,15 @@ def get_days_in_range(start: datetime.datetime, end: datetime.datetime) -> [date
     return days
 
 
-@app.route('/definition_requests_per_day')
+@app.route('/definition_requests')
 def definition_requests_per_day():
+    query = 'SELECT period, SUM(cnt) AS cnt FROM (' \
+            'SELECT DATE(time) as period, COUNT(time) AS cnt FROM analytics.definition_requests GROUP BY period ' \
+            'UNION ALL ' \
+            'SELECT period, 0 FROM UNNEST(GENERATE_DATE_ARRAY(DATE("2021-1-1"), current_date())) period' \
+            ') GROUP BY period ORDER BY period'
     rows = []
-    for row in get_definition_requests_per_day():
+    for row in bigquery_client.query(query):
         rows.append(row_to_dict(row))
     response = jsonify(rows)
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -63,6 +68,7 @@ def commands_per_day():
     # Get unique commands
     command_names = [row.get('command_name') for row in bigquery_client.query('SELECT DISTINCT command_name FROM analytics.commands').result()]
     print(command_names)
+    command_names = filter(lambda item: item not in ['list', 'set', 'voices', 'languages', 'property'], command_names)
 
     # Find commands per day for each command
     result = {}
@@ -99,9 +105,8 @@ def text_vs_slash_commands():
 @app.route('/dictionary_api_usage')
 def dictionary_api_usage():
     result = {}
-    for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` WHERE time >= TIMESTAMP_SUB(current_timestamp(), INTERVAL 1 DAY) GROUP BY api_name').result():
+    for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` GROUP BY api_name').result():
         d = row_to_dict(row)
-        print(d)
         result[d['api_name']] = d['cnt']
 
     response = jsonify(result)
