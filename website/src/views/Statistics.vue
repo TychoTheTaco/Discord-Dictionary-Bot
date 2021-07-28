@@ -53,6 +53,8 @@ const DICTIONARY_API_NAMES = {
 	'rapid_words': 'Rapid Words'
 }
 
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 export default {
 	name: 'Statistics',
 	components: {
@@ -61,22 +63,6 @@ export default {
 	mounted() {
 		this.$refs.a.load((async (container, canvas, stats) => {
 			const response = await (await fetch(API_ROOT + 'definition_requests')).json();
-
-			// Add missing days
-			/*const today = new Date();
-			let date = new Date(response[0]['d']);
-			let i = 0;
-			while (date < today) {
-				if (i < response.length && new Date(response[i]['d']).getTime() === date.getTime()) {
-					const item = response[i];
-					item['date'] = new Date(date);
-					items.push(item);
-					++i;
-				} else {
-					items.push({'date': new Date(date), 'cnt': 0});
-				}
-				date.setUTCDate(date.getUTCDate() + 1);
-			}*/
 
 			let xValues = [];
 			let yValues = [];
@@ -88,12 +74,12 @@ export default {
 
 			const ctx = canvas.getContext('2d');
 			new Chart(ctx, {
-					type: 'line',
+					type: 'bar',
 					data: {
 						labels: xValues,
 						datasets: [{
 							data: yValues,
-							borderColor: 'rgb(75, 192, 192)',
+							backgroundColor: 'rgb(75, 192, 192)',
 							tension: 0.1,
 							pointRadius: 0
 						}]
@@ -105,11 +91,10 @@ export default {
 									autoSkip: false,
 									maxRotation: 0,
 									callback: function (value, index, values) {
-										if (xValues[index].getDate() !== 1) {
+										if (xValues[index].getUTCDate() !== 1) {
 											return null;
 										}
-										const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-										return monthNames[xValues[index].getMonth()];
+										return MONTH_NAMES[xValues[index].getUTCMonth()];
 									}
 								}
 							}
@@ -117,6 +102,14 @@ export default {
 						plugins: {
 							title: {
 								text: 'Daily Definition Requests'
+							},
+							tooltip: {
+								callbacks: {
+									title: (context) => {
+										const date = xValues[context[0].dataIndex];
+										return MONTH_NAMES[date.getUTCMonth()] + " " + date.getUTCDate() + ", " + date.getUTCFullYear();
+									}
+								}
 							}
 						}
 					}
@@ -161,8 +154,7 @@ export default {
 										if (xValues[index].getDate() !== 1) {
 											return null;
 										}
-										const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-										return monthNames[xValues[index].getMonth()];
+										return MONTH_NAMES[xValues[index].getMonth()];
 									}
 								}
 							}
@@ -170,6 +162,14 @@ export default {
 						plugins: {
 							title: {
 								text: 'Total Definition Requests'
+							},
+							tooltip: {
+								callbacks: {
+									title: (context) => {
+										const date = xValues[context[0].dataIndex];
+										return MONTH_NAMES[date.getUTCMonth()] + " " + date.getUTCDate() + ", " + date.getUTCFullYear();
+									}
+								}
 							}
 						}
 					}
