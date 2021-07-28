@@ -1,4 +1,5 @@
 import datetime
+from functools import wraps
 
 from flask import Flask, jsonify
 from google.cloud import bigquery
@@ -8,6 +9,33 @@ app = Flask(__name__)
 
 
 bigquery_client = bigquery.Client()
+
+DEFAULT_CACHE_MINUTES = 5
+
+
+def cache(time):
+
+    def decorator(function):
+
+        cache = {}
+
+        @wraps(function)
+        def wrapper(*args, **kwargs):
+
+            if function in cache and datetime.datetime.now() - cache[function]['last_call_time'] < time:
+                return cache[function]['result']
+
+            result = function(*args, **kwargs)
+
+            cache[function] = {
+                'result': result,
+                'last_call_time': datetime.datetime.now()
+            }
+
+            return result
+
+        return wrapper
+    return decorator
 
 
 def get_definition_requests_per_day():
@@ -33,6 +61,7 @@ def get_days_in_range(start: datetime.datetime, end: datetime.datetime) -> [date
 
 
 @app.route('/definition_requests')
+@cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def definition_requests_per_day():
     query = 'SELECT period, SUM(cnt) AS cnt FROM (' \
             'SELECT DATE(time) as period, COUNT(time) AS cnt FROM analytics.definition_requests GROUP BY period ' \
@@ -48,6 +77,7 @@ def definition_requests_per_day():
 
 
 @app.route('/total_definition_requests')
+@cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def total_definition_requests():
     results = get_definition_requests_per_day()
     rows = []
@@ -63,6 +93,7 @@ def total_definition_requests():
 
 
 @app.route('/commands_per_day')
+@cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def commands_per_day():
 
     # Get unique commands
@@ -89,6 +120,7 @@ def commands_per_day():
 
 
 @app.route('/text_vs_slash_commands')
+@cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def text_vs_slash_commands():
     result = {date: {'text_count': 0, 'slash_count': 0} for date in get_days_in_range(datetime.datetime(2021, 1, 1), datetime.datetime.today())}
     for row in bigquery_client.query('SELECT DATE(time) as d, COUNTIF(NOT is_slash) as cnt, COUNTIF(is_slash) as slash_cnt FROM analytics.commands GROUP BY d ORDER BY d').result():
@@ -103,6 +135,7 @@ def text_vs_slash_commands():
 
 
 @app.route('/dictionary_api_usage')
+@cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def dictionary_api_usage():
     result = {}
     for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` GROUP BY api_name').result():
