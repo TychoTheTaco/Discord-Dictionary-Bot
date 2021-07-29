@@ -12,6 +12,7 @@
       <!-- Right -->
       <div style="display: inline-block; font-size: 1.2em">
         <a href="https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands" class="nav-link">Invite</a>
+        <a href="/documentation" class="nav-link">Commands</a>
         <a href="https://github.com/TychoTheTaco/Discord-Dictionary-Bot" class="nav-link">GitHub</a>
         <a href="/statistics" class="nav-link">Statistics</a>
       </div>

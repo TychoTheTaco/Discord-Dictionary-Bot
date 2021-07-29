@@ -3,7 +3,7 @@
 	<div style="flex: 1;">
 		<router-view/>
 	</div>
-	<Footer/>
+	<Footer style="margin-top: 3rem;"/>
 </template>
 
 <style>
@@ -27,6 +27,13 @@
 body {
     background-color: #141518;
     margin: 0;
+}
+
+code {
+    font-family: Consolas, "courier new", monospace;
+    background-color: #303030;
+    padding: 0.2rem;
+	border-radius: 0.4rem;
 }
 
 </style>

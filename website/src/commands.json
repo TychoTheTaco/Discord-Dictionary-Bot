@@ -1,0 +1,91 @@
+[
+  {
+    "name": "help",
+    "description": "Shows you a list of available commands and how to use them.",
+    "aliases": [
+      "h"
+    ],
+    "args": [
+      {
+        "required": false,
+        "value": "command_name",
+        "description": "Shows detailed info about a specific command."
+      }
+    ]
+  },
+  {
+    "name": "define",
+    "description": "Gets the definition of a word and posts it in chat.",
+    "aliases": [
+      "d"
+    ],
+    "args": [
+      {
+        "required": true,
+        "value": "word",
+        "description": "The word to define."
+      },
+      {
+        "required": false,
+        "value": "-v",
+        "description": "Read out the definition to the voice channel you are connected to, if any."
+      },
+      {
+        "required": false,
+        "value": "-lang",
+        "description": "Translates the definitions to a different language.",
+        "args": [
+          {
+            "value": "language_code",
+            "description": "The language to translate the definitions to. This can be a 2-digit language code or the name of a language."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "settings",
+    "description": "Change the bot's settings. Settings can be set for the entire server, or for individual channels.",
+    "usage": "(list <scope> | set <scope> <key> <value> | remove <scope> <key>)",
+    "sub_commands": [
+      {
+        "name": "list",
+        "description": "Lists all settings."
+      },
+      {
+        "name": "set",
+        "description": "Change the value of a setting."
+      },
+      {
+        "name": "remove",
+        "description": "Remove/reset a setting."
+      }
+    ]
+  },
+  {
+    "name": "stop",
+    "description": "Makes the bot stop talking.",
+    "aliases": [
+      "s"
+    ]
+  },
+  {
+    "name": "translate",
+    "description": "Translate a message to another language.",
+    "aliases": [
+      "t"
+    ],
+    "args": [
+      {
+        "required": true,
+        "value": "target_language",
+        "description": "The language to translate to. This can be a 2-digit language code or the name of a language."
+      },
+      {
+        "required": true,
+        "value": "message",
+        "description": "The message to translate. This can be a word or a phrase."
+      }
+    ]
+  }
+]
