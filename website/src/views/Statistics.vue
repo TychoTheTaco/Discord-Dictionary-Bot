@@ -72,17 +72,42 @@ export default {
 				yValues.push(item['cnt']);
 			}
 
+			const datasets = [];
+			datasets.push({
+				data: yValues,
+				backgroundColor: 'rgb(75, 192, 192)',
+				type: 'bar',
+				label: 'Requests',
+				order: 2
+			})
+
+			function movingAverage(period, items) {
+				const averages = [];
+				for (let i = 0; i < items.length; ++i) {
+					const x = items.slice(i - period < 0 ? 0 : i - period, i + 1);
+					const average = x.reduce((a, b) => a + b) / x.length;
+					averages.push(Math.round(average));
+				}
+				return averages;
+			}
+
+			// Calculate 30-day average
+			datasets.push({
+				data: movingAverage(30, yValues),
+				borderColor: '#BA2944',
+				tension: 0.1,
+				pointRadius: 0,
+				type: 'line',
+				label: '30 day average',
+				order: 1
+			})
+
 			const ctx = canvas.getContext('2d');
 			new Chart(ctx, {
-					type: 'bar',
+					type: 'line',
 					data: {
 						labels: xValues,
-						datasets: [{
-							data: yValues,
-							backgroundColor: 'rgb(75, 192, 192)',
-							tension: 0.1,
-							pointRadius: 0
-						}]
+						datasets: datasets
 					},
 					options: {
 						scales: {
@@ -109,7 +134,9 @@ export default {
 										const date = xValues[context[0].dataIndex];
 										return MONTH_NAMES[date.getUTCMonth()] + " " + date.getUTCDate() + ", " + date.getUTCFullYear();
 									}
-								}
+								},
+								intersect: false,
+								mode: 'index'
 							}
 						}
 					}
@@ -169,7 +196,9 @@ export default {
 										const date = xValues[context[0].dataIndex];
 										return MONTH_NAMES[date.getUTCMonth()] + " " + date.getUTCDate() + ", " + date.getUTCFullYear();
 									}
-								}
+								},
+								intersect: false,
+								mode: 'index'
 							}
 						}
 					}
@@ -301,7 +330,7 @@ export default {
 							},
 							datalabels: {
 								formatter: function (value, context) {
-									return ((value / (text_count_sum + slash_count_sum)) * 100).toFixed(1) +"%";
+									return ((value / (text_count_sum + slash_count_sum)) * 100).toFixed(1) + "%";
 								}
 							}
 						}
@@ -363,7 +392,7 @@ export default {
 						},
 						datalabels: {
 							formatter: function (value, context) {
-								return ((value / total) * 100).toFixed(1) +"%";
+								return ((value / total) * 100).toFixed(1) + "%";
 							}
 						}
 					}
