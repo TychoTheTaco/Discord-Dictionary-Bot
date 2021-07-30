@@ -1,19 +1,5 @@
 [
   {
-    "name": "help",
-    "description": "Shows you a list of available commands and how to use them.",
-    "aliases": [
-      "h"
-    ],
-    "args": [
-      {
-        "required": false,
-        "value": "command_name",
-        "description": "Shows detailed info about a specific command."
-      }
-    ]
-  },
-  {
     "name": "define",
     "description": "Gets the definition of a word and posts it in chat.",
     "aliases": [
@@ -44,32 +30,6 @@
     ]
   },
   {
-    "name": "settings",
-    "description": "Change the bot's settings. Settings can be set for the entire server, or for individual channels.",
-    "usage": "(list <scope> | set <scope> <key> <value> | remove <scope> <key>)",
-    "sub_commands": [
-      {
-        "name": "list",
-        "description": "Lists all settings."
-      },
-      {
-        "name": "set",
-        "description": "Change the value of a setting."
-      },
-      {
-        "name": "remove",
-        "description": "Remove/reset a setting."
-      }
-    ]
-  },
-  {
-    "name": "stop",
-    "description": "Makes the bot stop talking.",
-    "aliases": [
-      "s"
-    ]
-  },
-  {
     "name": "translate",
     "description": "Translate a message to another language.",
     "aliases": [
@@ -85,6 +45,85 @@
         "required": true,
         "value": "message",
         "description": "The message to translate. This can be a word or a phrase."
+      }
+    ]
+  },
+  {
+    "name": "settings",
+    "aliases": [
+      "p"
+    ],
+    "description": "Change the bot's settings. Settings can be set for the entire server, or for individual channels. Channel settings take priority over server (guild) settings.",
+    "usage": "(list <scope> | set <scope> <key> <value> | remove <scope> <key>)",
+    "sub_commands": [
+      {
+        "name": "list",
+        "description": "Lists all settings.",
+        "args": [
+          {
+            "required": false,
+            "value": "scope",
+            "description": "Either \"guild\" or \"channel\"."
+          }
+        ]
+      },
+      {
+        "name": "set",
+        "description": "Change the value of a setting.",
+        "args": [
+          {
+            "required": true,
+            "value": "scope",
+            "description": "Either \"guild\" or \"channel\"."
+          },
+          {
+            "required": true,
+            "value": "name",
+            "description": "The name of the setting."
+          },
+          {
+            "required": true,
+            "value": "value",
+            "description": "The value of the setting."
+          }
+        ]
+      },
+      {
+        "name": "remove",
+        "description": "Remove/reset a setting.",
+        "args": [
+          {
+            "required": true,
+            "value": "scope",
+            "description": "Either \"guild\" or \"channel\"."
+          },
+          {
+            "required": true,
+            "value": "name",
+            "description": "The name of the setting."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "stop",
+    "description": "Makes the bot stop talking.",
+    "aliases": [
+      "s"
+    ]
+  },
+  {
+    "name": "help",
+    "description": "Shows you a list of available commands and how to use them.",
+    "aliases": [
+      "h"
+    ],
+    "args": [
+      {
+        "required": false,
+        "value": "command_name",
+        "description": "The name of a command to show detailed info about it."
       }
     ]
   }

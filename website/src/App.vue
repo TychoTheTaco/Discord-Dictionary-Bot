@@ -32,8 +32,8 @@ body {
 code {
     font-family: Consolas, "courier new", monospace;
     background-color: #303030;
-    padding: 0.2rem;
-	border-radius: 0.4rem;
+    padding: 2px 4px;
+	border-radius: 3px;
 }
 
 </style>

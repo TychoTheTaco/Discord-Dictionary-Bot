@@ -1,42 +1,41 @@
 <template>
+	<div style="display: flex; flex-direction: row; max-width: 1280px; margin: auto; justify-content: center">
+		<a href="/docs/commands" class="nav-link">Commands</a>
+		<a href="/docs/settings" class="nav-link">Settings</a>
+		<a href="/docs/languages" class="nav-link">Languages</a>
+	</div>
+
 	<div style="max-width: 1280px; margin: auto;">
-
-		<h1>
-			Command Prefix
-		</h1>
-		<p>
-			The default command prefix is <code>.</code><br><br>If you forget the command prefix, just @mention the bot and it will respond with the current prefix.
-		</p>
-
-		<h1>
-			Commands
-		</h1>
-
-		<div v-for="(command, index) in commands" v-bind:key="command.name">
-			<Command v-bind:command="command" />
-			<hr v-if="index !== commands.length - 1">
-		</div>
-
+		<Commands v-if="$route.path === '/docs/commands'"/>
+		<Settings v-if="$route.name === 'Settings'"/>
+		<Languages v-if="$route.name === 'Languages'"/>
 	</div>
 </template>
 
 <script>
-import Command from "@/components/Command";
-import json from '../commands.json'
+import Commands from "@/components/Commands";
+import Settings from "@/components/Settings";
+import Languages from "@/components/Languages";
+
 export default {
-	components: {Command},
-	data: () => {
-		return {
-			commands: json
-		}
-	}
+	components: {Settings, Commands, Languages}
 }
 </script>
 
 <style scoped>
 
-hr {
-	margin: 2rem 0 2rem;
+.nav-link {
+	text-decoration: none;
+	margin: 1rem;
+	font-size: 1.2em;
+	font-weight: bold;
+	background-color: #303030;
+	border-radius: 0.4rem;
+	padding: 0.4rem;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
 }
 
 </style>

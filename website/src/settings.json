@@ -1,0 +1,74 @@
+[
+  {
+    "name": "prefix",
+    "description": "The bot's command prefix. This can be 1 or more characters but cannot contain spaces.",
+    "type": "string",
+    "default": "."
+  },
+  {
+    "name": "text_to_speech",
+    "description": "Change text-to-speech behavior.",
+    "type": "string",
+    "default": "flag",
+    "choices": [
+      {
+        "name": "force",
+        "description": "The bot will always read out the definition to you, even if not specified in the define command."
+      },
+      {
+        "name": "flag",
+        "description": "The bot will only read out the definition to you if specified by the define command."
+      },
+      {
+        "name": "disable",
+        "description": "The bot will never read out the definition to you, even if specified by the define command."
+      }
+    ]
+  },
+  {
+    "name": "show_definition_source",
+    "description": "Show the definition source when defining words.",
+    "type": "boolean",
+    "default": false
+  },
+  {
+    "name": "language",
+    "description": "The language to use when displaying definitions and speaking. This can be a two-letter language code or a language name.",
+    "type": "string",
+    "default": "en"
+  },
+  {
+    "name": "dictionary_apis",
+    "description": "A comma-separated list of dictionary APIs to use in order of preference.",
+    "type": "string",
+    "default": "unofficial_google,owlbot,merriam_webster_collegiate,merriam_webster_medical,rapid_words",
+    "choices": [
+      {
+        "name": "unofficial_google",
+        "description": ""
+      },
+      {
+        "name": "owlbot",
+        "description": ""
+      },
+      {
+        "name": "merriam_webster_collegiate",
+        "description": ""
+      },
+      {
+        "name": "merriam_webster_medical",
+        "description": ""
+      },
+      {
+        "name": "rapid_words",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "auto_translate",
+    "description": "Automatically translate words before looking up their definition.",
+    "type": "boolean",
+    "default": false
+  }
+]
