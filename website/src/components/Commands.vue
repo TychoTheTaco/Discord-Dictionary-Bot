@@ -22,7 +22,7 @@
 
 <script>
 import Command from "@/components/Command";
-import json from '../commands.json'
+import json from '@/assets/commands.json'
 export default {
 	name: "Commands",
 	components: {Command},

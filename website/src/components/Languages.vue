@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import languages from '../languages.json'
+import languages from '@/assets/languages.json'
 
 // Sort languages
 languages.sort((a, b) => {

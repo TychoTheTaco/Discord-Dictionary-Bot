@@ -42,7 +42,7 @@
 </template>
 
 <script>
-import json from '../settings.json'
+import json from '@/assets/settings.json'
 import marked from 'marked'
 
 export default {

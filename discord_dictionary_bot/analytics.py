@@ -3,6 +3,7 @@ import io
 import json
 import datetime
 import threading
+import time
 from typing import Union
 
 from google.cloud import bigquery
@@ -46,19 +47,34 @@ def to_bq_file(items):
     return io.StringIO('\n'.join([json.dumps(x) for x in items]))
 
 
-log_command_queue = []
-log_command_lock = threading.Lock()
+def upload(config):
+    client = bigquery.Client()
+    logger.info(f'Uploading {len(config["queue"])} items to {config["table"]}')
+    data_as_file = to_bq_file(config['queue'])
+
+    job = client.load_table_from_file(data_as_file, config['table'], job_config=config['job_config'])
+
+    try:
+        job.result()  # Waits for the job to complete.
+        config['queue'].clear()
+    except Exception as e:
+        logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
 
 
-@run_on_another_thread
-def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
-    with log_command_lock:
+def create_qal_item(table, job_config):
+    return {
+        'queue': [],
+        'lock': threading.Lock(),
+        'table': table,
+        'job_config': job_config
+    }
 
-        if _is_blacklisted(context):
-            return
 
-        client = bigquery.Client()
-        job_config = bigquery.LoadJobConfig(
+# Queues and locks
+qal = {
+    'log_command': create_qal_item(
+        'formal-scout-290305.analytics.commands',
+        bigquery.LoadJobConfig(
             schema=[
                 bigquery.SchemaField("command_name", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("is_slash", "BOOLEAN", mode="REQUIRED"),
@@ -69,44 +85,10 @@ def log_command(command_name: str, is_slash: bool, context: Union[commands.Conte
             source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
             autodetect=True
         )
-
-        guild_id, channel_id = get_guild_and_channel_id(context)
-        data = {
-            'command_name': command_name,
-            'is_slash': is_slash,
-            'guild_id': guild_id,
-            'channel_id': channel_id,
-            'time': datetime.datetime.now().isoformat()
-        }
-
-        log_command_queue.append(data)
-        logger.debug(f'log_command_buffer: {len(log_command_queue)}')
-
-        if len(log_command_queue) >= 10:
-            logger.info('Uploading analytics!')
-            data_as_file = to_bq_file(log_command_queue)
-
-            job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.commands', job_config=job_config)
-
-            try:
-                job.result()  # Waits for the job to complete.
-                log_command_queue.clear()
-            except Exception as e:
-                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
-
-
-log_definition_request_buffer = []
-log_definition_request_lock = threading.Lock()
-
-
-@run_on_another_thread
-def log_definition_request(word: str, reverse: bool, text_to_speech: bool, language: str, context: commands.Context):
-    with log_definition_request_lock:
-        if _is_blacklisted(context):
-            return
-
-        client = bigquery.Client()
-        job_config = bigquery.LoadJobConfig(
+    ),
+    'log_definition_request': create_qal_item(
+        'formal-scout-290305.analytics.definition_requests',
+        bigquery.LoadJobConfig(
             schema=[
                 bigquery.SchemaField("word", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("reverse", "BOOLEAN", mode="REQUIRED"),
@@ -119,6 +101,68 @@ def log_definition_request(word: str, reverse: bool, text_to_speech: bool, langu
             source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
             autodetect=True
         )
+    ),
+    'log_dictionary_api_request': create_qal_item(
+        'formal-scout-290305.analytics.dictionary_api_requests',
+        bigquery.LoadJobConfig(
+            schema=[
+                bigquery.SchemaField("api_name", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("success", "BOOLEAN", mode="REQUIRED"),
+                bigquery.SchemaField("time", "TIMESTAMP", mode="REQUIRED")
+            ],
+            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+            autodetect=True
+        )
+    )
+}
+
+
+def analytics_uploader_thread():
+    while True:
+
+        time.sleep(60 * 5)
+
+        for key, value in qal.items():
+            try:
+                queue = value['queue']
+                lock = value['lock']
+                with lock:
+                    if len(queue) > 0:
+                        upload(value)
+            except Exception as e:
+                logger.exception('Error uploading analytics!', exc_info=e)
+
+
+threading.Thread(target=analytics_uploader_thread).start()
+
+
+@run_on_another_thread
+def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
+    queue = qal['log_command']['queue']
+    with qal['log_command']['lock']:
+
+        if _is_blacklisted(context):
+            return
+
+        guild_id, channel_id = get_guild_and_channel_id(context)
+        data = {
+            'command_name': command_name,
+            'is_slash': is_slash,
+            'guild_id': guild_id,
+            'channel_id': channel_id,
+            'time': datetime.datetime.now().isoformat()
+        }
+
+        queue.append(data)
+
+
+@run_on_another_thread
+def log_definition_request(word: str, reverse: bool, text_to_speech: bool, language: str, context: commands.Context):
+    queue = qal['log_definition_request']['queue']
+    with qal['log_definition_request']['lock']:
+
+        if _is_blacklisted(context):
+            return
 
         guild_id, channel_id = get_guild_and_channel_id(context)
         data = {
@@ -131,40 +175,13 @@ def log_definition_request(word: str, reverse: bool, text_to_speech: bool, langu
             'time': datetime.datetime.now().isoformat()
         }
 
-        log_definition_request_buffer.append(data)
-        logger.debug(f'log_definition_request_buffer: {len(log_definition_request_buffer)}')
-
-        if len(log_definition_request_buffer) >= 10:
-            logger.info('Uploading analytics!')
-            data_as_file = to_bq_file(log_definition_request_buffer)
-
-            job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.definition_requests', job_config=job_config)
-
-            try:
-                job.result()  # Waits for the job to complete.
-                log_definition_request_buffer.clear()
-            except Exception as e:
-                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
-
-
-log_dictionary_api_request_buffer = []
-log_dictionary_api_request_lock = threading.Lock()
+        queue.append(data)
 
 
 @run_on_another_thread
 def log_dictionary_api_request(dictionary_api_name: str, success: bool):
-    with log_dictionary_api_request_lock:
-
-        client = bigquery.Client()
-        job_config = bigquery.LoadJobConfig(
-            schema=[
-                bigquery.SchemaField("api_name", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("success", "BOOLEAN", mode="REQUIRED"),
-                bigquery.SchemaField("time", "TIMESTAMP", mode="REQUIRED")
-            ],
-            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-            autodetect=True
-        )
+    queue = qal['log_dictionary_api_request']['queue']
+    with qal['log_dictionary_api_request']['lock']:
 
         data = {
             'api_name': dictionary_api_name,
@@ -172,17 +189,4 @@ def log_dictionary_api_request(dictionary_api_name: str, success: bool):
             'time': datetime.datetime.now().isoformat()
         }
 
-        log_dictionary_api_request_buffer.append(data)
-        logger.debug(f'log_dictionary_api_request_buffer: {len(log_dictionary_api_request_buffer)}')
-
-        if len(log_dictionary_api_request_buffer) >= 10:
-            logger.info('Uploading analytics!')
-            data_as_file = to_bq_file(log_dictionary_api_request_buffer)
-
-            job = client.load_table_from_file(data_as_file, 'formal-scout-290305.analytics.dictionary_api_requests', job_config=job_config)
-
-            try:
-                job.result()  # Waits for the job to complete.
-                log_dictionary_api_request_buffer.clear()
-            except Exception as e:
-                logger.exception(f'Failed BigQuery upload job! Errors: {job.errors}', exc_info=e)
+        queue.append(data)
