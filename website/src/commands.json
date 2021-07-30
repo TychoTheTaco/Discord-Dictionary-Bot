@@ -54,7 +54,6 @@
       "p"
     ],
     "description": "Change the bot's settings. Settings can be set for the entire server, or for individual channels. Channel settings take priority over server (guild) settings.",
-    "usage": "(list <scope> | set <scope> <key> <value> | remove <scope> <key>)",
     "sub_commands": [
       {
         "name": "list",

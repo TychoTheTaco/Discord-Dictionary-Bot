@@ -21,7 +21,7 @@
 					<b>Choices:</b>
 					<div style="margin-left: 2rem;">
 						<p v-for="choice in setting.choices" :key="choice">
-							<code>{{ choice.name }}</code> - {{ choice.description }}
+							<code>{{ choice.name }}</code> - <span v-html="parseMarkdown(choice.description)"></span>
 						</p>
 					</div>
 				</div>
@@ -43,12 +43,18 @@
 
 <script>
 import json from '../settings.json'
+import marked from 'marked'
 
 export default {
 	name: "Settings",
 	data: () => {
 		return {
 			settings: json
+		}
+	},
+	methods: {
+		parseMarkdown(text){
+			return marked.parseInline(text);
 		}
 	}
 }

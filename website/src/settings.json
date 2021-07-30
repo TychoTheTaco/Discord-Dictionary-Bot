@@ -45,23 +45,23 @@
     "choices": [
       {
         "name": "unofficial_google",
-        "description": ""
+        "description": "[Unofficial Google Dictionary API](https://github.com/meetDeveloper/googleDictionaryAPI)"
       },
       {
         "name": "owlbot",
-        "description": ""
+        "description": "[Owlbot](https://owlbot.info/)"
       },
       {
         "name": "merriam_webster_collegiate",
-        "description": ""
+        "description": "[Merriam Webster Collegiate](https://dictionaryapi.com/products/api-collegiate-dictionary)"
       },
       {
         "name": "merriam_webster_medical",
-        "description": ""
+        "description": "[Merriam Webster Medical](https://dictionaryapi.com/products/api-medical-dictionary)"
       },
       {
         "name": "rapid_words",
-        "description": ""
+        "description": "[RapidAPI WordsAPI](https://www.wordsapi.com/)"
       }
     ]
   },
