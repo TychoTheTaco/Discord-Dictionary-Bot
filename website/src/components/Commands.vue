@@ -9,6 +9,10 @@
 	<h1>
 		Commands
 	</h1>
+	<p>
+		Items with a <code class="args-required">red</code> background are required and items with a <code class="args-optional">yellow</code> background are optional.
+	</p>
+	<hr>
 
 	<div v-for="(command, index) in commands" v-bind:key="command.name">
 		<Command v-bind:command="command"/>

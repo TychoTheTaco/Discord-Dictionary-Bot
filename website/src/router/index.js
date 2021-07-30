@@ -2,6 +2,7 @@ import {createRouter, createWebHistory} from 'vue-router'
 import Home from '../views/Home.vue'
 import Statistics from "@/views/Statistics";
 import Documentation from "@/views/Documentation";
+import PageNotFound from "@/views/PageNotFound";
 
 const routes = [
 	{
@@ -36,6 +37,10 @@ const routes = [
 				component: Documentation
 			}
 		]
+	},
+	{
+		path: '/:catchAll(.*)',
+		component: PageNotFound
 	}
 ]
 

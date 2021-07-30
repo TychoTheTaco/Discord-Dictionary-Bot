@@ -90,7 +90,7 @@
       },
       {
         "name": "remove",
-        "description": "Remove/reset a setting.",
+        "description": "Remove/reset a setting. If \"scope\" is \"guild\" then the setting is reset to the default. If \"scope\" is \"channel\" then the setting is removed and the guild setting will apply.",
         "args": [
           {
             "required": true,
