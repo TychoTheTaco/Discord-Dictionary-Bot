@@ -1,6 +1,6 @@
 <template>
 
-	<div id="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap;">
+	<div ref="main_content" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap;">
 		<Graph ref="a"/>
 		<Graph ref="b"/>
 		<Graph ref="c"/>
@@ -21,7 +21,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 const API_ROOT = 'https://formal-scout-290305.wl.r.appspot.com/'
 
 Chart.defaults.plugins.legend.display = false
-Chart.defaults.responsive = false;
+Chart.defaults.maintainAspectRatio = false;
 Chart.defaults.plugins.title.display = true;
 Chart.defaults.color = 'whitesmoke';
 Chart.defaults.animation = false;
@@ -61,6 +61,9 @@ export default {
 		Graph
 	},
 	mounted() {
+		window.addEventListener('resize', this.onWindowResize);
+		this.onWindowResize();
+
 		this.$refs.a.load((async (container, canvas, stats) => {
 			const response = await (await fetch(API_ROOT + 'definition_requests')).json();
 
@@ -399,6 +402,20 @@ export default {
 				}
 			});
 		}));
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.onWindowResize);
+	},
+	methods: {
+		onWindowResize() {
+			this.$nextTick(() => {
+				if (window.innerWidth < 700 || screen.availWidth < 700){
+					this.$refs.main_content.style.flexDirection = 'column';
+				} else {
+					this.$refs.main_content.style.flexDirection = 'row';
+				}
+			});
+		}
 	}
 }
 

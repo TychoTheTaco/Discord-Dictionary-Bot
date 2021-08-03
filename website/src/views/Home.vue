@@ -1,10 +1,10 @@
 <template>
-	<div style="max-width: 1280px; margin: auto;">
+	<div style="max-width: 1280px; margin: auto; padding: 0 1rem;">
 
 		<p style="font-size: 1.6em; font-weight: bold;">
 			Discord Dictionary Bot
 		</p>
-		<p style="font-size: 1.2em;">
+		<p style="font-size: 1.1em;">
 			A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages!
 		</p>
 
@@ -16,7 +16,7 @@
 			Definitions
 		</p>
 
-		<div style="display: flex; flex-direction: row;">
+		<div class="image-container">
 			<img src="define_sunflower.jpg" class="demo-image">
 			<img src="define_hola.jpg" class="demo-image">
 		</div>
@@ -25,7 +25,7 @@
 			Translations
 		</p>
 
-		<div style="display: flex; flex-direction: row;">
+		<div class="image-container">
 			<img src="translate_spanish.jpg" class="demo-image">
 			<img src="translate_dutch_english.jpg" class="demo-image">
 		</div>
@@ -43,8 +43,17 @@
 }
 
 .demo-image {
-	margin: 1rem;
-	border-radius: 0.8rem;
+	margin: 0.5rem;
+	border-radius: 0.4rem;
+	max-width: 600px;
+}
+
+.image-container {
+	display: flex;
+	flex-direction: row;
+	overflow: scroll;
+	overflow-y: hidden;
+	overflow-x: auto;
 }
 
 </style>

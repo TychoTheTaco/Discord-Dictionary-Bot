@@ -1,7 +1,7 @@
 <template>
 	<div style="background-color: #1B1C1F">
 
-		<div style="display: flex; flex-direction: row; justify-content: space-between; align-items: end; max-width: 1280px; margin: auto; padding: 0.8rem;">
+		<div ref="container" style="display: flex; justify-content: space-between; align-items: end; max-width: 1280px; margin: auto; padding: 0.8rem;" class="desktop">
 
 			<div style="display: inline-block;">
 				<p>
@@ -12,6 +12,12 @@
 				</p>
 			</div>
 
+			<div style="display: inline-block;">
+				<p>
+					Discord Dictionary Bot is open source! Check it out on <a target="_blank" rel="noopener noreferrer" href="https://github.com/TychoTheTaco/Discord-Dictionary-Bot" class="nav-link">GitHub</a>!
+				</p>
+			</div>
+
 		</div>
 
 	</div>
@@ -19,10 +25,36 @@
 
 <script>
 export default {
-	name: 'Footer'
+	name: 'Footer',
+	mounted() {
+		window.addEventListener('resize', this.onWindowResize);
+		this.onWindowResize();
+	},
+	unmounted() {
+		window.removeEventListener('resize', this.onWindowResize);
+	},
+	methods: {
+		onWindowResize() {
+			this.$nextTick(() => {
+				if (window.innerWidth < 700 || screen.availWidth < 700){
+					this.$refs.container.className = 'mobile';
+				} else {
+					this.$refs.container.className = 'desktop';
+				}
+			});
+		}
+	}
 }
 </script>
 
 <style scoped>
+
+.desktop {
+    flex-direction: row;
+}
+
+.mobile {
+	flex-direction: column;
+}
 
 </style>
