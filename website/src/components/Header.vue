@@ -13,7 +13,7 @@
 
 				<!-- Right -->
 				<div style="display: inline-block; font-size: 1.2em; margin-right: 1rem;" :class="{ 'hide' : menu_visible, '' : !menu_visible}">
-					<a target="_blank" rel="noopener noreferrer" href="https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands" class="nav-link"><b>Invite</b></a>
+					<a target="_blank" rel="noopener noreferrer" href="https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands" class="nav-link"><b style="color: #EF6C00">Invite</b></a>
 					<a href="/" class="nav-link">Home</a>
 					<a href="/docs/commands" class="nav-link">Documentation</a>
 					<a target="_blank" rel="noopener noreferrer" href="https://github.com/TychoTheTaco/Discord-Dictionary-Bot" class="nav-link">GitHub</a>
