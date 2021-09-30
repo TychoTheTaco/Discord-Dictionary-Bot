@@ -121,6 +121,9 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
 
 class UnofficialGoogleAPI(DictionaryAPI):
+    """
+    https://github.com/meetDeveloper/freeDictionaryAPI
+    """
 
     def __init__(self):
         self._aio_client_session = aiohttp.ClientSession()

@@ -1,4 +1,5 @@
 import logging
+import sys
 from pathlib import Path
 from typing import Union
 import datetime
@@ -7,12 +8,13 @@ import discord.ext.commands
 from discord import Message
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
-
-from .cogs import Help, Settings, Dictionary, Statistics
-from .dictionary_api import DictionaryAPI
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext
+
 from .analytics import log_command
+from .cogs import Help, Settings, Dictionary, Statistics
+from .dictionary_api import DictionaryAPI
+from .utils import get_bot_permissions
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -51,16 +53,25 @@ class DiscordBotClient(Bot):
             logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}" {context.kwargs}')
             log_command(context.command, True, context)
 
-    async def on_command_error(self, context: commands.Context, exception):
+    async def on_command_error(self, context: commands.Context, exception: Exception):
         if isinstance(exception, commands.errors.CommandNotFound):
             pass  # Ignore command not found
         elif isinstance(exception, commands.errors.MissingRequiredArgument):
             await context.send('Invalid command usage!')
         elif isinstance(exception, commands.errors.ArgumentParsingError):
             await context.send('Invalid arguments! Usage: `' + context.command.usage + '`')
+        elif isinstance(exception, commands.errors.CommandInvokeError) and isinstance(exception.original, discord.errors.Forbidden):
+            logger.error(f'Missing permissions. We have {get_bot_permissions(context)}', exc_info=exception)
         else:
             logger.error('Error on command!', exc_info=exception)
             await super().on_command_error(context, exception)
+
+    async def on_error(self, event_method, *args, **kwargs):
+        exception = sys.exc_info()[1]
+        if isinstance(exception, discord.errors.Forbidden):
+            if isinstance(args[0], discord.Message):
+                fake_context = type('', (), {'channel': args[0].channel})()
+                logger.error(f'Missing permissions. We have {get_bot_permissions(fake_context)}', exc_info=exception)
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
