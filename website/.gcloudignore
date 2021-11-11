@@ -7,3 +7,5 @@ src
 babel.config.js
 package.json
 package-lock.json
+
+deploy.bat
