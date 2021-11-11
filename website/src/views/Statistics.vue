@@ -5,7 +5,6 @@
 		<Graph ref="b"/>
 		<Graph ref="c"/>
 		<Graph ref="d"/>
-		<Graph ref="e"/>
 	</div>
 
 </template>
@@ -148,16 +147,14 @@ export default {
 		}));
 
 		this.$refs.b.load((async (container, canvas) => {
-			const response = await (await fetch(API_ROOT + 'definition_requests')).json();
+			const response = await (await fetch(API_ROOT + 'total_definition_requests')).json();
 
 			let xValues = [];
 			let yValues = [];
 
-			let sum = 0;
 			for (const item of response) {
 				xValues.push(new Date(item['period']));
-				sum += item['cnt'];
-				yValues.push(sum);
+				yValues.push(item['cnt']);
 			}
 
 			//container.innerHTML += `<br>Maximum: ${Math.max(...yValues)}`
@@ -210,26 +207,13 @@ export default {
 		}));
 
 		this.$refs.c.load((async (container, canvas) => {
-			const response = await (await fetch(API_ROOT + 'commands_per_day')).json();
+			const response = await (await fetch(API_ROOT + 'command_usage')).json();
 
 			const datasets = [];
-
-			for (const commandName in response) {
-				const items = response[commandName];
-
-				if (['property', 'voices', 'list', 'set', 'languages'].includes(commandName)) {
-					continue;
-				}
-
-				let text_count_sum = 0;
-				let slash_count_sum = 0;
-				for (const item of items) {
-					text_count_sum += item['text_count'];
-					slash_count_sum += item['slash_count'];
-				}
+			for (const item of response){
 				datasets.push({
-					'label': commandName,
-					'data': text_count_sum + slash_count_sum
+					'label': item['command_name'],
+					'data': item['cnt']
 				})
 			}
 
@@ -300,49 +284,6 @@ export default {
 		}));
 
 		this.$refs.d.load((async (container, canvas) => {
-			const response = await (await fetch(API_ROOT + 'text_vs_slash_commands')).json();
-
-			let text_count_sum = 0;
-			let slash_count_sum = 0;
-			for (const item of response) {
-				text_count_sum += item['text_count'];
-				slash_count_sum += item['slash_count'];
-			}
-
-			const ctx = canvas.getContext('2d');
-			new Chart(ctx, {
-					plugins: [ChartDataLabels],
-					type: 'pie',
-					data: {
-						labels: ['Text Commands', 'Slash Commands'],
-						datasets: [
-							{
-								data: [text_count_sum, slash_count_sum],
-								backgroundColor: ['#BA2944', '#354CBA']
-							}
-						]
-					},
-					options: {
-						plugins: {
-							title: {
-								text: 'Slash Command Usage'
-							},
-							legend: {
-								display: true,
-								position: 'right'
-							},
-							datalabels: {
-								formatter: function (value, context) {
-									return ((value / (text_count_sum + slash_count_sum)) * 100).toFixed(1) + "%";
-								}
-							}
-						}
-					}
-				}
-			);
-		}));
-
-		this.$refs.e.load((async (container, canvas) => {
 			const response = await (await fetch(API_ROOT + 'dictionary_api_usage')).json();
 
 			const datas = [];

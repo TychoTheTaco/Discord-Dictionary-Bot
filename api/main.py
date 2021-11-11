@@ -38,10 +38,6 @@ def cache(time):
     return decorator
 
 
-def get_definition_requests_per_day():
-    return bigquery_client.query('SELECT DATE(time) as d, COUNT(time) as cnt FROM analytics.definition_requests GROUP BY d ORDER BY d').result()
-
-
 def row_to_dict(row):
     return {k: v for k, v in row.items()}
 
@@ -66,8 +62,8 @@ def definition_requests_per_day():
     query = 'SELECT period, SUM(cnt) AS cnt FROM (' \
             'SELECT DATE(time) as period, COUNT(time) AS cnt FROM analytics.definition_requests GROUP BY period ' \
             'UNION ALL ' \
-            'SELECT period, 0 FROM UNNEST(GENERATE_DATE_ARRAY(DATE("2021-1-1"), current_date())) period' \
-            ') GROUP BY period ORDER BY period'
+            'SELECT period, 0 FROM UNNEST(GENERATE_DATE_ARRAY(DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH), current_date())) period' \
+            ') WHERE DATE(period) > DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH) GROUP BY period ORDER BY period'
     rows = []
     for row in bigquery_client.query(query):
         rows.append(row_to_dict(row))
@@ -79,9 +75,17 @@ def definition_requests_per_day():
 @app.route('/total_definition_requests')
 @cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def total_definition_requests():
-    results = get_definition_requests_per_day()
+    result = bigquery_client.query('SELECT COUNT(*) FROM analytics.definition_requests WHERE DATE(time) <= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)')
+    for x in result:
+        total = x[0]
+        break
+    query = 'SELECT period, SUM(cnt) AS cnt FROM (' \
+            'SELECT DATE(time) as period, COUNT(time) AS cnt FROM analytics.definition_requests GROUP BY period ' \
+            'UNION ALL ' \
+            'SELECT period, 0 FROM UNNEST(GENERATE_DATE_ARRAY(DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH), current_date())) period' \
+            ') WHERE DATE(period) > DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH) GROUP BY period ORDER BY period'
+    results = bigquery_client.query(query).result()
     rows = []
-    total = 0
     for row in results:
         d = row_to_dict(row)
         total += d['cnt']
@@ -119,17 +123,18 @@ def commands_per_day():
     return response
 
 
-@app.route('/text_vs_slash_commands')
+@app.route('/command_usage')
 @cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
-def text_vs_slash_commands():
-    result = {date: {'text_count': 0, 'slash_count': 0} for date in get_days_in_range(datetime.datetime(2021, 1, 1), datetime.datetime.today())}
-    for row in bigquery_client.query('SELECT DATE(time) as d, COUNTIF(NOT is_slash) as cnt, COUNTIF(is_slash) as slash_cnt FROM analytics.commands GROUP BY d ORDER BY d').result():
+def command_usage():
+    results = bigquery_client.query('SELECT command_name, COUNT(*) AS cnt FROM analytics.commands GROUP BY command_name')
+    rows = []
+    for row in results:
         d = row_to_dict(row)
-        result[d['d']]['text_count'] = d['cnt']
-        result[d['d']]['slash_count'] = d['slash_cnt']
-    result = [{'date': date, **result[date]} for date in result.keys()]
+        if d['command_name'] in ['list', 'set', 'voices', 'languages', 'property']:
+            continue
+        rows.append(d)
 
-    response = jsonify(result)
+    response = jsonify(rows)
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
@@ -138,7 +143,7 @@ def text_vs_slash_commands():
 @cache(time=datetime.timedelta(minutes=DEFAULT_CACHE_MINUTES))
 def dictionary_api_usage():
     result = {}
-    for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` GROUP BY api_name').result():
+    for row in bigquery_client.query('SELECT api_name, COUNT(api_name) as cnt FROM `analytics.dictionary_api_requests` WHERE DATE(time) > DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH) GROUP BY api_name').result():
         d = row_to_dict(row)
         result[d['api_name']] = d['cnt']
 
