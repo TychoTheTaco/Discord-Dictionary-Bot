@@ -157,8 +157,6 @@ export default {
 				yValues.push(item['cnt']);
 			}
 
-			//container.innerHTML += `<br>Maximum: ${Math.max(...yValues)}`
-
 			const ctx = canvas.getContext('2d');
 			new Chart(ctx, {
 					type: 'line',
@@ -359,61 +357,5 @@ export default {
 		}
 	}
 }
-
-/*
-
-fetch(API_ROOT + 'active-guilds').then(
-    (response) => {
-        response.json().then(
-            (data) => {
-                console.log(data);
-
-                let xValues = [];
-                let yValues = [];
-
-                let date = new Date(Object.keys(data)[0]);
-                const today = new Date();
-                let sum = 0;
-                while (date.getUTCDate() !== today.getUTCDate() || date.getUTCMonth() !== today.getUTCMonth() || date.getUTCFullYear() !== today.getUTCFullYear()) {
-                    const key = (date.getMonth() + 1) + "-" + date.getDate() + "-" + date.getFullYear();
-                    xValues.push(key);
-                    if (key in data) {
-                        sum += data[key];
-                    }
-                    yValues.push(sum);
-                    date.setUTCDate(date.getUTCDate() + 1);
-                }
-
-                const ctx = document.getElementById('total_requests_canvas').getContext('2d');
-                const chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: xValues,
-                            datasets: [{
-                                data: yValues,
-                                borderColor: 'rgb(75, 192, 192)',
-                                tension: 0.1,
-                                pointRadius: 0
-                            }]
-                        },
-                        options: {
-                            plugins: {
-                                title: {
-                                    text: 'Total Requests'
-                                }
-                            }
-                        }
-                    }
-                );
-            },
-            (reason) => {
-                console.log(reason);
-            }
-        );
-    },
-    (reason) => {
-        console.log(reason);
-    }
-);*/
 
 </script>
