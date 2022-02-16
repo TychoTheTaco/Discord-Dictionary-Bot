@@ -1,13 +1,13 @@
 # Discord Dictionary Bot
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
-A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) Check out the [website](https://discord-dictionary-bot.uc.r.appspot.com/) for more information.
+A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) Check out the [website](https://a-dot-discord-dictionary-bot.uc.r.appspot.com/) for more information.
 
 
 
 ## Usage
 Default command prefix: `.`<br>This bot also supports [Slash Commands](https://discord.com/developers/docs/interactions/slash-commands). The syntax for slash commands is a little from the usage shown below, though mostly the same. The Discord UI provides usage hints for slash commands. Note that currently slash commands do not support aliases.<br>
 
-Please see the [website](https://discord-dictionary-bot.uc.r.appspot.com/docs/commands) for a list of commands.
+Please see the [website](https://a-dot-discord-dictionary-bot.uc.r.appspot.com/docs/commands) for a list of commands.
 
 
 ## Installation
