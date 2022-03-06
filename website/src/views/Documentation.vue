@@ -7,7 +7,7 @@
 		</div>
 
 		<div>
-			<Commands v-if="$route.path === '/docs/commands'"/>
+			<Commands v-if="$route.name === 'Commands'"/>
 			<Settings v-if="$route.name === 'Settings'"/>
 			<Languages v-if="$route.name === 'Languages'"/>
 		</div>
