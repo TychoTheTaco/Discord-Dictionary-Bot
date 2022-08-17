@@ -11,7 +11,7 @@ def logging_filter(record):
     :param record:
     :return:
     """
-    return 'discord_dictionary_bot' in record.name or 'discord_dictionary_bot' in record.pathname
+    return 'discord_dictionary_bot' in record.name or 'discord_dictionary_bot' in record.pathname or record.levelno >= logging.WARNING
 
 
 # Set up logging
