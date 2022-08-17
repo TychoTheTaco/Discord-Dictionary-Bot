@@ -16,7 +16,6 @@ Please see the [website](https://prod.d3967euqdvu56b.amplifyapp.com) for a list 
 Below is a list of APIs that are currently used by the bot. To run the bot yourself, you will need to provide your own API key for these services.
 - [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
 - [Google Cloud Firestore](https://firebase.google.com/products/firestore)
-- [Google Cloud Logging](https://cloud.google.com/logging)
 - [Google Cloud BigQuery](https://cloud.google.com/bigquery)
 
 Additionally, you will need [FFmpeg](https://ffmpeg.org/).

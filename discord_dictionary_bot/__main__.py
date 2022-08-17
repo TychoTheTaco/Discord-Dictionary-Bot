@@ -1,8 +1,6 @@
 import argparse
 import os
 import logging.config
-import google.cloud.logging
-from google.cloud.logging.handlers import CloudLoggingHandler
 from .discord_bot_client import DiscordBotClient
 from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterCollegiateAPI, RapidWordsAPI, MerriamWebsterMedicalAPI
 
@@ -16,13 +14,8 @@ def logging_filter(record):
     return 'discord_dictionary_bot' in record.name or 'discord_dictionary_bot' in record.pathname
 
 
-def gcp_logging_filter(record):
-    return 'google.cloud.logging_v2.handlers.transports.background_thread' not in record.name
-
-
 # Set up logging
 logging.basicConfig(format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S')
-logging.getLogger().handlers[0].addFilter(gcp_logging_filter)
 logging.getLogger().handlers[0].addFilter(logging_filter)
 
 
@@ -106,12 +99,6 @@ def main():
 
     # Set Google API credentials
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = args.google_credentials_path
-
-    # Set up GCP logging
-    gcp_logging_client = google.cloud.logging.Client()
-    gcp_logging_handler = CloudLoggingHandler(gcp_logging_client, name='discord-dictionary-bot')
-    gcp_logging_handler.addFilter(gcp_logging_filter)
-    logging.getLogger().addHandler(gcp_logging_handler)
 
     # Check which dictionary API we should use
     dictionary_apis = []
