@@ -1,8 +1,6 @@
-import argparse
 import io
 import asyncio
 import logging
-import contextlib
 import sqlite3 as sql
 import re
 from typing import Union, Optional, Dict
@@ -14,13 +12,12 @@ from google.cloud import texttospeech
 import requests
 from bs4 import BeautifulSoup
 import discord
-from discord_slash import SlashContext, cog_ext
+from discord import app_commands
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
 from google.cloud import translate_v2 as translate
 
 from ..dictionary_api import DictionaryAPI, SequentialDictionaryAPI
 from ..exceptions import InsufficientPermissionsException
-from .. import utils
 from ..analytics import log_definition_request
 
 # Set up logging
@@ -74,13 +71,21 @@ def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGend
     return response.audio_content
 
 
-class Dictionary(commands.Cog):
-    DEFINE_COMMAND_DESCRIPTION = 'Gets the definition of a word and optionally reads it out to you.'
-    STOP_COMMAND_DESCRIPTION = 'Makes the bot stop talking.'
-    TRANSLATE_COMMAND_DESCRIPTION = 'Translate a message from one language to another.'
+def is_valid_word(word: str):
+    # Arbitrary maximum word size to hopefully prevent the bot from generating responses that are above Discord's message limit of 2000.
+    if len(word) > 100:
+        return False
+
+    pattern = re.compile(r'^[a-zA-Z-\' ]+$')
+    return pattern.search(word) is not None
+
+
+class Dictionary(app_commands.Group):
     TRANSLATE_MAX_MESSAGE_LENGTH = 200
 
     def __init__(self, bot: commands.Bot, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path]):
+        super().__init__()
+
         self._bot = bot
         self._dictionary_apis = {api.id(): api for api in dictionary_apis}
         self._ffmpeg_path = Path(ffmpeg_path)
@@ -116,97 +121,29 @@ class Dictionary(commands.Cog):
             if key in self._language_to_voice_map:
                 self._language_to_voice_map[key] = value
 
-    def _translate(self, text: str, target_language: str, source_language: str = None):
-        result = self._translate_client.translate(text, target_language=target_language, source_language=source_language)
-        translated_text = html.unescape(result['translatedText'])
+    @app_commands.command(name='define', description='Gets the definition of a word.')
+    @app_commands.describe(word='The word to define', text_to_speech='Use text to speech', language='The language to translate the definition to.')
+    async def define(self, interaction: discord.Interaction, word: str, text_to_speech: bool = False, language: Optional[str] = None):
 
-        if source_language is None:
-            return translated_text, result['detectedSourceLanguage']
-        else:
-            return translated_text
-
-    @commands.command(name='define', aliases=['d'], help=DEFINE_COMMAND_DESCRIPTION, usage='[-v] [-lang <language>] <word>')
-    async def define(self, context: commands.Context, *args):
-        word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-        await self._define_or_befine(context, word, False, text_to_speech, language)
-
-    @cog_ext.cog_slash(
-        name='define',
-        description=DEFINE_COMMAND_DESCRIPTION,
-        options=[
-            {
-                'name': 'word',
-                'description': 'The word to define.',
-                'type': 3,
-                'required': True
-            },
-            {
-                'name': 'text_to_speech',
-                'description': 'Reads the definition to you.',
-                'type': 5
-            },
-            {
-                'name': 'language',
-                'description': 'The language to use when reading the definition.',
-                'type': 3,
-            }
-        ]
-    )
-    async def slash_define(self, context: SlashContext, word: str, text_to_speech: bool = False, language: Optional[str] = None):
-        # Get default language
+        # Get default language if none specified
         if language is None:
-            preferences_cog = context.bot.get_cog('Settings')
-            language = preferences_cog.scoped_property_manager.get('language', context.channel)
-
-        await self._define_or_befine(context, word, False, text_to_speech, language)
-
-    @commands.command(name='befine', aliases=['b'], hidden=True)
-    async def befine(self, context: commands.Context, *args):
-        word, text_to_speech, language = await self._parse_define_or_befine(context, *args)
-        await self._define_or_befine(context, word, True, text_to_speech, language)
-
-    async def _parse_define_or_befine(self, context: commands.Context, *args) -> (str, bool, str):
-        # Get default language
-        preferences_cog = context.bot.get_cog('Settings')
-        default_language = preferences_cog.scoped_property_manager.get('language', context.channel)
-
-        # Parse arguments
-        try:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('word', nargs='+')
-            parser.add_argument('-v', action='store_true', default=False, dest='text_to_speech')
-            parser.add_argument('-lang', '-l', dest='language', default=default_language)
-
-            # Parse arguments but suppress stderr output
-            stderr_stream = io.StringIO()
-            with contextlib.redirect_stderr(stderr_stream):
-                args = parser.parse_args(args)
-        except SystemExit:
-            raise commands.errors.ArgumentParsingError("Invalid arguments!")
-
-        # Extract word from arguments
-        word = ' '.join(args.word).strip()
-
-        return word, args.text_to_speech, args.language
-
-    async def _define_or_befine(self, context: Union[commands.Context, SlashContext], word: str, reverse: bool = False, text_to_speech: bool = False, language: str = 'English'):
+            language = self._bot._scoped_property_manager.get('language', interaction.channel)
 
         # Make sure this could be a word
-        if not self._is_valid_word(word):
-            await utils.reply_maybe_hidden(context, 'That\'s not a word.')
+        if not is_valid_word(word):
+            await interaction.response.send_message('That\'s not a word.', ephemeral=True)
             return
 
-        # Get current voice channel
-        voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
+        # Get voice channel the user is currently in (if any)
+        voice_channel = interaction.user.voice.channel if isinstance(interaction.user, discord.Member) and interaction.user.voice is not None else None
 
         # Make sure that the user that requested this definition is in a voice channel if text-to-speech is enabled
         if text_to_speech and voice_channel is None:
-            await utils.reply_maybe_hidden(context, 'You must be in a voice channel to use text-to-speech!')
+            await interaction.response.send_message('You must be in a voice channel to use text-to-speech!', ephemeral=True)
             return
 
         # Check for text-to-speech override
-        preferences_cog = context.bot.get_cog('Settings')
-        text_to_speech_property = preferences_cog.scoped_property_manager.get('text_to_speech', context.channel)
+        text_to_speech_property = self._bot._scoped_property_manager.get('text_to_speech', interaction.channel)
         if text_to_speech_property == 'force' and voice_channel is not None:
             text_to_speech = True
         elif text_to_speech_property == 'disable':
@@ -215,13 +152,49 @@ class Dictionary(commands.Cog):
         # Get voice code from language argument
         language_code = self._get_language_code(language)
         if language_code is None:
-            await utils.reply_maybe_hidden(context, f'Could not find a language matching `{language}`!')
+            await interaction.response.send_message(f'Could not find a language matching `{language}`!', ephemeral=True)
             return
 
         # Check if this language has a supported voice
         if self._language_to_voice_map[language_code] is None:
-            text_to_speech = False
-            await utils.reply_maybe_hidden(context, 'I can\'t speak that language!')
+            await interaction.response.send_message('I can\'t speak that language!', ephemeral=True)
+            return
+
+        # Defer our response since fetching the definition may take longer than a few seconds
+        await interaction.response.defer()
+
+        logger.info(f'Processing definition request: {{word: "{word}", text_to_speech: {text_to_speech}, language: "{language_code}"}}')
+
+        # Get dictionary api
+        dictionary_api_property = self._bot._scoped_property_manager.get('dictionary_apis', interaction.channel)
+        dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_property if api_id in self._dictionary_apis])
+
+        # Translate the word to english
+        if self._bot._scoped_property_manager.get('auto_translate', interaction.channel):
+            word, detected_source_language = self._translate(word, 'en')
+        else:
+            detected_source_language = 'en'
+
+        # Get definition
+        definitions, definition_source = await dictionary_api.define_with_source(word)
+
+        if len(definitions) == 0:
+            await interaction.followup.send(f'__**{word}**__\nI couldn\'t find any definitions for that word.')
+            return
+
+        # Record analytics only for valid words
+        log_definition_request(word, text_to_speech, language, interaction.channel)
+
+        # Translate word and definitions to target language
+        if language_code != 'en':
+            word, _ = self._translate(word, language_code)
+            for i in range(len(definitions)):
+                definitions[i]['word_type'], _ = self._translate(definitions[i]['word_type'], language_code)
+                definitions[i]['definition'], _ = self._translate(definitions[i]['definition'], language_code)
+
+        # Prepare response text and text-to-speech input
+        show_definition_source = self._bot._scoped_property_manager.get('show_definition_source', interaction.channel)
+        reply, text_to_speech_input = self.create_reply(word, definitions, definition_source=definition_source.name if show_definition_source else None, detected_source_language=detected_source_language)
 
         if text_to_speech:
 
@@ -233,62 +206,15 @@ class Dictionary(commands.Cog):
             if voice_channel is not None:
                 self._voice_channels[voice_channel] += 1
 
-            if context.guild not in self._guild_locks:
-                self._guild_locks[context.guild] = asyncio.Lock()
+            if interaction.guild not in self._guild_locks:
+                self._guild_locks[interaction.guild] = asyncio.Lock()
 
-        if isinstance(context, SlashContext):
-            await context.defer()
+            await self._say(reply, interaction, voice_channel, voice_code, text_to_speech_input)
 
-        logger.info(f'Processing definition request: {{word: "{word}", reverse: {reverse}, text_to_speech: {text_to_speech}, language: "{language_code}"}}')
-
-        # Get dictionary api
-        dictionary_api_property = preferences_cog.scoped_property_manager.get('dictionary_apis', context.channel)
-        dictionary_api = SequentialDictionaryAPI([self._dictionary_apis[api_id] for api_id in dictionary_api_property if api_id in self._dictionary_apis])
-
-        if isinstance(context, SlashContext):
-            cm = contextlib.AsyncExitStack()
         else:
-            cm = context.typing()
+            await interaction.followup.send(reply)
 
-        async with cm:
-
-            # Translate the word to english
-            if preferences_cog.scoped_property_manager.get('auto_translate', context.channel):
-                word, detected_source_language = self._translate(word, 'en')
-            else:
-                detected_source_language = 'en'
-
-            # Get definition
-            definitions, definition_source = await dictionary_api.define_with_source(word)
-
-            if len(definitions) == 0:
-                reply = f'__**{word}**__\nI couldn\'t find any definitions for that word.'
-                if text_to_speech:
-                    await self._say(reply, context, voice_channel, language_code, f'{word}. I couldn\'t find any definitions for that word.')
-                else:
-                    await context.send(reply)
-                return
-
-            # Record analytics only for valid words
-            log_definition_request(word, reverse, text_to_speech, language, context)
-
-            # Translate word and definitions to target language
-            if language_code != 'en':
-                word, _ = self._translate(word, language_code)
-                for i in range(len(definitions)):
-                    definitions[i]['word_type'], _ = self._translate(definitions[i]['word_type'], language_code)
-                    definitions[i]['definition'], _ = self._translate(definitions[i]['definition'], language_code)
-
-            # Prepare response text and text-to-speech input
-            show_definition_source = preferences_cog.scoped_property_manager.get('show_definition_source', context.channel)
-            reply, text_to_speech_input = self.create_reply(word, definitions, reverse=reverse, definition_source=definition_source.name if show_definition_source else None, detected_source_language=detected_source_language)
-
-            if text_to_speech:
-                await self._say(reply, context, voice_channel, voice_code, text_to_speech_input)
-            else:
-                await context.send(reply)
-
-    async def _say(self, text: str, context: Union[commands.Context, SlashContext], voice_channel, language, text_to_speech_input=None):
+    async def _say(self, text: str, interaction: discord.Interaction, voice_channel, language, text_to_speech_input=None):
 
         # Get text-to-speech data
         text_to_speech_bytes = await self._get_text_to_speech(text_to_speech_input, language=language)
@@ -296,11 +222,11 @@ class Dictionary(commands.Cog):
         # Check if we got valid text-to-speech data
         if text_to_speech_bytes.getbuffer().nbytes <= 0:
 
-            logger.error('There was a problem generating the text-to-speech!')
-            await context.send('There was a problem generating the text-to-speech!')
-
             # Send text chat reply
-            await context.send(text)
+            await interaction.followup.send(text)
+
+            logger.error('There was a problem generating the text-to-speech!')
+            await interaction.followup.send('There was a problem generating the text-to-speech!')
 
             # Update voice channel map
             self._voice_channels[voice_channel] -= 1
@@ -313,18 +239,15 @@ class Dictionary(commands.Cog):
 
             # Join the voice channel
             try:
-                await self._guild_locks[context.guild].acquire()
+                await self._guild_locks[interaction.guild].acquire()
                 voice_client = await self._join_voice_channel(voice_channel)
             except InsufficientPermissionsException as e:
-                self._guild_locks[context.guild].release()
-                await utils.reply_maybe_hidden(context, f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
+                self._guild_locks[interaction.guild].release()
+                interaction.followup.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
                 return
 
-            # Temporary fix for (https://github.com/TychoTheTaco/Discord-Dictionary-Bot/issues/1)
-            await asyncio.sleep(2.5)
-
             # Send text chat reply
-            await context.send(text)
+            await interaction.followup.send(text)
 
             # Create a callback to be invoked when the bot is finished playing audio
             def after(error):
@@ -342,66 +265,34 @@ class Dictionary(commands.Cog):
                     if self._voice_channels[voice_channel] <= 0:
                         await self._leave_voice_channel(voice_channel)
 
-                    self._guild_locks[context.guild].release()
+                    self._guild_locks[interaction.guild].release()
 
-                asyncio.run_coroutine_threadsafe(after_coroutine(error), context.bot.loop)
+                asyncio.run_coroutine_threadsafe(after_coroutine(error), self._bot.loop)
 
             # Speak
             voice_client.play(discord.PCMAudio(text_to_speech_bytes), after=after)
 
-    @commands.command(name='translate', aliases=['t'], help=TRANSLATE_COMMAND_DESCRIPTION, usage='[<target_language>] <message>')
-    async def translate(self, context: commands.Context, *args):
-        if len(args) < 2:
-            raise commands.errors.ArgumentParsingError("Invalid arguments!")
-
-        # Parse target language
-        target_language = self._get_language_code(args[0])
-        if target_language is None:
-            await context.reply('Invalid language!', mention_author=False)
-            return
-
-        # Parse message
-        message = ' '.join(args[1:])
+    @app_commands.command(name='translate', description='Translate a message from one language to another.')
+    @app_commands.describe(target_language='The language to translate to.', message='The message to translate.')
+    async def translate(self, interaction: discord.Interaction, target_language: str, message: str):
 
         # Limit message length
         if len(message) > Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH:
-            await context.reply(f'Message is too long! Maximum length is {Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH} characters.', mention_author=False)
+            await interaction.response.send_message(f'Message is too long! Maximum length is {Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH} characters.', ephemeral=True)
             return
 
+        await interaction.response.defer()
         translated_message, detected_language = self._translate(message, target_language=target_language)
-        await context.reply(self._create_translate_reply(message, detected_language, translated_message, target_language), mention_author=False)
+        await interaction.followup.send(self._create_translate_reply(message, detected_language, translated_message, target_language))
 
-    @cog_ext.cog_slash(
-        name='translate',
-        description=TRANSLATE_COMMAND_DESCRIPTION,
-        options=[
-            {
-                'name': 'target_language',
-                'description': 'The language to translate to.',
-                'type': 3,
-                'required': True
-            },
-            {
-                'name': 'message',
-                'description': 'The message to translate.',
-                'type': 3
-            }
-        ]
-    )
-    async def slash_translate(self, context: SlashContext, target_language: str, message: str):
-        # Parse target language
-        target_language = self._get_language_code(target_language)
-        if target_language is None:
-            await utils.reply_maybe_hidden(context, 'Invalid language!')
-            return
+    def _translate(self, text: str, target_language: str, source_language: str = None):
+        result = self._translate_client.translate(text, target_language=target_language, source_language=source_language)
+        translated_text = html.unescape(result['translatedText'])
 
-        # Limit message length
-        if len(message) > Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH:
-            await utils.reply_maybe_hidden(context, f'Message is too long! Maximum length is {Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH} characters.')
-            return
-
-        translated_message, detected_language = self._translate(message, target_language=target_language)
-        await context.send(self._create_translate_reply(message, detected_language, translated_message, target_language))
+        if source_language is None:
+            return translated_text, result['detectedSourceLanguage']
+        else:
+            return translated_text
 
     def _create_translate_reply(self, message: str, source_language: str, translated_message: str, target_language: str):
         result = f'**__{self._get_language_name(source_language)}__**\n'
@@ -409,16 +300,6 @@ class Dictionary(commands.Cog):
         result += f'**__{self._get_language_name(target_language)}__**\n'
         result += translated_message
         return result
-
-    @staticmethod
-    def _is_valid_word(word) -> bool:
-
-        # Arbitrary maximum word size to hopefully prevent the bot from generating responses that are above Discord's message limit of 2000.
-        if len(word) > 100:
-            return False
-
-        pattern = re.compile(r'^[a-zA-Z-\' ]+$')
-        return pattern.search(word) is not None
 
     async def _join_voice_channel(self, voice_channel: discord.VoiceChannel) -> discord.VoiceProtocol:
         # Make sure we have permission to join the voice channel. If we try to join a voice channel without permission, it will timeout.
@@ -439,17 +320,14 @@ class Dictionary(commands.Cog):
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
 
-    def create_reply(self, word, definitions, reverse=False, definition_source: Optional[str] = None, detected_source_language: str = 'en') -> (str, str):
+    def create_reply(self, word, definitions, definition_source: Optional[str] = None, detected_source_language: str = 'en') -> (str, str):
         """
         Create a reply.
         :param word:
         :param definitions:
-        :param reverse:
         :param definition_source:
         :return:
         """
-        if reverse:
-            word = word[::-1]
 
         reply = f'__**{word}**__'
         if detected_source_language != 'en':
@@ -460,10 +338,6 @@ class Dictionary(commands.Cog):
         for i, definition in enumerate(definitions):
             word_type = definition['word_type']
             definition_text = definition['definition']
-
-            if reverse:
-                word_type = word_type[::-1]
-                definition_text = definition_text[::-1]
 
             reply += f'**[{i + 1}]** ({word_type})\n' + definition_text + '\n'
             tts_input += f' {i + 1}, {word_type}, {definition_text}'
@@ -489,29 +363,17 @@ class Dictionary(commands.Cog):
 
         return result
 
-    @commands.command(name='stop', aliases=['s'], help=STOP_COMMAND_DESCRIPTION)
-    async def stop(self, context: commands.Context):
-        for voice_client in context.bot.voice_clients:
-            if voice_client == context.voice_client:
-                await self._stop(context, voice_client)
-                return
-
-    @cog_ext.cog_slash(name='stop', description=STOP_COMMAND_DESCRIPTION)
-    async def slash_stop(self, context: SlashContext):
+    @app_commands.command(name='stop', description='Makes the bot stop talking.')
+    async def stop(self, interaction: discord.Interaction):
         # Get voice channel of current user
-        voice_channel = context.author.voice.channel if isinstance(context.author, discord.Member) and context.author.voice is not None else None
+        voice_channel = interaction.user.voice.channel if isinstance(interaction.user, discord.Member) and interaction.user.voice is not None else None
 
         # Get voice client
-        for voice_client in context.bot.voice_clients:
+        for voice_client in self._bot.voice_clients:
             if voice_client.channel == voice_channel:
-                await self._stop(context, voice_client)
+                voice_client.stop()
+                await interaction.response.send_message('Okay, I\'ll be quiet.')
                 return
-
-        await context.send('Okay, I\'ll be quiet.')
-
-    async def _stop(self, context: Union[commands.Context, SlashContext], voice_client: discord.VoiceClient):
-        voice_client.stop()
-        await context.send('Okay, I\'ll be quiet.')
 
     @staticmethod
     def _create_voices_table():

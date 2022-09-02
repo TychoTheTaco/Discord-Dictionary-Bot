@@ -1,15 +1,12 @@
-import logging
+import datetime
 import io
 import json
-import datetime
+import logging
 import threading
 import time
-from typing import Union
 
-from google.cloud import bigquery
 import discord
-from discord.ext import commands
-from discord_slash import SlashContext
+from google.cloud import bigquery
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -28,19 +25,12 @@ def run_on_another_thread(function):
     return f
 
 
-def _is_blacklisted(context: commands.Context):
+def _is_blacklisted(channel: discord.TextChannel):
     # Ignore dev server
-    if isinstance(context.channel, discord.TextChannel) and context.channel.guild.id in [454852632528420876, 799455809297842177]:
+    if channel.guild.id in [454852632528420876, 799455809297842177]:
         logger.info(f'Ignoring analytics submission for development server.')
         return True
     return False
-
-
-def get_guild_and_channel_id(context: commands.Context):
-    if isinstance(context.channel, discord.TextChannel):
-        return context.channel.guild.id, context.channel.id
-    elif isinstance(context.channel, discord.DMChannel):
-        return None, context.channel.id
 
 
 def to_bq_file(items):
@@ -136,42 +126,40 @@ def analytics_uploader_thread():
 threading.Thread(target=analytics_uploader_thread).start()
 
 
+# @run_on_another_thread
+# def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
+#     queue = qal['log_command']['queue']
+#     with qal['log_command']['lock']:
+#
+#         if _is_blacklisted(context):
+#             return
+#
+#         guild_id, channel_id = get_guild_and_channel_id(context)
+#         data = {
+#             'command_name': command_name,
+#             'is_slash': is_slash,
+#             'guild_id': guild_id,
+#             'channel_id': channel_id,
+#             'time': datetime.datetime.now().isoformat()
+#         }
+#
+#         queue.append(data)
+
+
 @run_on_another_thread
-def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
-    queue = qal['log_command']['queue']
-    with qal['log_command']['lock']:
-
-        if _is_blacklisted(context):
-            return
-
-        guild_id, channel_id = get_guild_and_channel_id(context)
-        data = {
-            'command_name': command_name,
-            'is_slash': is_slash,
-            'guild_id': guild_id,
-            'channel_id': channel_id,
-            'time': datetime.datetime.now().isoformat()
-        }
-
-        queue.append(data)
-
-
-@run_on_another_thread
-def log_definition_request(word: str, reverse: bool, text_to_speech: bool, language: str, context: commands.Context):
+def log_definition_request(word: str, text_to_speech: bool, language: str, channel: discord.TextChannel):
     queue = qal['log_definition_request']['queue']
     with qal['log_definition_request']['lock']:
-
-        if _is_blacklisted(context):
+        if _is_blacklisted(channel):
             return
 
-        guild_id, channel_id = get_guild_and_channel_id(context)
         data = {
             'word': word,
-            'reverse': reverse,
+            'reverse': False,
             'text_to_speech': text_to_speech,
             'language': language,
-            'guild_id': guild_id,
-            'channel_id': channel_id,
+            'guild_id': channel.guild.id,
+            'channel_id': channel.id,
             'time': datetime.datetime.now().isoformat()
         }
 
@@ -182,7 +170,6 @@ def log_definition_request(word: str, reverse: bool, text_to_speech: bool, langu
 def log_dictionary_api_request(dictionary_api_name: str, success: bool):
     queue = qal['log_dictionary_api_request']['queue']
     with qal['log_dictionary_api_request']['lock']:
-
         data = {
             'api_name': dictionary_api_name,
             'success': success,

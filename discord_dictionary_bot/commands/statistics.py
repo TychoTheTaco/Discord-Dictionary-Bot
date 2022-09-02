@@ -1,19 +1,23 @@
-from discord.ext import commands
-from google.cloud import bigquery
 import logging
+
+from discord.ext import commands
+from discord import app_commands, Interaction
+from google.cloud import bigquery
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-class Statistics(commands.Cog):
+class Statistics(app_commands.Group):
 
     def __init__(self, bot: commands.Bot):
+        super().__init__()
         self._bot = bot
         self._bigquery_client = bigquery.Client()
 
-    @commands.command(name='stats', hidden=True)
-    async def stats(self, context: commands.Context):
+    @app_commands.command(name='stats')
+    async def stats(self, interaction: Interaction):
+        await interaction.response.defer(ephemeral=True)
         reply = '**----- Statistics -----**\n'
 
         # Channel count
@@ -49,4 +53,4 @@ class Statistics(commands.Cog):
         for i, row in enumerate(results):
             reply += f'{i + 1}. `{row.word}`\n'
 
-        await context.send(reply)
+        await interaction.followup.send(reply)

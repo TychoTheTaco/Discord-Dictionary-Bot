@@ -1,7 +1,6 @@
 from typing import Union, Any, Iterable, Optional
 import logging
 from abc import ABC, abstractmethod
-import datetime
 
 import discord
 from google.cloud import firestore

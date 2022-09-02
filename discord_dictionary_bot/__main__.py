@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging.config
+
 from .discord_bot_client import DiscordBotClient
 from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterCollegiateAPI, RapidWordsAPI, MerriamWebsterMedicalAPI
 

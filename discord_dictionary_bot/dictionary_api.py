@@ -90,11 +90,10 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
     def __init__(self, token: str):
         self._token = token
-        self._aio_client_session = aiohttp.ClientSession()
 
     async def define(self, word: str) -> List[Dict[str, str]]:
         headers = {'Authorization': f'Token {self._token}'}
-        async with self._aio_client_session.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
+        async with aiohttp.ClientSession().get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
             if not await handle_default_status(self, word, response):
                 return []
@@ -125,11 +124,8 @@ class UnofficialGoogleAPI(DictionaryAPI):
     https://github.com/meetDeveloper/freeDictionaryAPI
     """
 
-    def __init__(self):
-        self._aio_client_session = aiohttp.ClientSession()
-
     async def define(self, word: str) -> List[Dict[str, str]]:
-        async with self._aio_client_session.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
+        async with aiohttp.ClientSession().get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
             if not await handle_default_status(self, word, response):
                 return []
@@ -160,7 +156,6 @@ class MerriamWebsterAPI(DictionaryAPI, ABC):
 
     def __init__(self, api_key):
         self._api_key = api_key
-        self._aio_client_session = aiohttp.ClientSession()
         self._request_limiter = RequestLimiter(1000, timedelta(days=1))
 
     def _get_short_definitions(self, response_json) -> []:
@@ -205,7 +200,7 @@ class MerriamWebsterCollegiateAPI(MerriamWebsterAPI):
 
         word = word.lower()
 
-        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
+        async with aiohttp.ClientSession().get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
             if not await handle_default_status(self, word, response):
                 return []
@@ -236,7 +231,7 @@ class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
         word = word.lower()
 
-        async with self._aio_client_session.get('https://dictionaryapi.com/api/v3/references/medical/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
+        async with aiohttp.ClientSession().get('https://dictionaryapi.com/api/v3/references/medical/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
             if not await handle_default_status(self, word, response):
                 return []
@@ -257,7 +252,6 @@ class RapidWordsAPI(DictionaryAPI):
 
     def __init__(self, api_key):
         self._api_key = api_key
-        self._aio_client_session = aiohttp.ClientSession()
         self._request_limiter = RequestLimiter(2000, timedelta(days=1))
 
     async def define(self, word: str) -> List[Dict[str, str]]:
@@ -273,7 +267,7 @@ class RapidWordsAPI(DictionaryAPI):
             'x-rapidapi-key': self._api_key,
             'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
         }
-        async with self._aio_client_session.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
+        async with aiohttp.ClientSession().get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
 
             if not await handle_default_status(self, word, response):
                 return []
