@@ -320,12 +320,13 @@ class Dictionary(app_commands.Group):
             if voice_client.channel == voice_channel:
                 await voice_client.disconnect()
 
-    def create_reply(self, word, definitions, definition_source: Optional[str] = None, detected_source_language: str = 'en') -> (str, str):
+    def create_reply(self, word: str, definitions, definition_source: Optional[str] = None, detected_source_language: str = 'en') -> (str, str):
         """
         Create a reply.
         :param word:
         :param definitions:
         :param definition_source:
+        :param detected_source_language:
         :return:
         """
 

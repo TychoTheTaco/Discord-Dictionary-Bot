@@ -1,27 +1,24 @@
+import datetime
 import logging
-import sys
 from pathlib import Path
 from typing import Union
-import datetime
 
 import discord.ext.commands
 from discord import Message
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
-from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
-#from .analytics import log_command
+# from .analytics import log_command
 from .commands import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
-#from .utils import get_bot_permissions
+from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
 def get_prefix(bot: Bot, message: Message):
-    preferences_cog = bot.get_cog('Settings')
-    return preferences_cog.scoped_property_manager.get('prefix', message.channel)
+    return bot._scoped_property_manager.get('prefix', message.channel)
 
 
 class DiscordBotClient(Bot):
@@ -87,21 +84,6 @@ class DiscordBotClient(Bot):
         #async def on_slash_command(context: SlashContext):
         #    logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}" {context.kwargs}')
         #    log_command(context.command, True, context)
-
-    # async def on_command_error(self, context: commands.Context, exception: Exception):
-    #     elif isinstance(exception, commands.errors.CommandInvokeError) and isinstance(exception.original, discord.errors.Forbidden):
-    #         #logger.error(f'Missing permissions. We have {get_bot_permissions(context)}', exc_info=exception)
-    #         pass
-    #     else:
-    #         logger.error('Error on command!', exc_info=exception)
-    #         await super().on_command_error(context, exception)
-
-    async def on_error(self, event_method, *args, **kwargs):
-        exception = sys.exc_info()[1]
-        if isinstance(exception, discord.errors.Forbidden):
-            if isinstance(args[0], discord.Message):
-                fake_context = type('', (), {'channel': args[0].channel})()
-                #logger.error(f'Missing permissions. We have {get_bot_permissions(fake_context)}', exc_info=exception)
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
