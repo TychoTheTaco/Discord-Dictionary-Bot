@@ -25,8 +25,6 @@ class Settings(app_commands.Group):
     @app_commands.describe(key='Property name', value='Property value')
     async def set(self, interaction: discord.Interaction, scope_name: Literal['guild', 'channel'], key: PropertyKeyType, value: str):
 
-        raise RuntimeError('haha')
-
         scope = self._get_scope_from_name(scope_name, interaction)
         if scope is None:
             await interaction.response.send_message(f'Invalid scope: `{scope_name}`! Must be either `guild` or `channel`.', ephemeral=True)

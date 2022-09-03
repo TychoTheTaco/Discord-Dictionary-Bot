@@ -7,6 +7,8 @@
       <excludeFolder url="file://$MODULE_DIR$/ffmpeg-20200831-4a11a6f-win64-static" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/bot/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/bot/build" />
+      <excludeFolder url="file://$MODULE_DIR$/bot/discord_dictionary_bot.egg-info" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (Discord Dictionary Bot)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

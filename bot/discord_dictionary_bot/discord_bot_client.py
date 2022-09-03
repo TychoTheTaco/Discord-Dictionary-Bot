@@ -1,10 +1,11 @@
 import datetime
 import logging
+import sys
 from pathlib import Path
-from typing import Union
+from typing import Union, Any
 
 import discord.ext.commands
-from discord import Message
+from discord import Message, Guild
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
@@ -12,6 +13,7 @@ from google.cloud import firestore
 from .commands import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
+from .utils import get_bot_permissions
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -98,7 +100,7 @@ class DiscordBotClient(Bot):
             if not snapshot.exists:
                 await self.on_guild_join(guild)
 
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: Message):
 
         # If we are mentioned, show our prefix and help
         if self.user in message.mentions:
@@ -107,7 +109,7 @@ class DiscordBotClient(Bot):
 
         await super().on_message(message)
 
-    async def on_guild_join(self, guild: discord.Guild):
+    async def on_guild_join(self, guild: Guild):
         logger.info('Joined guild: ' + guild.name)
 
         firestore_client = firestore.Client()
@@ -118,3 +120,13 @@ class DiscordBotClient(Bot):
             guild_document.set({
                 'joined': datetime.datetime.now()
             })
+
+    async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
+        exception = sys.exc_info()[1]
+        if isinstance(exception, discord.errors.Forbidden):
+            if event_method == 'on_message':
+                message: Message = args[0]
+                logger.error(f'Missing permissions. We have {get_bot_permissions(message.channel)}')
+                return
+        await super().on_error(event_method, *args, **kwargs)
+
