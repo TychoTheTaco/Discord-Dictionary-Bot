@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Union, Any
 
 import discord.ext.commands
-from discord import Message, Guild
+from discord import Message, Guild, Interaction
+from discord.app_commands import ContextMenu, Command
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
@@ -82,10 +83,9 @@ class DiscordBotClient(Bot):
         self.tree.add_command(Settings(self._scoped_property_manager), guild=discord.Object(id='799455809297842177'))
         self.tree.add_command(Statistics(self), guild=discord.Object(id='799455809297842177'))
 
-        #@self.event
-        #async def on_slash_command(context: SlashContext):
-        #    logger.info(f'[G: "{context.guild}", C: "{context.channel}"] "/{context.command}" {context.kwargs}')
-        #    log_command(context.command, True, context)
+    async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
+        args = {option['name']: option['value'] for option in interaction.data['options'][0]['options']}
+        logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{command.name}" {args}')
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')

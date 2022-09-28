@@ -1,11 +1,11 @@
-aiohttp==3.8.1
+aiohttp==3.8.3
 discord.py==2.0.1
 pyNaCl==1.5.0
 gTTS==2.2.4
-google-cloud-firestore==2.6.1
+google-cloud-firestore==2.7.0
 google-cloud-texttospeech==2.12.1
 google-cloud-bigquery==3.3.2
-google-cloud-translate==3.8.1
+google-cloud-translate==3.8.2
 beautifulsoup4==4.11.1
 lxml==4.9.1
 requests==2.28.1
