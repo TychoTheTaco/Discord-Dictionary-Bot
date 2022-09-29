@@ -1,19 +1,20 @@
 # Discord Dictionary Bot
+
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
-A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) Check out the [website](https://prod.d3967euqdvu56b.amplifyapp.com) for more information.
-
-
+A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different
+languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) Check out
+the [website](https://prod.d3967euqdvu56b.amplifyapp.com) for more information.
 
 ## Usage
-Default command prefix: `.`<br>This bot also supports [Slash Commands](https://discord.com/developers/docs/interactions/slash-commands). The syntax for slash commands is a little from the usage shown below, though mostly the same. The Discord UI provides usage hints for slash commands. Note that currently slash commands do not support aliases.<br>
 
 Please see the [website](https://prod.d3967euqdvu56b.amplifyapp.com) for a list of commands.
-
 
 ## Installation
 
 ### Requirements
+
 Below is a list of APIs that are currently used by the bot. To run the bot yourself, you will need to provide your own API key for these services.
+
 - [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
 - [Google Cloud Firestore](https://firebase.google.com/products/firestore)
 - [Google Cloud BigQuery](https://cloud.google.com/bigquery)
@@ -21,9 +22,11 @@ Below is a list of APIs that are currently used by the bot. To run the bot yours
 Additionally, you will need [FFmpeg](https://ffmpeg.org/).
 
 ### Installation
+
 To install, simply run `pip install .` in the project's root directory. You can then run the bot using `python -m discord_dictionary_bot` along with the appropriate arguments described below.
 
 ### Dictionary API's
+
 This bot supports the following dictionary API's.
 
 | Name | Description |
@@ -35,6 +38,7 @@ This bot supports the following dictionary API's.
 |`rapid-words`| [RapidAPI WordsAPI](https://www.wordsapi.com/)|
 
 ### Program Arguments
+
 |Argument| Description |
 | --- | --- |
 |<code>&#8209;&#8209;discord&#8209;token&nbsp;\<token\></code>|Your discord bot token.|
@@ -47,7 +51,9 @@ This bot supports the following dictionary API's.
 |<code>&#8209;&#8209;rapid&#8209;words&#8209;api&#8209;token&nbsp;\<token\></code>| Your RapidAPI WordsAPI token. Only required if using the `rapid-words` API.|
 
 ## Credits
+
 #### Dictionary icon
+
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
 This icon was modified from the [original](https://thenounproject.com/term/dictionary/653775/).<br>
 `dictionary by Oriol Sallés from the Noun Project`
