@@ -122,7 +122,7 @@ class Dictionary(Cog):
                 self._language_to_voice_map[key] = value
 
     @app_commands.command(name='define', description='Gets the definition of a word.')
-    @app_commands.describe(word='The word to define', text_to_speech='Use text to speech', language='The language to translate the definition to.')
+    @app_commands.describe(word='The word to define', text_to_speech='Use text to speech?', language='The language to translate the definition to.')
     async def define(self, interaction: discord.Interaction, word: str, text_to_speech: bool = False, language: Optional[str] = None):
 
         # Get default language if none specified

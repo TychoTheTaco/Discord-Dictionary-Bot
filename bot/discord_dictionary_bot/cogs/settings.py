@@ -22,7 +22,7 @@ class Settings(GroupCog):
     def scoped_property_manager(self):
         return self._scoped_property_manager
 
-    @app_commands.command(name='set', description='Set a setting.')
+    @app_commands.command(name='set', description='Set a property.')
     @app_commands.describe(key='Property name', value='Property value')
     async def set(self, interaction: discord.Interaction, scope_name: Literal['guild', 'channel'], key: PropertyKeyType, value: str):
 
@@ -74,7 +74,7 @@ class Settings(GroupCog):
                     properties[p] = value
         return properties
 
-    @app_commands.command(name='remove', description='Remove something')
+    @app_commands.command(name='remove', description='Remove a property.')
     @app_commands.describe(key='Property name')
     async def remove(self, interaction: discord.Interaction, scope_name: Literal['guild', 'channel'], key: PropertyKeyType):
 
