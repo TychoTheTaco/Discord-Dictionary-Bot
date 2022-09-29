@@ -6,12 +6,12 @@ from typing import Union, Any
 
 import discord.ext.commands
 from discord import Message, Guild, Interaction
-from discord.app_commands import ContextMenu, Command
+from discord.app_commands import ContextMenu, Command, CommandTree, Group
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
 # from .analytics import log_command
-from .commands import Settings, Dictionary, Statistics
+from .cogs import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
 from .utils import get_bot_permissions
@@ -24,17 +24,38 @@ def get_prefix(bot: Bot, message: Message):
     return bot._scoped_property_manager.get('prefix', message.channel)
 
 
+def interaction_data_to_string(data):
+    if isinstance(data, list):
+
+        if 'value' not in data[0]:
+            return interaction_data_to_string(data[0])
+        else:
+            result = {}
+            for d in data:
+                result[d['name']] = d['value']
+            return f'{result}'
+
+    name = data['name']
+
+    options = data.get('options')
+    if options:
+        return name + ' ' + interaction_data_to_string(options)
+
+    return name
+
+
 class DiscordBotClient(Bot):
 
     def __init__(self, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path], **kwargs):
         """
         Creates a new Discord bot client.
-        :param dictionary_apis: A list of 'DictionaryAPI's that are available for the bot to use.
-        :param ffmpeg_path:
+        :param dictionary_apis: A list of dictionary APIs that are available for the bot to use.
+        :param ffmpeg_path: Path to ffmpeg executable.
         :param kwargs:
         """
         super().__init__(get_prefix, help_command=None, intents=discord.Intents.default(), **kwargs)
-
+        self._dictionary_apis = dictionary_apis
+        self._ffmpeg_path = ffmpeg_path
         self._scoped_property_manager = FirestorePropertyManager([
             Property(
                 'prefix',
@@ -79,18 +100,20 @@ class DiscordBotClient(Bot):
             )
         ])
 
-        self.tree.add_command(Dictionary(self, dictionary_apis, ffmpeg_path), guild=discord.Object(id='799455809297842177'))
-        self.tree.add_command(Settings(self._scoped_property_manager), guild=discord.Object(id='799455809297842177'))
-        self.tree.add_command(Statistics(self), guild=discord.Object(id='799455809297842177'))
+    async def setup_hook(self) -> None:
+        # Add cogs
+        await self.add_cog(Dictionary(self, self._dictionary_apis, self._ffmpeg_path))
+        await self.add_cog(Settings(self._scoped_property_manager))
+        await self.add_cog(Statistics(self), guild=discord.Object(id='799455809297842177'))
+
+        # Sync slash commands
+        await self.tree.sync()
 
     async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
-        args = {option['name']: option['value'] for option in interaction.data['options'][0]['options']}
-        logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{command.name}" {args}')
+        logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{interaction_data_to_string(interaction.data)}"')
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
-
-        await self.tree.sync(guild=discord.Object(id='799455809297842177'))
 
         # Check for new guilds
         firestore_client = firestore.Client()
@@ -129,4 +152,3 @@ class DiscordBotClient(Bot):
                 logger.error(f'Missing permissions. We have {get_bot_permissions(message.channel)}')
                 return
         await super().on_error(event_method, *args, **kwargs)
-

@@ -2,6 +2,7 @@ from typing import Any, Union, Literal
 
 import discord
 from discord import app_commands
+from discord.ext.commands import GroupCog
 
 from ..property_manager import Property, InvalidKeyError, InvalidValueError, ScopedPropertyManager
 
@@ -10,7 +11,7 @@ ScopeNameType = Literal['all', 'guild', 'channel']
 PropertyKeyType = Literal['text_to_speech', 'language', 'prefix', 'show_definition_source', 'dictionary_apis', 'auto_translate']
 
 
-class Settings(app_commands.Group):
+class Settings(GroupCog):
     PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
 
     def __init__(self, property_manager: ScopedPropertyManager):

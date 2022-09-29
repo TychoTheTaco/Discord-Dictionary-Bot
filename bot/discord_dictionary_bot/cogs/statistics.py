@@ -1,16 +1,16 @@
 import logging
 
-from discord.ext import commands
 from discord import app_commands, Interaction
+from discord.ext.commands import Cog, Bot
 from google.cloud import bigquery
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-class Statistics(app_commands.Group):
+class Statistics(Cog):
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         super().__init__()
         self._bot = bot
         self._bigquery_client = bigquery.Client()

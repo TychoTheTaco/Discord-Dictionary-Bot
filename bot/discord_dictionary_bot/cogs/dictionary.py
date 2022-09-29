@@ -7,7 +7,7 @@ from typing import Union, Optional, Dict
 from pathlib import Path
 import html
 
-from discord.ext import commands
+from discord.ext.commands import Cog, Bot
 from google.cloud import texttospeech
 import requests
 from bs4 import BeautifulSoup
@@ -80,10 +80,10 @@ def is_valid_word(word: str):
     return pattern.search(word) is not None
 
 
-class Dictionary(app_commands.Group):
+class Dictionary(Cog):
     TRANSLATE_MAX_MESSAGE_LENGTH = 200
 
-    def __init__(self, bot: commands.Bot, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path]):
+    def __init__(self, bot: Bot, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path]):
         super().__init__()
 
         self._bot = bot
