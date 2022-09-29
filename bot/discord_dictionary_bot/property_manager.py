@@ -121,15 +121,15 @@ class ScopedPropertyManager(ABC):
         return self._properties
 
     @abstractmethod
-    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], recursive: bool = True) -> Optional[Any]:
+    def get(self, key: str, scope: Union[discord.Guild, 'discord.abc.MessageableChannel'], recursive: bool = True) -> Optional[Any]:
         raise NotImplementedError
 
     @abstractmethod
-    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+    def set(self, key: str, value: Any, scope: Union[discord.Guild, 'discord.abc.MessageableChannel']):
         raise NotImplementedError
 
     @abstractmethod
-    def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+    def remove(self, key: str, scope: Union[discord.Guild, 'discord.abc.MessageableChannel']):
         raise NotImplementedError
 
 
@@ -146,7 +146,7 @@ class FirestorePropertyManager(ScopedPropertyManager):
         # This dictionary keeps track of which scopes are dirty and need to be fetched from Firestore next time
         self._dirty = {}
 
-    def get(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel], recursive: bool = True) -> Optional[Any]:
+    def get(self, key: str, scope: Union[discord.Guild, 'discord.abc.MessageableChannel'], recursive: bool = True) -> Optional[Any]:
 
         # Check the cache
         if scope in self._cache and not self._dirty[scope]:
@@ -171,12 +171,20 @@ class FirestorePropertyManager(ScopedPropertyManager):
                     value = self._default_properties[key]
                     return value
 
-            elif isinstance(scope, discord.TextChannel):
-
-                # The text-channel did not have the requested property, maybe the guild has it
-                return self.get(key, scope.guild)
             else:
-                raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+
+                guild = None
+                try:
+                    guild = scope.guild
+                except Exception:
+                    logger.error(f'Scope does not have guild: {type(scope)} "{scope}"')
+
+                if guild:
+                    # The channel did not have the requested property, maybe the guild has it
+                    return self.get(key, guild)
+
+                raise TypeError(f'Unsupported scope: {type(scope)} "{scope}"')
+
         return None
 
     def get_property(self, key):
@@ -185,7 +193,7 @@ class FirestorePropertyManager(ScopedPropertyManager):
                 return p
         return None
 
-    def set(self, key: str, value: Any, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+    def set(self, key: str, value: Any, scope: Union[discord.Guild, 'discord.abc.MessageableChannel']):
 
         prop = self.get_property(key)
         if prop is None:
@@ -202,7 +210,7 @@ class FirestorePropertyManager(ScopedPropertyManager):
         self._get_snapshot(scope).reference.set({key: value}, merge=True)
         self._dirty[scope] = True
 
-    def remove(self, key: str, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]):
+    def remove(self, key: str, scope: Union[discord.Guild, 'discord.abc.MessageableChannel']):
 
         # Make sure this is a valid property
         prop = self.get_property(key)
@@ -217,15 +225,10 @@ class FirestorePropertyManager(ScopedPropertyManager):
             })
             self._dirty[scope] = True
 
-    def _get_snapshot(self, scope: Union[discord.Guild, discord.TextChannel, discord.DMChannel]) -> firestore.DocumentSnapshot:
+    def _get_snapshot(self, scope: Union[discord.Guild, 'discord.abc.MessageableChannel']) -> firestore.DocumentSnapshot:
         if isinstance(scope, discord.Guild):
             guild_document = self._firestore_client.collection('guilds').document(str(scope.id))
             return guild_document.get()
-        elif isinstance(scope, discord.TextChannel):
-            guild_document = self._firestore_client.collection('guilds').document(str(scope.guild.id))
-            channel_document = guild_document.collection('channels').document(str(scope.id))
-            channel_snapshot = channel_document.get()
-            return channel_snapshot
         elif isinstance(scope, discord.DMChannel):
             guild_document = self._firestore_client.collection('dms').document(str(scope.id))
             snapshot = guild_document.get()
@@ -238,4 +241,15 @@ class FirestorePropertyManager(ScopedPropertyManager):
 
             return snapshot
         else:
-            raise TypeError(f'Scope is not a guild or channel: {type(scope)} "{scope}"')
+            guild_id = None
+            try:
+                guild_id = scope.guild.id
+            except Exception:
+                logger.error(f'No guild ID for scope: {type(scope)} {scope}')
+
+            if guild_id:
+                guild_document = self._firestore_client.collection('guilds').document(str(guild_id))
+                channel_document = guild_document.collection('channels').document(str(scope.id))
+                channel_snapshot = channel_document.get()
+                return channel_snapshot
+        raise TypeError(f'Unknown scope: {type(scope)} "{scope}"')

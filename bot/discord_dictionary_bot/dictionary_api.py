@@ -93,21 +93,22 @@ class OwlBotDictionaryAPI(DictionaryAPI):
 
     async def define(self, word: str) -> List[Dict[str, str]]:
         headers = {'Authorization': f'Token {self._token}'}
-        async with aiohttp.ClientSession().get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
+        async with aiohttp.ClientSession() as client:
+            async with client.get('https://owlbot.info/api/v4/dictionary/' + word.replace(' ', '%20'), headers=headers) as response:
 
-            if not await handle_default_status(self, word, response):
-                return []
+                if not await handle_default_status(self, word, response):
+                    return []
 
-            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-            response_json = await response.json()
+                response_json = await response.json()
 
-            result = []
-            for d in response_json['definitions']:
-                result.append({
-                    'word_type': d['type'],
-                    'definition': d['definition']
-                })
+                result = []
+                for d in response_json['definitions']:
+                    result.append({
+                        'word_type': d['type'],
+                        'definition': d['definition']
+                    })
 
         return result
 
@@ -125,24 +126,25 @@ class UnofficialGoogleAPI(DictionaryAPI):
     """
 
     async def define(self, word: str) -> List[Dict[str, str]]:
-        async with aiohttp.ClientSession().get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
+        async with aiohttp.ClientSession() as client:
+            async with client.get('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.replace(' ', '%20') + '?format=json') as response:
 
-            if not await handle_default_status(self, word, response):
-                return []
+                if not await handle_default_status(self, word, response):
+                    return []
 
-            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-            result = []
+                result = []
 
-            response_json = await response.json()
-            for d in response_json[0]['meanings']:
-                definition = {
-                    'word_type': d['partOfSpeech'],
-                    'definition': d['definitions'][0]['definition']
-                }
-                result.append(definition)
+                response_json = await response.json()
+                for d in response_json[0]['meanings']:
+                    definition = {
+                        'word_type': d['partOfSpeech'],
+                        'definition': d['definitions'][0]['definition']
+                    }
+                    result.append(definition)
 
-        return result
+            return result
 
     def id(self) -> str:
         return 'unofficial_google'
@@ -200,14 +202,15 @@ class MerriamWebsterCollegiateAPI(MerriamWebsterAPI):
 
         word = word.lower()
 
-        async with aiohttp.ClientSession().get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
+        async with aiohttp.ClientSession() as client:
+            async with client.get('https://dictionaryapi.com/api/v3/references/collegiate/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-            if not await handle_default_status(self, word, response):
-                return []
+                if not await handle_default_status(self, word, response):
+                    return []
 
-            result = self._get_short_definitions(await response.json())
+                result = self._get_short_definitions(await response.json())
 
-        return result
+            return result
 
     def id(self) -> str:
         return 'merriam_webster_collegiate'
@@ -231,14 +234,15 @@ class MerriamWebsterMedicalAPI(MerriamWebsterAPI):
 
         word = word.lower()
 
-        async with aiohttp.ClientSession().get('https://dictionaryapi.com/api/v3/references/medical/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
+        async with aiohttp.ClientSession() as client:
+            async with client.get('https://dictionaryapi.com/api/v3/references/medical/json/' + word.replace(' ', '%20') + '?key=' + self._api_key) as response:
 
-            if not await handle_default_status(self, word, response):
-                return []
+                if not await handle_default_status(self, word, response):
+                    return []
 
-            result = self._get_short_definitions(await response.json())
+                result = self._get_short_definitions(await response.json())
 
-        return result
+            return result
 
     def id(self) -> str:
         return 'merriam_webster_medical'
@@ -267,29 +271,30 @@ class RapidWordsAPI(DictionaryAPI):
             'x-rapidapi-key': self._api_key,
             'x-rapidapi-host': 'wordsapiv1.p.rapidapi.com'
         }
-        async with aiohttp.ClientSession().get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
+        async with aiohttp.ClientSession() as client:
+            async with client.get('https://wordsapiv1.p.rapidapi.com/words/' + word.replace(' ', '%20'), headers=headers) as response:
 
-            if not await handle_default_status(self, word, response):
-                return []
+                if not await handle_default_status(self, word, response):
+                    return []
 
-            logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
+                logger.info(f'{self} {{status_code: {response.status}, word: "{word}"}}')
 
-            results = []
+                results = []
 
-            response_json = await response.json()
+                response_json = await response.json()
 
-            if 'results' not in response_json:
-                logger.warning(f'{self} No results for word: "{word}"')
-                return []
+                if 'results' not in response_json:
+                    logger.warning(f'{self} No results for word: "{word}"')
+                    return []
 
-            results_json = response_json['results']
-            for definition_json in results_json:
-                results.append({
-                    'word_type': definition_json['partOfSpeech'],
-                    'definition': definition_json['definition'] + '.'
-                })
+                results_json = response_json['results']
+                for definition_json in results_json:
+                    results.append({
+                        'word_type': definition_json['partOfSpeech'],
+                        'definition': definition_json['definition'] + '.'
+                    })
 
-        return results
+            return results
 
     def id(self) -> str:
         return 'rapid_words'

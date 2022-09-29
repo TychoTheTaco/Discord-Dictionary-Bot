@@ -6,7 +6,6 @@ from discord.ext.commands import GroupCog
 
 from ..property_manager import Property, InvalidKeyError, InvalidValueError, ScopedPropertyManager
 
-
 ScopeNameType = Literal['all', 'guild', 'channel']
 PropertyKeyType = Literal['text_to_speech', 'language', 'prefix', 'show_definition_source', 'dictionary_apis', 'auto_translate']
 
@@ -68,7 +67,7 @@ class Settings(GroupCog):
         for p in self._scoped_property_manager.properties:
             if isinstance(scope, (discord.Guild, discord.DMChannel)):
                 properties[p] = self._scoped_property_manager.get(p.key, scope)
-            elif isinstance(scope, discord.TextChannel):
+            else:
                 value = self._scoped_property_manager.get(p.key, scope, recursive=False)
                 if value is not None:
                     properties[p] = value
@@ -108,11 +107,11 @@ class Settings(GroupCog):
         if isinstance(scope, discord.Guild):
             reply += '__**Server Settings**__\n'
             reply += 'These settings affect every channel in your server, unless they are overridden with a channel-specific setting.\n\n'
-        elif isinstance(scope, discord.TextChannel):
-            reply += '__**Channel Settings**__\n'
-            reply += 'These settings only affect this channel and take priority over server settings.\n\n'
         elif isinstance(scope, discord.DMChannel):
             reply += '__**DM Settings**__\n'
+        else:
+            reply += '__**Channel Settings**__\n'
+            reply += 'These settings only affect this channel and take priority over server settings.\n\n'
 
         reply += 'Use `help settings` to see more info about settings.\n\n'
 
