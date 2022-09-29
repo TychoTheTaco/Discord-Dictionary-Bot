@@ -179,7 +179,11 @@ class Dictionary(Cog):
         definitions, definition_source = await dictionary_api.define_with_source(word)
 
         if len(definitions) == 0:
-            await interaction.followup.send(f'__**{word}**__\nI couldn\'t find any definitions for that word.')
+            reply = f'__**{word}**__'
+            if detected_source_language != 'en':
+                reply += f' (Translated from {self._get_language_name(detected_source_language)})'
+            reply += '\nI couldn\'t find any definitions for that word.'
+            await interaction.followup.send(reply)
             return
 
         # Record analytics only for valid words
@@ -342,7 +346,7 @@ class Dictionary(Cog):
 
         reply = f'__**{word}**__'
         if detected_source_language != 'en':
-            reply += f' ({self._get_language_name(detected_source_language)})'
+            reply += f' (Translated from {self._get_language_name(detected_source_language)})'
         reply += '\n'
         tts_input = f'{word}, '
 

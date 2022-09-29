@@ -177,7 +177,11 @@ class MerriamWebsterAPI(DictionaryAPI, ABC):
 
         results = []
 
-        word_type = response_definition['fl']
+        try:
+            word_type = response_definition['fl']
+        except KeyError:
+            logger.warning(f'{self} Bad response definition: {response_definition}')
+            return []
 
         for definition in response_definition['shortdef']:
             results.append({
