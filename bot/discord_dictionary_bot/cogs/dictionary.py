@@ -376,6 +376,8 @@ class Dictionary(app_commands.Group):
                 await interaction.response.send_message('Okay, I\'ll be quiet.')
                 return
 
+        await interaction.response.send_message('I\'m not even talking!')
+
     @staticmethod
     def _create_voices_table():
 
