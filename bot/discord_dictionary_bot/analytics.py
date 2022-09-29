@@ -124,10 +124,10 @@ def analytics_uploader_thread():
                 logger.exception('Error uploading analytics!', exc_info=e)
 
 
-threading.Thread(target=analytics_uploader_thread).start()
+def start_analytics_thread():
+    threading.Thread(target=analytics_uploader_thread).start()
 
 
-# @run_on_another_thread
 def log_command(command_name: str, interaction: Interaction):
     queue = qal['log_command']['queue']
     with qal['log_command']['lock']:
