@@ -6,6 +6,7 @@ import threading
 import time
 
 import discord
+from discord import Interaction
 from google.cloud import bigquery
 
 # Set up logging
@@ -25,7 +26,7 @@ def run_on_another_thread(function):
     return f
 
 
-def _is_blacklisted(channel: discord.TextChannel):
+def _is_blacklisted(channel):
     # Ignore dev server
     if channel.guild.id in [454852632528420876, 799455809297842177]:
         logger.info(f'Ignoring analytics submission for development server.')
@@ -127,23 +128,22 @@ threading.Thread(target=analytics_uploader_thread).start()
 
 
 # @run_on_another_thread
-# def log_command(command_name: str, is_slash: bool, context: Union[commands.Context, SlashContext]):
-#     queue = qal['log_command']['queue']
-#     with qal['log_command']['lock']:
-#
-#         if _is_blacklisted(context):
-#             return
-#
-#         guild_id, channel_id = get_guild_and_channel_id(context)
-#         data = {
-#             'command_name': command_name,
-#             'is_slash': is_slash,
-#             'guild_id': guild_id,
-#             'channel_id': channel_id,
-#             'time': datetime.datetime.now().isoformat()
-#         }
-#
-#         queue.append(data)
+def log_command(command_name: str, interaction: Interaction):
+    queue = qal['log_command']['queue']
+    with qal['log_command']['lock']:
+
+        if _is_blacklisted(interaction.channel):
+            return
+
+        data = {
+            'command_name': command_name,
+            'is_slash': True,
+            'guild_id': interaction.guild_id,
+            'channel_id': interaction.channel_id,
+            'time': datetime.datetime.now().isoformat()
+        }
+
+        queue.append(data)
 
 
 @run_on_another_thread

@@ -6,11 +6,11 @@ from typing import Union, Any
 
 import discord.ext.commands
 from discord import Message, Guild, Interaction
-from discord.app_commands import ContextMenu, Command, CommandTree, Group
+from discord.app_commands import ContextMenu, Command
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
-# from .analytics import log_command
+from .analytics import log_command
 from .cogs import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
@@ -111,6 +111,7 @@ class DiscordBotClient(Bot):
 
     async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
         logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{interaction_data_to_string(interaction.data)}"')
+        log_command(command.name, interaction)
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')
