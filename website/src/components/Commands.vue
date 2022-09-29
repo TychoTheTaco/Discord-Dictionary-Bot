@@ -1,16 +1,9 @@
 <template>
 	<h1>
-		Command Prefix
+		Slash Commands
 	</h1>
 	<p>
-		The default command prefix is <code>.</code><br><br>If you forget the command prefix, just @mention the bot and it will respond with the current prefix.
-	</p>
-
-	<h1>
-		Commands
-	</h1>
-	<p>
-		Items with a <code class="args-required">red</code> background are required and items with a <code class="args-optional">yellow</code> background are optional.
+		Options with a <code class="args-required">red</code> background are required; the rest are optional.
 	</p>
 	<hr>
 
@@ -34,10 +27,17 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
 
 hr {
     margin: 2rem 0 2rem;
+}
+
+.args-required {
+    font-family: Consolas, "courier new", monospace;
+    background-color: #642424;
+    padding: 2px 4px;
+	border-radius: 3px;
 }
 
 </style>

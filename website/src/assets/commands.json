@@ -13,19 +13,13 @@
       },
       {
         "required": false,
-        "value": "-v",
+        "value": "text_to_speech",
         "description": "Read out the definition to the voice channel you are connected to, if any."
       },
       {
         "required": false,
-        "value": "-lang",
-        "description": "Translates the definitions to a different language.",
-        "args": [
-          {
-            "value": "language_code",
-            "description": "The language to translate the definitions to. This can be a 2-digit language code or the name of a language."
-          }
-        ]
+        "value": "language",
+        "description": "The language to translate the definitions to. This can be a 2-digit language code or the name of a language."
       }
     ]
   },
@@ -110,20 +104,6 @@
     "description": "Makes the bot stop talking.",
     "aliases": [
       "s"
-    ]
-  },
-  {
-    "name": "help",
-    "description": "Shows you a list of available commands and how to use them.",
-    "aliases": [
-      "h"
-    ],
-    "args": [
-      {
-        "required": false,
-        "value": "command_name",
-        "description": "The name of a command to show detailed info about it."
-      }
     ]
   }
 ]

@@ -36,20 +36,6 @@ code {
 	border-radius: 3px;
 }
 
-.args-optional {
-    font-family: Consolas, "courier new", monospace;
-    background-color: #FFFF0020;
-    padding: 2px 4px;
-	border-radius: 3px;
-}
-
-.args-required {
-    font-family: Consolas, "courier new", monospace;
-    background-color: #FF000040;
-    padding: 2px 4px;
-	border-radius: 3px;
-}
-
 </style>
 
 <script>
