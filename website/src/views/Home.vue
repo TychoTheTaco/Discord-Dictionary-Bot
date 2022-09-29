@@ -18,7 +18,7 @@
 
 		<div class="image-container">
 			<img src="define_sunflower.jpg" class="demo-image">
-			<img src="define_hola.jpg" class="demo-image">
+			<img src="define_gracias.jpg" class="demo-image">
 		</div>
 
 		<p style="font-size: 1.3em; font-weight: bold;">
@@ -26,7 +26,7 @@
 		</p>
 
 		<div class="image-container">
-			<img src="translate_spanish.jpg" class="demo-image">
+			<img src="translate_english_spanish.jpg" class="demo-image">
 			<img src="translate_dutch_english.jpg" class="demo-image">
 		</div>
 
@@ -51,9 +51,6 @@
 .image-container {
 	display: flex;
 	flex-direction: row;
-	overflow: scroll;
-	overflow-y: hidden;
-	overflow-x: auto;
 }
 
 </style>
