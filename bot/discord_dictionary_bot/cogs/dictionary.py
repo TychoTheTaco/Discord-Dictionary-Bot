@@ -281,9 +281,15 @@ class Dictionary(app_commands.Group):
             await interaction.response.send_message(f'Message is too long! Maximum length is {Dictionary.TRANSLATE_MAX_MESSAGE_LENGTH} characters.', ephemeral=True)
             return
 
+        # Parse target language
+        target_language_code = self._get_language_code(target_language)
+        if target_language_code is None:
+            await interaction.response.send_message(f'Invalid language!', ephemeral=True)
+            return
+
         await interaction.response.defer()
-        translated_message, detected_language = self._translate(message, target_language=target_language)
-        await interaction.followup.send(self._create_translate_reply(message, detected_language, translated_message, target_language))
+        translated_message, detected_language = self._translate(message, target_language=target_language_code)
+        await interaction.followup.send(self._create_translate_reply(message, detected_language, translated_message, target_language_code))
 
     def _translate(self, text: str, target_language: str, source_language: str = None):
         result = self._translate_client.translate(text, target_language=target_language, source_language=source_language)
@@ -295,7 +301,11 @@ class Dictionary(app_commands.Group):
             return translated_text
 
     def _create_translate_reply(self, message: str, source_language: str, translated_message: str, target_language: str):
-        result = f'**__{self._get_language_name(source_language)}__**\n'
+        source_language_name = self._get_language_name(source_language)
+        if source_language_name is None:
+            source_language_name = source_language
+            logger.warning('Could not find language name for code: ' + source_language)
+        result = f'**__{source_language_name}__**\n'
         result += message + '\n'
         result += f'**__{self._get_language_name(target_language)}__**\n'
         result += translated_message
@@ -421,7 +431,10 @@ class Dictionary(app_commands.Group):
         return None
 
     def _get_language_name(self, language_code: str) -> Optional[str]:
-        return self._get_language(language_code)['name']
+        language = self._get_language(language_code)
+        if language is None:
+            return None
+        return language['name']
 
     def _get_language(self, language: str) -> Optional[Dict[str, str]]:
         for x in self._languages:
