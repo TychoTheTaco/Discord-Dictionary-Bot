@@ -243,7 +243,7 @@ class Dictionary(Cog):
                 voice_client = await self._join_voice_channel(voice_channel)
             except InsufficientPermissionsException as e:
                 self._guild_locks[interaction.guild].release()
-                interaction.followup.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
+                await interaction.followup.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
                 return
 
             # Send text chat reply
