@@ -1,5 +1,6 @@
-build
-*.egg-info
-
 # Python virtual environment
 venv
+
+# Build output
+build
+*.egg-info
