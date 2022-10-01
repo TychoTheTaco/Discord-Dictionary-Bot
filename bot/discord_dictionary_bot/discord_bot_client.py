@@ -10,7 +10,7 @@ from discord.app_commands import ContextMenu, Command
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
-from .analytics import log_command, start_analytics_thread
+from .analytics import log_command, start_analytics_thread, log_context_menu_usage
 from .cogs import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
@@ -113,8 +113,14 @@ class DiscordBotClient(Bot):
         start_analytics_thread()
 
     async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
-        logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{interaction_data_to_string(interaction.data)}"')
-        log_command(command.name, interaction)
+        if isinstance(command, Command):
+            logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "/{interaction_data_to_string(interaction.data)}"')
+            log_command(command.name, interaction)
+        elif isinstance(command, ContextMenu):
+            logger.info(f'[G: "{interaction.guild}", C: "{interaction.channel}"] "CM -> {command.name}"')
+            log_context_menu_usage(command.name, interaction)
+        else:
+            logger.error('Unknown command type!')
 
     async def on_ready(self):
         logger.info(f'Logged on as {self.user}!')

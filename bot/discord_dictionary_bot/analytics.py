@@ -13,19 +13,6 @@ from google.cloud import bigquery
 logger = logging.getLogger(__name__)
 
 
-def run_on_another_thread(function):
-    """
-    This decorator will run the decorated function in another thread, starting it immediately.
-    :param function:
-    :return:
-    """
-
-    def f(*args, **kargs):
-        threading.Thread(target=function, args=[*args, *kargs]).start()
-
-    return f
-
-
 def _is_blacklisted(channel):
     # Ignore dev server
     if channel.guild.id in [454852632528420876, 799455809297842177]:
@@ -77,6 +64,19 @@ qal = {
             autodetect=True
         )
     ),
+    'log_context_menu': create_qal_item(
+        'formal-scout-290305.analytics.context_menu_usage',
+        bigquery.LoadJobConfig(
+            schema=[
+                bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("guild_id", "INTEGER"),
+                bigquery.SchemaField("channel_id", "INTEGER"),
+                bigquery.SchemaField("time", "TIMESTAMP", mode="REQUIRED"),
+            ],
+            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+            autodetect=True
+        )
+    ),
     'log_definition_request': create_qal_item(
         'formal-scout-290305.analytics.definition_requests',
         bigquery.LoadJobConfig(
@@ -108,20 +108,22 @@ qal = {
 }
 
 
+def upload_pending_analytics():
+    for key, value in qal.items():
+        try:
+            queue = value['queue']
+            lock = value['lock']
+            with lock:
+                if len(queue) > 0:
+                    upload(value)
+        except Exception as e:
+            logger.exception('Error uploading analytics!', exc_info=e)
+
+
 def analytics_uploader_thread():
     while True:
-
         time.sleep(60 * 5)
-
-        for key, value in qal.items():
-            try:
-                queue = value['queue']
-                lock = value['lock']
-                with lock:
-                    if len(queue) > 0:
-                        upload(value)
-            except Exception as e:
-                logger.exception('Error uploading analytics!', exc_info=e)
+        upload_pending_analytics()
 
 
 def start_analytics_thread():
@@ -131,7 +133,6 @@ def start_analytics_thread():
 def log_command(command_name: str, interaction: Interaction):
     queue = qal['log_command']['queue']
     with qal['log_command']['lock']:
-
         if _is_blacklisted(interaction.channel):
             return
 
@@ -146,7 +147,22 @@ def log_command(command_name: str, interaction: Interaction):
         queue.append(data)
 
 
-@run_on_another_thread
+def log_context_menu_usage(name: str, interaction: Interaction):
+    queue = qal['log_context_menu']['queue']
+    with qal['log_context_menu']['lock']:
+        if _is_blacklisted(interaction.channel):
+            return
+
+        data = {
+            'name': name,
+            'guild_id': interaction.guild_id,
+            'channel_id': interaction.channel_id,
+            'time': datetime.datetime.now().isoformat()
+        }
+
+        queue.append(data)
+
+
 def log_definition_request(word: str, text_to_speech: bool, language: str, channel: discord.TextChannel):
     queue = qal['log_definition_request']['queue']
     with qal['log_definition_request']['lock']:
@@ -166,7 +182,6 @@ def log_definition_request(word: str, text_to_speech: bool, language: str, chann
         queue.append(data)
 
 
-@run_on_another_thread
 def log_dictionary_api_request(dictionary_api_name: str, success: bool):
     queue = qal['log_dictionary_api_request']['queue']
     with qal['log_dictionary_api_request']['lock']:

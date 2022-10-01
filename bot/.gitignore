@@ -10,7 +10,6 @@ credentials
 # Database
 database.db
 
-
 # Build output
 build
 *.egg-info

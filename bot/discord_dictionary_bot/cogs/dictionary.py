@@ -83,6 +83,14 @@ def is_valid_word(word: str):
 class Dictionary(Cog):
     TRANSLATE_MAX_MESSAGE_LENGTH = 200
 
+    # Languages to display in the `Translate` context menu. Discord enforces a limit of 25 items so these languages are a manually chosen subset of the supported languages
+    TRANSLATE_CONTEXT_MENU_LANGUAGES = [{'language': 'ar', 'name': 'Arabic'}, {'language': 'zh', 'name': 'Chinese (Simplified)'}, {'language': 'da', 'name': 'Danish'}, {'language': 'nl', 'name': 'Dutch'},
+                                        {'language': 'en', 'name': 'English'}, {'language': 'tl', 'name': 'Filipino'}, {'language': 'fi', 'name': 'Finnish'}, {'language': 'fr', 'name': 'French'}, {'language': 'de', 'name': 'German'},
+                                        {'language': 'el', 'name': 'Greek'}, {'language': 'hi', 'name': 'Hindi'}, {'language': 'hu', 'name': 'Hungarian'}, {'language': 'id', 'name': 'Indonesian'}, {'language': 'it', 'name': 'Italian'},
+                                        {'language': 'ja', 'name': 'Japanese'}, {'language': 'ko', 'name': 'Korean'}, {'language': 'pl', 'name': 'Polish'}, {'language': 'pt', 'name': 'Portuguese'}, {'language': 'ru', 'name': 'Russian'},
+                                        {'language': 'es', 'name': 'Spanish'}, {'language': 'sv', 'name': 'Swedish'}, {'language': 'th', 'name': 'Thai'}, {'language': 'tr', 'name': 'Turkish'}, {'language': 'uk', 'name': 'Ukrainian'},
+                                        {'language': 'vi', 'name': 'Vietnamese'}]
+
     def __init__(self, bot: Bot, dictionary_apis: [DictionaryAPI], ffmpeg_path: Union[str, Path]):
         super().__init__()
 
@@ -120,6 +128,9 @@ class Dictionary(Cog):
         for key, value in override_voices.items():
             if key in self._language_to_voice_map:
                 self._language_to_voice_map[key] = value
+
+        # Add context menus
+        bot.tree.add_command(app_commands.ContextMenu(name='Translate', callback=self._translate_context_menu))
 
     @app_commands.command(name='define', description='Gets the definition of a word.')
     @app_commands.describe(word='The word to define', text_to_speech='Use text to speech?', language='The language to translate the definition to.')
@@ -303,6 +314,23 @@ class Dictionary(Cog):
             return translated_text, result['detectedSourceLanguage']
         else:
             return translated_text
+
+    async def _translate_context_menu(self, interaction: discord.Interaction, message: discord.Message):
+        view = discord.ui.View(timeout=None)
+        selector = discord.ui.Select(placeholder='Select Language', options=[discord.SelectOption(label=language['name'], value=language['language']) for language in Dictionary.TRANSLATE_CONTEXT_MENU_LANGUAGES])
+
+        async def callback(interaction: discord.Interaction):
+            language = selector.values[0]
+            content = discord.utils.remove_markdown(message.content)
+            translated_message, detected_language = self._translate(content, target_language=language)
+            source_language_name = self._get_language_name(detected_language)
+            target_language_name = self._get_language_name(language)
+            await interaction.response.edit_message(content=f'**__Original__** ({source_language_name})\n```\n{content}\n```**__Translated__** ({target_language_name})\n```\n{translated_message}\n```', view=None)
+
+        selector.callback = callback
+        view.add_item(selector)
+
+        await interaction.response.send_message(view=view, ephemeral=True)
 
     def _create_translate_reply(self, message: str, source_language: str, translated_message: str, target_language: str):
         source_language_name = self._get_language_name(source_language)
