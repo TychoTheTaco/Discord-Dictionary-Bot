@@ -2,7 +2,7 @@
 venv
 
 # FFmpeg installation
-ffmpeg-20200831-4a11a6f-win64-static
+ffmpeg-*
 
 # Credentials and API tokens
 credentials

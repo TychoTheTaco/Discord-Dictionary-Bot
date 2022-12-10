@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataSource name="database">
-  <database-model serializer="dbm" dbms="SQLITE" family-id="SQLITE" format-version="4.43">
+  <database-model serializer="dbm" dbms="SQLITE" family-id="SQLITE" format-version="4.45">
     <root id="1"/>
     <collation id="2" parent="1" name="BINARY"/>
     <collation id="3" parent="1" name="NOCASE"/>
@@ -1329,47 +1329,47 @@
     </table>
     <table id="490" parent="169" name="voices"/>
     <column id="491" parent="489" name="type">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>1</Position>
     </column>
     <column id="492" parent="489" name="name">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>2</Position>
     </column>
     <column id="493" parent="489" name="tbl_name">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>3</Position>
     </column>
     <column id="494" parent="489" name="rootpage">
-      <DataType>int|0s</DataType>
+      <DasType>int|0s</DasType>
       <Position>4</Position>
     </column>
     <column id="495" parent="489" name="sql">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>5</Position>
     </column>
     <column id="496" parent="490" name="voice_code">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>1</Position>
     </column>
     <column id="497" parent="490" name="language_code">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>2</Position>
     </column>
     <column id="498" parent="490" name="language_name">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>3</Position>
     </column>
     <column id="499" parent="490" name="language_region">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>4</Position>
     </column>
     <column id="500" parent="490" name="voice_type">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>5</Position>
     </column>
     <column id="501" parent="490" name="voice_gender">
-      <DataType>text|0s</DataType>
+      <DasType>text|0s</DasType>
       <Position>6</Position>
     </column>
     <index id="502" parent="490" name="sqlite_autoindex_voices_1">
