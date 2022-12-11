@@ -212,24 +212,74 @@ class Dictionary(Cog):
         reply, text_to_speech_input = self.create_reply(word, definitions, definition_source=definition_source.name if show_definition_source else None, detected_source_language=detected_source_language)
 
         if text_to_speech:
-
             voice_code = self._language_to_voice_map[language_code]
-
-            # Increment counter for this voice channel
-            if voice_channel not in self._voice_channels:
-                self._voice_channels[voice_channel] = 0
-            if voice_channel is not None:
-                self._voice_channels[voice_channel] += 1
-
-            if interaction.guild not in self._guild_locks:
-                self._guild_locks[interaction.guild] = asyncio.Lock()
-
             await self._say(reply, interaction, voice_channel, voice_code, text_to_speech_input)
-
         else:
             await interaction.followup.send(reply)
 
-    async def _say(self, text: str, interaction: discord.Interaction, voice_channel, language, text_to_speech_input=None):
+    @app_commands.command(name='say', description='Makes me say something.')
+    @app_commands.describe(
+        message='The message to say.',
+        language='The language to translate the message to.',
+        voice='The voice to use when speaking'
+    )
+    async def say(self, interaction: discord.Interaction, message: str, language: Optional[str] = None, voice: Optional[str] = None):
+
+        # Limit message size
+        if len(message) > 250:
+            await interaction.response.send_message('Message is too long!', ephemeral=True)
+            return
+
+        # Get default language if none specified
+        if language is None:
+            language = self._bot._scoped_property_manager.get('language', interaction.channel)
+
+        # Get voice channel the user is currently in (if any)
+        voice_channel = interaction.user.voice.channel if isinstance(interaction.user, discord.Member) and interaction.user.voice is not None else None
+
+        # Make sure that the user is in a voice channel
+        if voice_channel is None:
+            await interaction.response.send_message('You must be in a voice channel to use this command!', ephemeral=True)
+            return
+
+        # Get language code from language argument
+        language_code = self._get_language_code(language)
+        if language_code is None:
+            await interaction.response.send_message(f'Could not find a language matching `{language}`!', ephemeral=True)
+            return
+
+        # Determine which voice to use
+        if voice is None:
+            # User didn't specify a voice, let's check if the language has a supported voice
+            voice_code = self._language_to_voice_map[language_code]
+            if voice_code is None:
+                await interaction.response.send_message('I can\'t speak that language!', ephemeral=True)
+                return
+        else:
+            voice_code = self._get_voice_code(voice)
+            if voice_code is None:
+                await interaction.response.send_message('I don\'t know that voice!', ephemeral=True)
+                return
+
+        # Defer response
+        await interaction.response.defer()
+
+        # Translate message to target language
+        if language_code != 'en':
+            message, detected_source_language = self._translate(message, language_code)
+
+        await self._say(message, interaction, voice_channel, voice_code, message, allow_partial_success=False)
+
+    async def _say(self, text: str, interaction: discord.Interaction, voice_channel, language, text_to_speech_input=None, allow_partial_success=True):
+
+        # Increment counter for this voice channel
+        if voice_channel not in self._voice_channels:
+            self._voice_channels[voice_channel] = 0
+        if voice_channel is not None:
+            self._voice_channels[voice_channel] += 1
+
+        if interaction.guild not in self._guild_locks:
+            self._guild_locks[interaction.guild] = asyncio.Lock()
 
         # Get text-to-speech data
         text_to_speech_bytes = await self._get_text_to_speech(text_to_speech_input, language=language)
@@ -237,11 +287,12 @@ class Dictionary(Cog):
         # Check if we got valid text-to-speech data
         if text_to_speech_bytes.getbuffer().nbytes <= 0:
 
-            # Send text chat reply
-            await interaction.followup.send(text)
-
             logger.error('There was a problem generating the text-to-speech!')
             await interaction.followup.send('There was a problem generating the text-to-speech!')
+
+            if allow_partial_success:
+                # Send text chat reply
+                await interaction.followup.send(text)
 
             # Update voice channel map
             self._voice_channels[voice_channel] -= 1
@@ -257,6 +308,12 @@ class Dictionary(Cog):
                 await self._guild_locks[interaction.guild].acquire()
                 voice_client = await self._join_voice_channel(voice_channel)
             except InsufficientPermissionsException as e:
+                # Update voice channel map
+                self._voice_channels[voice_channel] -= 1
+
+                # Disconnect from the voice channel if we don't need it anymore
+                if self._voice_channels[voice_channel] <= 0:
+                    await self._leave_voice_channel(voice_channel)
                 self._guild_locks[interaction.guild].release()
                 await interaction.followup.send(f'I don\'t have permission to join your voice channel! Please grant me the following permissions: ' + ', '.join(f'`{x}`' for x in e.permissions) + '.')
                 return

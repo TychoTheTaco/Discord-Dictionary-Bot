@@ -4,12 +4,9 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/bot" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/bot/discord_dictionary_bot" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/bot/venv" />
       <excludeFolder url="file://$MODULE_DIR$/bot/build" />
       <excludeFolder url="file://$MODULE_DIR$/bot/discord_dictionary_bot.egg-info" />
-      <excludeFolder url="file://$MODULE_DIR$/bot/ffmpeg-20200831-4a11a6f-win64-static" />
-      <excludeFolder url="file://$MODULE_DIR$/bot/ffmpeg-2022-12-08-git-9ca139b2aa-full_build" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (Discord-Dictionary-Bot)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -17,5 +14,8 @@
     <orderEntry type="library" name="chartjs-plugin-datalabels" level="application" />
     <orderEntry type="library" name="vue" level="application" />
     <orderEntry type="library" name="material-components-web" level="application" />
+  </component>
+  <component name="PackageRequirementsSettings">
+    <option name="versionSpecifier" value="Strong equality (==x.y.z)" />
   </component>
 </module>
