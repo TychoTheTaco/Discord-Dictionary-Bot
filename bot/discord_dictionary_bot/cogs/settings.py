@@ -7,11 +7,11 @@ from discord.ext.commands import GroupCog
 from ..property_manager import Property, InvalidKeyError, InvalidValueError, ScopedPropertyManager
 
 ScopeNameType = Literal['all', 'guild', 'channel']
-PropertyKeyType = Literal['text_to_speech', 'language', 'prefix', 'show_definition_source', 'dictionary_apis', 'auto_translate']
+PropertyKeyType = Literal['text_to_speech', 'language', 'show_definition_source', 'dictionary_apis', 'auto_translate']
 
 
 class Settings(GroupCog):
-    PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot prefix, default text-to-speech language, etc.'
+    PROPERTY_COMMAND_DESCRIPTION = 'Change the bot\'s properties for a channel or server. Use this to change the bot\'s default text-to-speech language, etc.'
 
     def __init__(self, property_manager: ScopedPropertyManager):
         super().__init__()

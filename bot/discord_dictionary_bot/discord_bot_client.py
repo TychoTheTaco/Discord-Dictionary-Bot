@@ -20,10 +20,6 @@ from .utils import get_bot_permissions
 logger = logging.getLogger(__name__)
 
 
-def get_prefix(bot: Bot, message: Message):
-    return bot._scoped_property_manager.get('prefix', message.channel)
-
-
 def interaction_data_to_string(data):
     if isinstance(data, list):
 
@@ -53,15 +49,10 @@ class DiscordBotClient(Bot):
         :param ffmpeg_path: Path to ffmpeg executable.
         :param kwargs:
         """
-        super().__init__(get_prefix, help_command=None, intents=discord.Intents.default(), **kwargs)
+        super().__init__('', help_command=None, intents=discord.Intents.default(), **kwargs)
         self._dictionary_apis = dictionary_apis
         self._ffmpeg_path = ffmpeg_path
         self._scoped_property_manager = FirestorePropertyManager([
-            Property(
-                'prefix',
-                default='.',
-                description='The bot\'s prefix. This can be one or more characters. If you forget the prefix, just mention the bot and it will show you the current prefix.'
-            ),
             Property(
                 'text_to_speech',
                 choices=['force', 'flag', 'disable'],
@@ -132,14 +123,6 @@ class DiscordBotClient(Bot):
             snapshot = document.get()
             if not snapshot.exists:
                 await self.on_guild_join(guild)
-
-    async def on_message(self, message: Message):
-
-        # If we are mentioned, show some helpful information
-        if self.user in message.mentions:
-            await message.reply(f'Hello there! Try `/define taco` to get started :taco:', mention_author=False)
-
-        await super().on_message(message)
 
     async def on_guild_join(self, guild: Guild):
         logger.info('Joined guild: ' + guild.name)

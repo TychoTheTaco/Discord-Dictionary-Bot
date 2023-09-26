@@ -1,11 +1,5 @@
 [
   {
-    "name": "prefix",
-    "description": "The bot's command prefix. This can be 1 or more characters but cannot contain spaces.",
-    "type": "string",
-    "default": "."
-  },
-  {
     "name": "text_to_speech",
     "description": "Change text-to-speech behavior.",
     "type": "string",
