@@ -3,7 +3,7 @@ import asyncio
 import logging
 import sqlite3 as sql
 import re
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, List
 from pathlib import Path
 import html
 
@@ -132,8 +132,18 @@ class Dictionary(Cog):
         # Add context menus
         bot.tree.add_command(app_commands.ContextMenu(name='Translate', callback=self._translate_context_menu))
 
+    async def _language_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        supported_languages = self._languages
+        matched_choices = [
+            app_commands.Choice(name=language['name'], value=language['name'])
+            for language in supported_languages if current.lower() in language['name'].lower()
+        ]
+        # Discord enforces a limit of 25 items that can be returned from an interaction, so just return the first 25
+        return matched_choices[:25]
+
     @app_commands.command(name='define', description='Gets the definition of a word.')
     @app_commands.describe(word='The word to define', text_to_speech='Use text to speech?', language='The language to translate the definition to.')
+    @app_commands.autocomplete(language=_language_autocomplete)
     async def define(self, interaction: discord.Interaction, word: str, text_to_speech: bool = False, language: Optional[str] = None):
 
         # Get default language if none specified
@@ -148,11 +158,6 @@ class Dictionary(Cog):
         # Get voice channel the user is currently in (if any)
         voice_channel = interaction.user.voice.channel if isinstance(interaction.user, discord.Member) and interaction.user.voice is not None else None
 
-        # Make sure that the user that requested this definition is in a voice channel if text-to-speech is enabled
-        if text_to_speech and voice_channel is None:
-            await interaction.response.send_message('You must be in a voice channel to use text-to-speech!', ephemeral=True)
-            return
-
         # Check for text-to-speech override
         text_to_speech_property = self._bot._scoped_property_manager.get('text_to_speech', interaction.channel)
         if text_to_speech_property == 'force' and voice_channel is not None:
@@ -166,10 +171,17 @@ class Dictionary(Cog):
             await interaction.response.send_message(f'Could not find a language matching `{language}`!', ephemeral=True)
             return
 
-        # Check if this language has a supported voice
-        if self._language_to_voice_map[language_code] is None:
-            await interaction.response.send_message('I can\'t speak that language!', ephemeral=True)
-            return
+        if text_to_speech:
+
+            # Make sure that the user that requested this definition is in a voice channel if text-to-speech is enabled
+            if text_to_speech and voice_channel is None:
+                await interaction.response.send_message('You must be in a voice channel to use text-to-speech!', ephemeral=True)
+                return
+
+            # Check if this language has a supported voice
+            if self._language_to_voice_map[language_code] is None:
+                await interaction.response.send_message('I can\'t speak that language! Try again without using text-to-speech.', ephemeral=True)
+                return
 
         # Defer our response since fetching the definition may take longer than a few seconds
         await interaction.response.defer()
@@ -223,6 +235,7 @@ class Dictionary(Cog):
         language='The language to translate the message to.',
         voice='The voice to use when speaking'
     )
+    @app_commands.autocomplete(language=_language_autocomplete)
     async def say(self, interaction: discord.Interaction, message: str, language: Optional[str] = None, voice: Optional[str] = None):
 
         # Limit message size
@@ -346,6 +359,7 @@ class Dictionary(Cog):
 
     @app_commands.command(name='translate', description='Translate a message from one language to another.')
     @app_commands.describe(target_language='The language to translate to.', message='The message to translate.')
+    @app_commands.autocomplete(target_language=_language_autocomplete)
     async def translate(self, interaction: discord.Interaction, target_language: str, message: str):
 
         # Limit message length
@@ -359,7 +373,7 @@ class Dictionary(Cog):
             await interaction.response.send_message(f'Invalid language!', ephemeral=True)
             return
 
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         translated_message, detected_language = self._translate(message, target_language=target_language_code)
         await interaction.followup.send(self._create_translate_reply(message, detected_language, translated_message, target_language_code))
 
