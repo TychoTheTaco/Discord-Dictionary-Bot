@@ -281,7 +281,37 @@ class Dictionary(Cog):
         if language_code != 'en':
             message, detected_source_language = self._translate(message, language_code)
 
-        await self._say(message, interaction, voice_channel, voice_code, message, allow_partial_success=False)
+        # Replace @user and #channel with their display names
+        text_to_speech_input = await self._replace_discord_tags(message)
+
+        await self._say(message, interaction, voice_channel, voice_code, text_to_speech_input, allow_partial_success=False)
+
+    async def _replace_discord_tags(self, text: str) -> str:
+        # Replace tagged users
+        pattern = r'<@(\d+)>'
+        while True:
+            match = re.search(pattern, text)
+            if match is None:
+                break
+            item_id = int(match.group(1))
+            user = await self._bot.fetch_user(item_id)
+            if user is not None:
+                text = re.sub(pattern, user.display_name, text, 1)
+                continue
+
+        # Replace tagged channels
+        pattern = r'<#(\d+)>'
+        while True:
+            match = re.search(pattern, text)
+            if match is None:
+                break
+            item_id = int(match.group(1))
+            channel = await self._bot.fetch_channel(item_id)
+            if channel is not None:
+                text = re.sub(pattern, channel.name, text, 1)
+                continue
+
+        return text
 
     async def _say(self, text: str, interaction: discord.Interaction, voice_channel, language, text_to_speech_input=None, allow_partial_success=True):
 
