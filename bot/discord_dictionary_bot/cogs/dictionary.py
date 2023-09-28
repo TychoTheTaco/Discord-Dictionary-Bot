@@ -3,14 +3,13 @@ import asyncio
 import logging
 import sqlite3 as sql
 import re
-from typing import Union, Optional, Dict, List
+from typing import Union, Optional, Dict, List, Tuple
 from pathlib import Path
 import html
 
 from discord.ext.commands import Cog, Bot
 from google.cloud import texttospeech
-import requests
-from bs4 import BeautifulSoup
+import babel
 import discord
 from discord import app_commands
 from google.cloud.texttospeech_v1.services.text_to_speech.transports.grpc import TextToSpeechGrpcTransport
@@ -39,7 +38,7 @@ async def convert(source: bytes, ffmpeg_path='ffmpeg'):
     return output[0]
 
 
-def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.NEUTRAL) -> bytes:
+def text_to_speech_pcm(text, language='en-us', gender=texttospeech.SsmlVoiceGender.SSML_VOICE_GENDER_UNSPECIFIED) -> bytes:
     # Create a text-to-speech client with maximum receive size of 24MB. This limit can be adjusted if necessary. It needs to be specified
     # because the default of 4MB is not enough for some definitions.
     channel = TextToSpeechGrpcTransport.create_channel(options=[('grpc.max_receive_message_length', 24 * 1024 * 1024)])
@@ -141,6 +140,23 @@ class Dictionary(Cog):
         # Discord enforces a limit of 25 items that can be returned from an interaction, so just return the first 25
         return matched_choices[:25]
 
+    async def _voice_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        supported_voices = self._get_all_voices()
+        matched_choices = []
+        for voice in supported_voices:
+            cl = current.lower()
+            if voice[0] is not None and cl in voice[0].lower():
+                matched_choices.append(app_commands.Choice(name=voice[0], value=voice[0]))
+                continue
+            if voice[1] is not None and cl in voice[1].lower():
+                matched_choices.append(app_commands.Choice(name=voice[0], value=voice[0]))
+                continue
+            if voice[2] is not None and cl in voice[2].lower():
+                matched_choices.append(app_commands.Choice(name=voice[0], value=voice[0]))
+                continue
+        # Discord enforces a limit of 25 items that can be returned from an interaction, so just return the first 25
+        return matched_choices[:25]
+
     @app_commands.command(name='define', description='Gets the definition of a word.')
     @app_commands.describe(word='The word to define', text_to_speech='Use text to speech?', language='The language to translate the definition to.')
     @app_commands.autocomplete(language=_language_autocomplete)
@@ -235,7 +251,7 @@ class Dictionary(Cog):
         language='The language to translate the message to.',
         voice='The voice to use when speaking'
     )
-    @app_commands.autocomplete(language=_language_autocomplete)
+    @app_commands.autocomplete(language=_language_autocomplete, voice=_voice_autocomplete)
     async def say(self, interaction: discord.Interaction, message: str, language: Optional[str] = None, voice: Optional[str] = None):
 
         # Limit message size
@@ -522,37 +538,36 @@ class Dictionary(Cog):
         await interaction.response.send_message('I\'m not even talking!')
 
     @staticmethod
+    def _language_code_to_language_name(language_code: str) -> Optional[str]:
+        try:
+            return babel.Locale.parse(language_code, sep='-').get_display_name('en')
+        except babel.core.UnknownLocaleError:
+            pass
+        try:
+            return babel.Locale.parse(language_code.split('-')[0]).get_display_name('en')
+        except babel.core.UnknownLocaleError:
+            pass
+        return None
+
+    @staticmethod
     def _create_voices_table():
-
-        # Get supported languages from HTML
-        request = requests.get('https://cloud.google.com/text-to-speech/docs/voices')
-        soup = BeautifulSoup(request.content, 'lxml')
-        languages_table = soup.find('div', attrs={'class': 'devsite-article-body clearfix'}).table
-
+        # Connect to database
         connection = sql.connect('database.db')
         cursor = connection.cursor()
 
         # Create table
-        cursor.execute(
-            'CREATE TABLE IF NOT EXISTS voices (voice_code text UNIQUE, language_code text, language_name text, language_region text, voice_type text, voice_gender text)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS voices (voice_code text UNIQUE, language_code text, language_name text, voice_type text, voice_gender text)')
 
-        # Add languages
-        for row in languages_table.find_all('tr')[1:]:
-            columns = row.find_all('td')
-
-            # Get language name and region
-            pattern = re.compile(r'(\w+)(?: \((\w+)\))?')
-            match = pattern.match(columns[0].text)
-            if match:
-                language_name = match.group(1)
-                region = match.group(2)
-
-                voice_type = columns[1].text
-                language_code = columns[2].text
-                voice_code = columns[3].text
-                voice_gender = columns[4].text
-
-                cursor.execute(f'INSERT OR IGNORE INTO voices VALUES (?, ?, ?, ?, ?, ?)', (voice_code, language_code, language_name, region, voice_type, voice_gender))
+        # Add supported voices
+        client = texttospeech.TextToSpeechClient()
+        response = client.list_voices()
+        for voice in response.voices:
+            voice_code = voice.name
+            voice_gender = voice.ssml_gender.name
+            language_code = '-'.join(voice_code.split('-')[:2])
+            language_name = Dictionary._language_code_to_language_name(language_code)
+            voice_type = voice_code.split('-')[2]
+            cursor.execute(f'INSERT OR IGNORE INTO voices VALUES (?, ?, ?, ?, ?)', (voice_code, language_code, language_name, voice_type, voice_gender))
 
         connection.commit()
         connection.close()
@@ -592,12 +607,12 @@ class Dictionary(Cog):
         cursor = connection.cursor()
 
         # Prepare queries
-        q = 'ORDER BY CASE voice_type WHEN "WaveNet" THEN 0 ELSE 1 END, CASE voice_gender WHEN "FEMALE" THEN 0 ELSE 1 END ASC'
+        q = 'ORDER BY CASE voice_type WHEN "Wavenet" THEN 0 ELSE 1 END, CASE voice_gender WHEN "FEMALE" THEN 0 ELSE 1 END ASC'
         queries = (
             f'SELECT * FROM voices WHERE voice_code LIKE ? {q}',
             f'SELECT * FROM voices WHERE language_code LIKE ? {q}',
             f'SELECT * FROM voices WHERE language_name LIKE ? {q}',
-            f'SELECT * FROM voices WHERE language_region LIKE ? {q}'
+            # f'SELECT * FROM voices WHERE language_region LIKE ? {q}'
         )
 
         # Return first value that matches a query
@@ -608,6 +623,23 @@ class Dictionary(Cog):
                 connection.close()
                 return result[0]
 
+        # Disconnect from database
         connection.close()
 
         return None
+
+    def _get_all_voices(self) -> List[Tuple[str, str, str]]:
+        # Connect to database
+        connection = sql.connect('database.db')
+        cursor = connection.cursor()
+
+        # Get all voices
+        voices = []
+        results = cursor.execute('SELECT voice_code, language_code, language_name FROM voices')
+        for result in results:
+            voices.append(result)
+
+        # Disconnect from database
+        connection.close()
+
+        return voices

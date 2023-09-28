@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="database" uuid="346c94dd-9d10-4374-af26-8591124f5f04">
+    <data-source source="LOCAL" name="database" uuid="9c2e63b8-15f7-45bc-bb54-7ee48304a0c3">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\tycho\PycharmProjects\Discord Dictionary Bot\database.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\Tycho\PycharmProjects\Discord-Dictionary-Bot\bot\database.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>
