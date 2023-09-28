@@ -130,7 +130,7 @@ def command_usage():
     rows = []
     for row in results:
         d = row_to_dict(row)
-        if d['command_name'] in ['list', 'set', 'voices', 'languages', 'property']:
+        if d['command_name'] in ['list', 'set', 'voices', 'languages', 'property', 'remove']:
             continue
         rows.append(d)
 
