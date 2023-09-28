@@ -1,9 +1,11 @@
 import argparse
 import os
 import logging.config
+import signal
 
 from .discord_bot_client import DiscordBotClient
 from .dictionary_api import OwlBotDictionaryAPI, UnofficialGoogleAPI, MerriamWebsterCollegiateAPI, RapidWordsAPI, MerriamWebsterMedicalAPI
+from .analytics import AnalyticsUploader
 
 
 def logging_filter(record):
@@ -35,7 +37,6 @@ def try_read_token(token_or_path: str) -> str:
 
 
 def main():
-
     dictionary_api_options = {
         'google': {
             'class': UnofficialGoogleAPI
@@ -122,8 +123,20 @@ def main():
         else:
             dictionary_apis.append(api_info["class"]())
 
-    # Start client
+    # Start analytics thread
+    analytics_uploader = AnalyticsUploader()
+    analytics_uploader.start()
+
+    # Create bot client
     bot = DiscordBotClient(dictionary_apis, args.ffmpeg_path)
+
+    # Capture interrupt signal to shut down gracefully
+    def stop_gracefully(sig, frame):
+        analytics_uploader.stop()
+        bot.loop.call_soon((_ for _ in ()).throw(KeyboardInterrupt))  # A bit of a hack to stop the bot
+    signal.signal(signal.SIGINT, stop_gracefully)
+
+    # Start client
     bot.run(try_read_token(args.discord_bot_token))
 
 

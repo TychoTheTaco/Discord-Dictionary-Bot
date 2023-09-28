@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import threading
-import time
 
 import discord
 from discord import Interaction
@@ -120,14 +119,32 @@ def upload_pending_analytics():
             logger.exception('Error uploading analytics!', exc_info=e)
 
 
-def analytics_uploader_thread():
-    while True:
-        time.sleep(60 * 5)
-        upload_pending_analytics()
+class AnalyticsUploader:
 
+    def __init__(self):
+        self._is_running = False
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._run)
 
-def start_analytics_thread():
-    threading.Thread(target=analytics_uploader_thread).start()
+    def start(self):
+        if self._is_running:
+            return
+        self._is_running = True
+        self._thread.start()
+
+    def stop(self):
+        if not self._is_running:
+            return
+        self._is_running = False
+        self._stop_event.set()
+        self._thread.join()
+
+    def _run(self):
+        logger.info('Started analytics uploader')
+        while self._is_running:
+            self._stop_event.wait(60 * 5)
+            upload_pending_analytics()
+        logger.info('Stopped analytics uploader')
 
 
 def log_command(command_name: str, interaction: Interaction):

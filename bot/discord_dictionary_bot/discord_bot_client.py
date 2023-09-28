@@ -10,7 +10,7 @@ from discord.app_commands import ContextMenu, Command
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
-from .analytics import log_command, start_analytics_thread, log_context_menu_usage
+from .analytics import log_command, log_context_menu_usage
 from .cogs import Settings, Dictionary, Statistics
 from .dictionary_api import DictionaryAPI
 from .property_manager import FirestorePropertyManager, Property, BooleanProperty, ListProperty
@@ -99,9 +99,6 @@ class DiscordBotClient(Bot):
 
         # Sync slash commands
         await self.tree.sync()
-
-        # Start analytics thread
-        start_analytics_thread()
 
     async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
         if isinstance(command, Command):
