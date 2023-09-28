@@ -1,9 +1,10 @@
+import collections
 import io
 import asyncio
 import logging
 import sqlite3 as sql
 import re
-from typing import Union, Optional, Dict, List, Tuple
+from typing import Union, Optional, Dict, List, Tuple, Set
 from pathlib import Path
 import html
 
@@ -101,11 +102,14 @@ class Dictionary(Cog):
         self._create_voices_table()
 
         # Each guild will have a lock to ensure that we only join 1 voice channel at a time
-        self._guild_locks = {}
+        self._guild_locks = collections.defaultdict(asyncio.Lock)
 
         # This dict keeps track of how many definition requests need the corresponding voice channel. This way we can leave the channel
         # only when we have finished all requests for that channel.
-        self._voice_channels = {}
+        self._voice_channels = collections.defaultdict(int)
+
+        # Pending interaction IDs for anything that uses text-to-speech. This is used to cancel pending requests.
+        self._pending_interactions: Set[int] = set()
 
         # Client used for translations
         self._translate_client = translate.Client()
@@ -241,7 +245,12 @@ class Dictionary(Cog):
 
         if text_to_speech:
             voice_code = self._language_to_voice_map[language_code]
-            await self._say(reply, interaction, voice_channel, voice_code, text_to_speech_input)
+            self._pending_interactions.add(interaction.id)
+            try:
+                await self._say(reply, interaction, voice_channel, voice_code, text_to_speech_input)
+            except Exception as exception:
+                logger.exception('Error saying things!', exc_info=exception)
+            self._pending_interactions.discard(interaction.id)
         else:
             await interaction.followup.send(reply)
 
@@ -300,7 +309,12 @@ class Dictionary(Cog):
         # Replace @user and #channel with their display names
         text_to_speech_input = await self._replace_discord_tags(message)
 
-        await self._say(message, interaction, voice_channel, voice_code, text_to_speech_input, allow_partial_success=False)
+        self._pending_interactions.add(interaction.id)
+        try:
+            await self._say(message, interaction, voice_channel, voice_code, text_to_speech_input, allow_partial_success=False)
+        except Exception as exception:
+            logger.exception('Error saying things!', exc_info=exception)
+        self._pending_interactions.discard(interaction.id)
 
     async def _replace_discord_tags(self, text: str) -> str:
         # Replace tagged users
@@ -332,13 +346,8 @@ class Dictionary(Cog):
     async def _say(self, text: str, interaction: discord.Interaction, voice_channel, language, text_to_speech_input=None, allow_partial_success=True):
 
         # Increment counter for this voice channel
-        if voice_channel not in self._voice_channels:
-            self._voice_channels[voice_channel] = 0
         if voice_channel is not None:
             self._voice_channels[voice_channel] += 1
-
-        if interaction.guild not in self._guild_locks:
-            self._guild_locks[interaction.guild] = asyncio.Lock()
 
         # Get text-to-speech data
         text_to_speech_bytes = await self._get_text_to_speech(text_to_speech_input, language=language)
@@ -365,6 +374,21 @@ class Dictionary(Cog):
             # Join the voice channel
             try:
                 await self._guild_locks[interaction.guild].acquire()
+
+                # Check if this request was cancelled
+                if interaction.id not in self._pending_interactions:
+                    await interaction.followup.send('Request cancelled!')
+
+                    # Update voice channel map
+                    self._voice_channels[voice_channel] -= 1
+
+                    # Disconnect from the voice channel if we don't need it anymore
+                    if self._voice_channels[voice_channel] <= 0:
+                        await self._leave_voice_channel(voice_channel)
+                    self._guild_locks[interaction.guild].release()
+
+                    return
+
                 voice_client = await self._join_voice_channel(voice_channel)
             except InsufficientPermissionsException as e:
                 # Update voice channel map
@@ -524,9 +548,14 @@ class Dictionary(Cog):
         return result
 
     @app_commands.command(name='stop', description='Makes the bot stop talking.')
-    async def stop(self, interaction: discord.Interaction):
+    @app_commands.describe(clear_pending_requests='Clear all pending text-to-speech requests.')
+    async def stop(self, interaction: discord.Interaction, clear_pending_requests: bool = False):
         # Get voice channel of current user
         voice_channel = interaction.user.voice.channel if isinstance(interaction.user, discord.Member) and interaction.user.voice is not None else None
+
+        # Clear all pending requests
+        if clear_pending_requests:
+            self._pending_interactions.clear()
 
         # Get voice client
         for voice_client in self._bot.voice_clients:
@@ -535,7 +564,7 @@ class Dictionary(Cog):
                 await interaction.response.send_message('Okay, I\'ll be quiet.')
                 return
 
-        await interaction.response.send_message('I\'m not even talking!')
+        await interaction.response.send_message('I\'m not even talking!', ephemeral=True)
 
     @staticmethod
     def _language_code_to_language_name(language_code: str) -> Optional[str]:
