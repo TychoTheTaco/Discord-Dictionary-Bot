@@ -27,13 +27,10 @@ Chart.defaults.animation = false;
 
 const COMMAND_COLORS = {
 	'define': '#BA2944',
-	'help': '#1565C0',
+	'say': '#1565C0',
 	'stop': '#F9A825',
 	'translate': '#2E7D32',
-	'settings': '#AD1457',
-
-	'befine': '#EF6C00',
-	'stats': '#6A1B9A'
+	'settings': '#6A1B9A'
 }
 
 const DICTIONARY_API_COLORS = {
@@ -259,7 +256,7 @@ export default {
 									callback: (value, index, values) => {
 										//console.log(value, Math.log10(value));
 										if (Math.log10(value) % 1 === 0) {
-											return Math.floor(value);
+											return Math.floor(value).toLocaleString();
 										}
 										if (index === values.length - 1) {
 											//console.log('LAST:' + Math.pow(10, Math.ceil(Math.log10(value))));

@@ -43,7 +43,7 @@
 
 <script>
 import json from '@/assets/settings.json'
-import marked from 'marked'
+import {marked} from 'marked'
 
 export default {
 	name: "Settings",

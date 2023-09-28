@@ -3,13 +3,11 @@
 		<div style="display: flex; flex-direction: row; justify-content: center">
 			<a href="/docs/commands" class="nav-link">Commands</a>
 			<a href="/docs/settings" class="nav-link">Settings</a>
-			<a href="/docs/languages" class="nav-link">Languages</a>
 		</div>
 
 		<div>
 			<Commands v-if="$route.name === 'Commands'"/>
 			<Settings v-if="$route.name === 'Settings'"/>
-			<Languages v-if="$route.name === 'Languages'"/>
 		</div>
 	</div>
 
@@ -18,10 +16,9 @@
 <script>
 import Commands from "@/components/Commands";
 import Settings from "@/components/Settings";
-import Languages from "@/components/Languages";
 
 export default {
-	components: {Settings, Commands, Languages}
+	components: {Settings, Commands}
 }
 </script>
 
