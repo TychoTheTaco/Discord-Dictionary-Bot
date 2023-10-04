@@ -6,9 +6,7 @@
 		Settings can be changed for the whole server (guild) or for individual channels. Channel settings take priority over server settings.
 	</p>
 
-	<h1>
-		Settings
-	</h1>
+  <hr>
 
 	<div v-for="(setting, index) in settings" v-bind:key="setting">
 		<code>{{ setting.name }}</code> - {{ setting.description }}

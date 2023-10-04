@@ -1,7 +1,7 @@
 <template>
 	<div style="background-color: #1B1C1F">
 
-		<div ref="container" style="display: flex; justify-content: space-between; align-items: end; max-width: 1280px; margin: auto; padding: 0.8rem;" class="desktop">
+		<div ref="container" style="display: flex; justify-content: space-between; max-width: 1280px; margin: auto; padding: 0.8rem;" class="desktop">
 
 			<div style="display: inline-block; margin-right: 2rem;">
 				<p>

@@ -38,6 +38,12 @@
 </template>
 
 <script>
+
+function getActualElementWidth(element) {
+  const style = window.getComputedStyle(element);
+  return element.offsetWidth + parseFloat(style.getPropertyValue("margin-right")) + parseFloat(style.getPropertyValue("margin-left"));
+}
+
 export default {
 	name: 'Header',
 	mounted() {
@@ -60,7 +66,7 @@ export default {
 		updateWidth() {
 			let totalChildWidth = 0;
 			for (const child of this.$refs.container.children) {
-				totalChildWidth += child.clientWidth;
+				totalChildWidth += getActualElementWidth(child);
 			}
 			this.menu_visible = totalChildWidth >= this.$el.clientWidth
 		},
