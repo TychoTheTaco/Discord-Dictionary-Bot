@@ -15,7 +15,7 @@ class Statistics(Cog):
         self._bot = bot
         self._bigquery_client = bigquery.Client()
 
-    @app_commands.command(name='stats')
+    @app_commands.command(name='stats', description='Shows some statistics about the bot.')
     async def stats(self, interaction: Interaction):
         await interaction.response.defer(ephemeral=True)
         reply = '**----- Statistics -----**\n'
@@ -28,7 +28,7 @@ class Statistics(Cog):
 
         # Guild count
         reply += '**Guilds**\n'
-        reply += f'Active in **{len(self._bot.guilds)}** guilds and **{channel_count}** channels.\n\n'
+        reply += f'Active in **{len(self._bot.guilds):,}** guilds and **{channel_count:,}** channels.\n\n'
 
         # Total requests
         reply += '**Total Requests**\n'
@@ -36,7 +36,7 @@ class Statistics(Cog):
         total_requests_results = total_requests_job.result()
         for row in total_requests_results:
             total_requests = row.total
-        reply += f'**{total_requests}** requests.\n\n'
+        reply += f'**{total_requests:,}** requests.\n\n'
 
         # Most common words
         reply += '**Most Common Words**\n'

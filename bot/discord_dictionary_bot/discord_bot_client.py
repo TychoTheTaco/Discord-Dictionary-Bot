@@ -2,11 +2,13 @@ import datetime
 import logging
 import sys
 from pathlib import Path
-from typing import Union, Any
+from typing import Union, Any, Optional, Sequence
 
 import discord.ext.commands
 from discord import Message, Guild, Interaction
+from discord.abc import Snowflake
 from discord.app_commands import ContextMenu, Command
+from discord.ext.commands import Cog
 from discord.ext.commands.bot import Bot
 from google.cloud import firestore
 
@@ -92,13 +94,27 @@ class DiscordBotClient(Bot):
         ])
 
     async def setup_hook(self) -> None:
+        guild_ids = []
+
+        async def add_cog_wrapper(cog: Cog, guilds: Optional[Sequence[Snowflake]] = None):
+            if not guilds:
+                guilds = []
+            guild_ids.extend(guilds)
+            await self.add_cog(cog, guilds=guilds)
+
         # Add cogs
-        await self.add_cog(Dictionary(self, self._dictionary_apis, self._ffmpeg_path))
-        await self.add_cog(Settings(self._scoped_property_manager))
-        await self.add_cog(Statistics(self), guild=discord.Object(id='799455809297842177'))
+        await add_cog_wrapper(Dictionary(self, self._dictionary_apis, self._ffmpeg_path))
+        await add_cog_wrapper(Settings(self._scoped_property_manager))
+        await add_cog_wrapper(Statistics(self), guilds=[discord.Object(id='799455809297842177'), discord.Object(id='454852632528420876')])
 
         # Sync slash commands
         await self.tree.sync()
+        for guild in guild_ids:
+            try:
+                await self.tree.sync(guild=guild)
+            except discord.errors.Forbidden:
+                # If the bot isn't in the guild, we will get a Forbidden error
+                logger.warning(f'Failed to sync commands for guild {guild.id}')
 
     async def on_app_command_completion(self, interaction: Interaction, command: Union[Command, ContextMenu]):
         if isinstance(command, Command):
