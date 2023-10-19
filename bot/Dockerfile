@@ -7,10 +7,16 @@ COPY ./requirements.txt .
 COPY ./setup.py .
 
 # Install ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt-get update  \
+    && apt-get install -y ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install requirements
-RUN pip install -r requirements.txt
+# Install build dependencies and requirements
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install -r requirements.txt \
+    && apt-get purge -y --auto-remove gcc
 
 # Install app
 RUN pip install .
