@@ -3,7 +3,7 @@
 <img src="https://github.com/TychoTheTaco/Discord-Dictionary-Bot/blob/master/media/dictionary.png?raw=true" width="64" align="left"></img>
 A Discord bot that can fetch definitions and post them in chat. If you are connected to a voice channel, the bot can also read out the definition to you. Dictionary bot can also translate words and phrases to many different
 languages! [Invite Dictionary Bot to your server!](https://discord.com/api/oauth2/authorize?client_id=755688136851324930&permissions=3165184&scope=bot%20applications.commands) Check out
-the [website](https://prod.d3967euqdvu56b.amplifyapp.com) for more information.
+the [website](https://ddd.bellers.dev) for more information.
 
 ## Usage
 
