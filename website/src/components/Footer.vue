@@ -8,7 +8,7 @@
 					Created by Tycho Bellers
 				</p>
 				<p>
-					<a href="mailto:tycho.developer@gmail.com">tycho.developer@gmail.com</a>
+					<a href="mailto:tycho@bellers.net">tycho@bellers.net</a>
 				</p>
 			</div>
 
