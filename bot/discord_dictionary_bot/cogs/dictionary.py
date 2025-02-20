@@ -595,7 +595,11 @@ class Dictionary(Cog):
             voice_gender = voice.ssml_gender.name
             language_code = '-'.join(voice_code.split('-')[:2])
             language_name = Dictionary._language_code_to_language_name(language_code)
-            voice_type = voice_code.split('-')[2]
+            split_voice_code = voice_code.split('-')
+            if len(split_voice_code) < 3:
+                logger.warning(f'Skipping unsupported language: {voice_code}')
+                continue
+            voice_type = split_voice_code[2]
             cursor.execute(f'INSERT OR IGNORE INTO voices VALUES (?, ?, ?, ?, ?)', (voice_code, language_code, language_name, voice_type, voice_gender))
 
         connection.commit()

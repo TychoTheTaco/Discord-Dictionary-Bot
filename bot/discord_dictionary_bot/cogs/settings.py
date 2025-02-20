@@ -50,6 +50,8 @@ class Settings(GroupCog):
                     if len(properties) > 0:
                         reply += '\n' + self._print_properties(properties, scope)
 
+            reply += '\n'
+            reply += 'Check the [website](https://ddb.bellers.net/docs/settings) to see more information about settings.'
             await interaction.response.send_message(reply, ephemeral=True)
 
         else:
@@ -60,7 +62,10 @@ class Settings(GroupCog):
                 return
 
             properties = self.get_all(scope)
-            await interaction.response.send_message(self._print_properties(properties, scope), ephemeral=True)
+            reply = self._print_properties(properties, scope)
+            reply += '\n'
+            reply += 'Check the [website](https://ddb.bellers.net/docs/settings) to see more information about settings.'
+            await interaction.response.send_message(reply, ephemeral=True)
 
     def get_all(self, scope):
         properties = {}
@@ -112,8 +117,6 @@ class Settings(GroupCog):
         else:
             reply += '__**Channel Settings**__\n'
             reply += 'These settings only affect this channel and take priority over server settings.\n\n'
-
-        reply += 'Use `help settings` to see more info about settings.\n\n'
 
         for p in sorted(properties, key=lambda x: x.key):
             reply += f'**{p.key}**: `{p.to_string(properties[p])}`\n'
