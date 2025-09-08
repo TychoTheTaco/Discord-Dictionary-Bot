@@ -12,11 +12,13 @@ from google.cloud import bigquery
 logger = logging.getLogger(__name__)
 
 
-def _is_blacklisted(channel):
+def _is_blacklisted(channel: discord.TextChannel | discord.DMChannel):
     # Ignore dev server
-    if channel.guild.id in [454852632528420876, 799455809297842177]:
-        logger.info(f'Ignoring analytics submission for development server.')
-        return True
+    guild = channel.guild
+    if guild:
+        if guild.id in [454852632528420876, 799455809297842177]:
+            logger.info(f'Ignoring analytics submission for development server.')
+            return True
     return False
 
 
@@ -180,18 +182,21 @@ def log_context_menu_usage(name: str, interaction: Interaction):
         queue.append(data)
 
 
-def log_definition_request(word: str, text_to_speech: bool, language: str, channel: discord.TextChannel):
+def log_definition_request(word: str, text_to_speech: bool, language: str, channel: discord.TextChannel | discord.DMChannel):
     queue = qal['log_definition_request']['queue']
     with qal['log_definition_request']['lock']:
         if _is_blacklisted(channel):
             return
+
+        guild = channel.guild
+        guild_id = guild.id if guild else None
 
         data = {
             'word': word,
             'reverse': False,
             'text_to_speech': text_to_speech,
             'language': language,
-            'guild_id': channel.guild.id,
+            'guild_id': guild_id,
             'channel_id': channel.id,
             'time': datetime.datetime.now().isoformat()
         }

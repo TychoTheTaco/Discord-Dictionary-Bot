@@ -61,7 +61,7 @@
   },
   {
     "name": "auto_translate",
-    "description": "Automatically translate words before looking up their definition.",
+    "description": "Automatically translate words to English before looking up their definition.",
     "type": "boolean",
     "default": false
   }
