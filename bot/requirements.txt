@@ -1,6 +1,6 @@
 aiohttp==3.13.3
 Babel==2.18.0
-discord.py==2.7.0
+discord.py==2.7.1
 pyNaCl==1.6.2
 gTTS==2.5.4
 google-cloud-firestore==2.23.0
